@@ -1,4 +1,4 @@
 package model;
 
-public record Mesa(int id, int capacidad) {
+public record Mesa(String id, int capacidad) {
 }

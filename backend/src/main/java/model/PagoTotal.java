@@ -1,3 +1,3 @@
 package model;
 
-public record PagoTotal(int id, double total, Cuenta cuenta) { }
+public record PagoTotal(String id, double total, Cuenta cuenta) { }
