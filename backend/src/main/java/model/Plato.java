@@ -1,3 +1,3 @@
 package model;
 
-public record Plato(String nombre, Category categoria, String descripcion, double price, Boolean activo) {}
+public record Plato(String nombre, Categoria categoria, String descripcion, double price, Boolean activo) {}

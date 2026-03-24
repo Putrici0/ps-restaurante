@@ -1,6 +1,6 @@
 package model;
 
-public enum Category {
+public enum Categoria {
     Bebida,
     Entrante,
     Principal,
