@@ -1,6 +1,8 @@
 package repository.firestore;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.WriteResult;
 import model.Cuenta;
 import model.Pedido;
 import model.PedidoEstado;
@@ -12,6 +14,7 @@ import java.util.Optional;
 public class FirestorePedidoRepository implements PedidoRepository {
 
     private final Firestore db;
+    private static final String COLLECTION = "pedidos";
 
     public FirestorePedidoRepository(Firestore db) {
         this.db = db;
@@ -39,7 +42,15 @@ public class FirestorePedidoRepository implements PedidoRepository {
 
     @Override
     public Pedido save(Pedido entity) {
-        return null;
+        try {
+            ApiFuture<WriteResult> future = db.collection(COLLECTION)
+                                        .document(entity.id())
+                                        .set(entity);
+            future.addListener(() -> System.out.println("pedido guardado" + entity.id()), Runnable::run);
+            return entity;
+        } catch (Exception e) {
+            throw new RuntimeException("Error guardando pedido", e);
+        }
     }
 
     @Override
