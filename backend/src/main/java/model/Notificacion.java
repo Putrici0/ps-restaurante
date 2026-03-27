@@ -1,5 +1,5 @@
 package model;
 
-import java.time.LocalDate;
+import java.util.Date;
 
-public record Notificacion(String id, Cuenta cuenta, TipoNotificacion tipo, boolean leida, LocalDate fecha ) { }
+public record Notificacion(String id, Cuenta cuenta, TipoNotificacion tipo, boolean leida, Date fecha ) { }

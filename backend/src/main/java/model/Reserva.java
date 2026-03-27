@@ -1,5 +1,5 @@
 package model;
 
-import java.time.LocalDate;
+import java.util.Date;
 
-public record Reserva(String id, String nombre, LocalDate fecha, int capacidad, LocalDate fecha_creacion) { }
+public record Reserva(String id, String nombre, Date fecha, int capacidad, Date fecha_creacion) { }
