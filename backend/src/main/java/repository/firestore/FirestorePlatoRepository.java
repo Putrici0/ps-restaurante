@@ -1,5 +1,6 @@
 package repository.firestore;
 
+import com.google.cloud.firestore.Firestore;
 import model.Categoria;
 import model.Plato;
 import repository.interfaces.PlatoRepository;
@@ -8,6 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class FirestorePlatoRepository implements PlatoRepository {
+
+    private final Firestore db;
+
+    public FirestorePlatoRepository(Firestore db) {
+        this.db = db;
+    }
+
     @Override
     public List<Plato> findByCategoria(Categoria categoria) {
         return List.of();

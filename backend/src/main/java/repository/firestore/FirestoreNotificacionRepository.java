@@ -1,5 +1,6 @@
 package repository.firestore;
 
+import com.google.cloud.firestore.Firestore;
 import model.Cuenta;
 import model.Notificacion;
 import model.TipoNotificacion;
@@ -9,6 +10,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class FirestoreNotificacionRepository implements NotificacionRepository {
+
+    private final Firestore db;
+
+    public FirestoreNotificacionRepository(Firestore db) {
+        this.db = db;
+    }
+
     @Override
     public List<Notificacion> findByCuenta(Cuenta cuenta) {
         return List.of();

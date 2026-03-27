@@ -1,5 +1,6 @@
 package repository.firestore;
 
+import com.google.cloud.firestore.Firestore;
 import model.Reserva;
 import repository.interfaces.ReservaRepository;
 
@@ -8,6 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class FirestoreReservaRepository implements ReservaRepository {
+
+    private final Firestore db;
+
+    public FirestoreReservaRepository(Firestore db) {
+        this.db = db;
+    }
+
     @Override
     public List<Reserva> findByDate(Date date) {
         return List.of();

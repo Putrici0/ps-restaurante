@@ -1,5 +1,6 @@
 package repository.firestore;
 
+import com.google.cloud.firestore.Firestore;
 import model.Cuenta;
 import model.Pedido;
 import model.PedidoEstado;
@@ -9,6 +10,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class FirestorePedidoRepository implements PedidoRepository {
+
+    private final Firestore db;
+
+    public FirestorePedidoRepository(Firestore db) {
+        this.db = db;
+    }
+
     @Override
     public List<Pedido> findByCuenta(Cuenta cuenta) {
         return List.of();

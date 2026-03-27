@@ -1,5 +1,6 @@
 package repository.firestore;
 
+import com.google.cloud.firestore.Firestore;
 import model.Rol;
 import model.Usuario;
 import repository.interfaces.UsuarioRepository;
@@ -8,6 +9,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class FirestoreUsuarioRepository implements UsuarioRepository {
+
+    private final Firestore db;
+
+    public FirestoreUsuarioRepository(Firestore db) {
+        this.db = db;
+    }
+
     @Override
     public List<Usuario> findByNombre(String nombre) {
         return List.of();

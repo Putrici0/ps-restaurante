@@ -1,5 +1,7 @@
 package repository.firestore;
 
+import com.google.cloud.firestore.Firestore;
+import config.FirestoreClientProvider;
 import model.Cuenta;
 import model.Mesa;
 import repository.interfaces.CuentaRepository;
@@ -8,6 +10,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class FirestoreCuentaRepository implements CuentaRepository {
+
+    private final Firestore db;
+
+    public FirestoreCuentaRepository(Firestore db) {
+        this.db = db;
+    }
+
     @Override
     public Optional<Cuenta> findByMesa(Mesa mesa) {
         return Optional.empty();

@@ -1,5 +1,6 @@
 package repository.firestore;
 
+import com.google.cloud.firestore.Firestore;
 import model.Orden;
 import model.OrdenEstado;
 import model.Pedido;
@@ -9,6 +10,13 @@ import java.util.List;
 import java.util.Optional;
 
 public class FirestoreOrdenRepository implements OrdenRepository {
+
+    private final Firestore db;
+
+    public FirestoreOrdenRepository(Firestore db) {
+        this.db = db;
+    }
+
     @Override
     public List<Orden> findByPedido(Pedido pedido) {
         return List.of();
