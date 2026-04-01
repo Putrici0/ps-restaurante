@@ -1,5 +1,5 @@
 package model;
 
-import java.util.Date;
+import java.time.Instant;
 
-public record Usuario(String id, String username, String password, Rol rol, Date fecha_creacion) { }
+public record Usuario(String id, String username, String passwordHash, Rol rol, Instant fechaCreacion) { }

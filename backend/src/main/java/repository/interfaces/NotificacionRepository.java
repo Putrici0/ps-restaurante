@@ -1,8 +1,8 @@
 package repository.interfaces;
 
-import model.Cuenta;
 import model.Notificacion;
 import model.TipoNotificacion;
+import model.Cuenta;
 
 import java.util.List;
 

@@ -1,15 +1,13 @@
 package repository.firestore;
 
-import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QuerySnapshot;
 import model.Cuenta;
 import model.Mesa;
 import model.Reserva;
 import repository.interfaces.CuentaRepository;
 
+import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 public class FirestoreCuentaRepository extends AbstractFirestoreRepository<Cuenta> implements CuentaRepository {
@@ -18,41 +16,32 @@ public class FirestoreCuentaRepository extends AbstractFirestoreRepository<Cuent
         super(db, "cuentas");
     }
 
-    // --- Record Mapping Implementation ---
-
     @Override
     protected Cuenta mapToEntity(String id, Map<String, Object> data) {
-        // We map the list of Mesas from the data (assuming IDs/basic data stored)
         List<Map<String, Object>> mesasData = (List<Map<String, Object>>) data.getOrDefault("mesas", List.of());
         List<Mesa> mesas = mesasData.stream()
-                .map(m -> new Mesa(
-                        (String) m.get("id"),
-                        ((Long) m.getOrDefault("capacidad", 0L)).intValue()
-                ))
+                .map(m -> new Mesa((String) m.get("id"), ((Long) m.getOrDefault("capacidad", 0L)).intValue()))
                 .collect(Collectors.toList());
 
-        // We handle Optional Reserva
-        Map<String, Object> reservaData = (Map<String, Object>) data.get("reserva");
+        Map<String, Object> resData = (Map<String, Object>) data.get("reserva");
         Optional<Reserva> reserva = Optional.empty();
-        if (reservaData != null) {
-            Timestamp tFecha = (Timestamp) reservaData.get("fecha");
-            Timestamp tCreacion = (Timestamp) reservaData.get("fecha_creacion");
+        if (resData != null) {
             reserva = Optional.of(new Reserva(
-                    (String) reservaData.get("id"),
-                    (String) reservaData.get("nombre"),
-                    (tFecha != null) ? tFecha.toDate() : null,
-                    ((Long) reservaData.getOrDefault("capacidad", 0L)).intValue(),
-                    (tCreacion != null) ? tCreacion.toDate() : new Date()
+                    (String) resData.get("id"),
+                    (String) resData.get("nombre"),
+                    toInstant(resData.get("fecha")),
+                    ((Long) resData.getOrDefault("capacidad", 0L)).intValue(),
+                    toInstant(resData.get("fechaCreacion"))
             ));
         }
 
-        Timestamp tCreacion = (Timestamp) data.get("fecha_creacion");
         return new Cuenta(
                 id,
                 mesas,
-                (Boolean) data.getOrDefault("payed", false),
+                get(data, "estaPagada", false),
                 reserva,
-                (tCreacion != null) ? tCreacion.toDate() : new Date()
+                toInstant(data.get("fechaCreacion")),
+                Optional.ofNullable(toInstant(data.get("fechaPago")))
         );
     }
 
@@ -60,29 +49,27 @@ public class FirestoreCuentaRepository extends AbstractFirestoreRepository<Cuent
     protected Map<String, Object> entityToMap(Cuenta cuenta) {
         Map<String, Object> map = new HashMap<>();
         
-        // Map List of Mesas to List of Maps
         List<Map<String, Object>> mesasMap = cuenta.mesas().stream()
                 .map(m -> {
-                    Map<String, Object> mesaMap = new HashMap<>();
-                    mesaMap.put("id", m.id());
-                    mesaMap.put("capacidad", m.capacidad());
-                    return mesaMap;
-                })
-                .collect(Collectors.toList());
+                    Map<String, Object> mData = new HashMap<>();
+                    mData.put("id", m.id());
+                    mData.put("capacidad", m.capacidad());
+                    return mData;
+                }).collect(Collectors.toList());
         
         map.put("mesas", mesasMap);
-        map.put("payed", cuenta.payed());
-        map.put("fecha_creacion", cuenta.fecha_creacion());
+        map.put("estaPagada", cuenta.estaPagada());
+        map.put("fechaCreacion", toTimestamp(cuenta.fechaCreacion()));
+        cuenta.fechaPago().ifPresent(f -> map.put("fechaPago", toTimestamp(f)));
 
-        // Map Optional Reserva
-        cuenta.reserva().ifPresent(res -> {
-            Map<String, Object> resMap = new HashMap<>();
-            resMap.put("id", res.id());
-            resMap.put("nombre", res.nombre());
-            resMap.put("fecha", res.fecha());
-            resMap.put("capacidad", res.capacidad());
-            resMap.put("fecha_creacion", res.fecha_creacion());
-            map.put("reserva", resMap);
+        cuenta.reserva().ifPresent(r -> {
+            Map<String, Object> rMap = new HashMap<>();
+            rMap.put("id", r.id());
+            rMap.put("nombre", r.nombre());
+            rMap.put("fecha", toTimestamp(r.fecha()));
+            rMap.put("capacidad", r.capacidad());
+            rMap.put("fechaCreacion", toTimestamp(r.fechaCreacion()));
+            map.put("reserva", rMap);
         });
 
         return map;
@@ -95,46 +82,19 @@ public class FirestoreCuentaRepository extends AbstractFirestoreRepository<Cuent
 
     @Override
     protected Cuenta createWithId(Cuenta cuenta, String id) {
-        return new Cuenta(
-                id,
-                cuenta.mesas(),
-                cuenta.payed(),
-                cuenta.reserva(),
-                cuenta.fecha_creacion()
-        );
+        return new Cuenta(id, cuenta.mesas(), cuenta.estaPagada(), cuenta.reserva(), cuenta.fechaCreacion(), cuenta.fechaPago());
     }
-
-    // --- CuentaRepository Specific Implementation ---
 
     @Override
     public Optional<Cuenta> findByMesa(Mesa mesa) {
-        // In Firestore, searching inside a list of objects (mesas) is done with array-contains
-        try {
-            // Note: This requires the exact same object map. If mesas change frequently, 
-            // it's better to store just the IDs of the mesas in a field like "mesa_ids".
-            // For now, we follow the current record structure.
-            QuerySnapshot query = collection.whereArrayContains("mesas", Map.of(
-                    "id", mesa.id(),
-                    "capacidad", mesa.capacidad()
-            )).get().get();
-            
-            return query.getDocuments().stream()
-                    .map(doc -> mapToEntity(doc.getId(), doc.getData()))
-                    .findFirst();
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error fetching cuenta by mesa", e);
-        }
+        Map<String, Object> mesaMap = new HashMap<>();
+        mesaMap.put("id", mesa.id());
+        mesaMap.put("capacidad", mesa.capacidad());
+        return buscar(collection.whereArrayContains("mesas", mesaMap)).stream().findFirst();
     }
 
     @Override
-    public List<Cuenta> findByPayed(Boolean payed) {
-        try {
-            QuerySnapshot query = collection.whereEqualTo("payed", payed).get().get();
-            return query.getDocuments().stream()
-                    .map(doc -> mapToEntity(doc.getId(), doc.getData()))
-                    .collect(Collectors.toList());
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error fetching cuentas by payed status", e);
-        }
+    public List<Cuenta> findByEstaPagada(boolean estaPagada) {
+        return buscarPorCampo("estaPagada", estaPagada);
     }
 }

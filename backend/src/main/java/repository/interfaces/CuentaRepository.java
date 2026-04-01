@@ -8,6 +8,5 @@ import java.util.Optional;
 
 public interface CuentaRepository extends Repository<Cuenta, String> {
     Optional<Cuenta> findByMesa(Mesa mesa);
-    List<Cuenta> findByPayed(Boolean payed);
+    List<Cuenta> findByEstaPagada(boolean estaPagada);
 }
-

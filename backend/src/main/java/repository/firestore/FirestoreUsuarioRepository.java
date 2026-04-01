@@ -1,17 +1,14 @@
 package repository.firestore;
 
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.QuerySnapshot;
-import com.google.cloud.Timestamp;
 import model.Rol;
 import model.Usuario;
 import repository.interfaces.UsuarioRepository;
 
-import java.util.Date;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.stream.Collectors;
 
 public class FirestoreUsuarioRepository extends AbstractFirestoreRepository<Usuario> implements UsuarioRepository {
 
@@ -19,31 +16,25 @@ public class FirestoreUsuarioRepository extends AbstractFirestoreRepository<Usua
         super(db, "usuarios");
     }
 
-    // --- Record Mapping Implementation ---
-
     @Override
     protected Usuario mapToEntity(String id, Map<String, Object> data) {
-        // We handle Firestore Timestamps to convert them back to java.util.Date
-        Timestamp timestamp = (Timestamp) data.get("fecha_creacion");
-        Date fechaCreacion = (timestamp != null) ? timestamp.toDate() : new Date();
-
         return new Usuario(
             id,
-            (String) data.get("username"),
-            (String) data.get("password"),
-            Rol.valueOf((String) data.get("rol")),
-            fechaCreacion
+            get(data, "username", ""),
+            get(data, "passwordHash", ""),
+            toEnum(Rol.class, data.get("rol"), Rol.Camarero),
+            toInstant(data.get("fechaCreacion"))
         );
     }
 
     @Override
     protected Map<String, Object> entityToMap(Usuario usuario) {
-        return Map.of(
-            "username", usuario.username(),
-            "password", usuario.password(),
-            "rol", usuario.rol().name(),
-            "fecha_creacion", usuario.fecha_creacion() // Firestore automatically converts Date to Timestamp
-        );
+        Map<String, Object> map = new HashMap<>();
+        map.put("username", usuario.username());
+        map.put("passwordHash", usuario.passwordHash());
+        map.put("rol", usuario.rol().name());
+        map.put("fechaCreacion", toTimestamp(usuario.fechaCreacion()));
+        return map;
     }
 
     @Override
@@ -53,38 +44,16 @@ public class FirestoreUsuarioRepository extends AbstractFirestoreRepository<Usua
 
     @Override
     protected Usuario createWithId(Usuario usuario, String id) {
-        return new Usuario(
-            id,
-            usuario.username(),
-            usuario.password(),
-            usuario.rol(),
-            usuario.fecha_creacion()
-        );
+        return new Usuario(id, usuario.username(), usuario.passwordHash(), usuario.rol(), usuario.fechaCreacion());
     }
-
-    // --- UsuarioRepository Specific Implementation ---
 
     @Override
     public List<Usuario> findByNombre(String nombre) {
-        try {
-            QuerySnapshot query = collection.whereEqualTo("username", nombre).get().get();
-            return query.getDocuments().stream()
-                    .map(doc -> mapToEntity(doc.getId(), doc.getData()))
-                    .collect(Collectors.toList());
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error fetching usuarios by nombre: " + nombre, e);
-        }
+        return buscarPorCampo("username", nombre);
     }
 
     @Override
     public List<Usuario> findByRol(Rol rol) {
-        try {
-            QuerySnapshot query = collection.whereEqualTo("rol", rol.name()).get().get();
-            return query.getDocuments().stream()
-                    .map(doc -> mapToEntity(doc.getId(), doc.getData()))
-                    .collect(Collectors.toList());
-        } catch (InterruptedException | ExecutionException e) {
-            throw new RuntimeException("Error fetching usuarios by rol: " + rol, e);
-        }
+        return buscarPorCampo("rol", rol.name());
     }
 }

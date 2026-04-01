@@ -1,6 +1,6 @@
 package model;
 
 import java.math.BigDecimal;
-import java.util.Date;
+import java.time.Instant;
 
-public record Orden(String id, Pedido pedido, Plato plato, BigDecimal price, OrdenEstado ordenEstado, Date fecha, String detalles){}
+public record Orden(String id, Pedido pedido, Plato plato, BigDecimal precio, OrdenEstado ordenEstado, Instant fecha, String detalles){}

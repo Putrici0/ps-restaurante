@@ -52,7 +52,8 @@ class FirestorePlatoRepositoryIntegrationTest {
         assertTrue(recuperadoOpt.isPresent(), "El plato debería existir en la base de datos");
         
         Plato recuperado = recuperadoOpt.get();
-        assertEquals(new BigDecimal("25.99"), recuperado.price(), "¡Éxito! El precio recuperado coincide al céntimo");
+        assertEquals(new BigDecimal("25.99"), recuperado.precio(), "¡Éxito! El precio recuperado coincide al céntimo");
+        assertTrue(recuperado.estaActivo());
     }
 
     @Test

@@ -1,5 +1,5 @@
 package model;
 
-import java.util.Date;
+import java.time.Instant;
 
-public record Reserva(String id, String nombre, Date fecha, int capacidad, Date fecha_creacion) { }
+public record Reserva(String id, String nombre, Instant fecha, int capacidad, Instant fechaCreacion) { }
