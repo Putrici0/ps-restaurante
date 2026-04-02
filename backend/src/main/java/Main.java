@@ -1,3 +1,7 @@
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.cloud.firestore.Firestore;
 import config.FirebaseConfig;
 import controller.CuentaController;
@@ -8,6 +12,7 @@ import controller.PedidoController;
 import controller.PlatoController;
 import controller.ReservaController;
 import io.javalin.Javalin;
+import io.javalin.json.JavalinJackson;
 import repository.firestore.FirestoreCuentaRepository;
 import repository.firestore.FirestoreMesaRepository;
 import repository.firestore.FirestoreNotificacionRepository;
@@ -53,7 +58,13 @@ public class Main {
         OrdenController ordenController = new OrdenController(ordenService);
         NotificacionController notificacionController = new NotificacionController(notificacionService);
 
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new Jdk8Module());
+        objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         Javalin app = Javalin.create(config -> {
+            config.jsonMapper(new JavalinJackson());
 
             config.bundledPlugins.enableCors(cors -> {
                 cors.addRule(rule -> {
