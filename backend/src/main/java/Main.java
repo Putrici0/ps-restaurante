@@ -55,6 +55,12 @@ public class Main {
 
         Javalin app = Javalin.create(config -> {
 
+            config.bundledPlugins.enableCors(cors -> {
+                cors.addRule(rule -> {
+                    rule.anyHost();
+                });
+            });
+
             config.routes.get("/", ctx -> ctx.result("API del restaurante funcionando"));
             config.routes.get("/health", ctx -> ctx.result("OK"));
 

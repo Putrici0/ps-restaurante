@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tester API Restaurante</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            color: #222;
+        }
+        h1, h2, h3 { margin-top: 0; }
+        .topbar {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .stack { display: grid; gap: 10px; }
+        label {
+            display: grid;
+            gap: 6px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        input, select, textarea, button {
+            font: inherit;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #bbb;
+            border-radius: 8px;
+            background: #fff;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        button {
+            border: 0;
+            border-radius: 8px;
+            padding: 10px 14px;
+            cursor: pointer;
+            background: #222;
+            color: white;
+        }
+        button.secondary { background: #666; }
+        button.danger { background: #9d1c1c; }
+        button.small { padding: 7px 10px; font-size: 13px; }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .muted { color: #666; font-size: 14px; }
+        .mono {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .result {
+            background: #111;
+            color: #f3f3f3;
+            border-radius: 8px;
+            padding: 12px;
+            max-height: 320px;
+            overflow: auto;
+        }
+        .ok { color: #0a7f28; }
+        .bad { color: #b10000; }
+        .entity-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 16px;
+        }
+        .list-item {
+            border: 1px solid #e3e3e3;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 8px;
+            background: #fafafa;
+        }
+        .pill {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 12px;
+            background: #ececec;
+            margin-right: 4px;
+            margin-bottom: 4px;
+        }
+        @media (max-width: 900px) {
+            .grid-2, .grid-3 { grid-template-columns: 1fr; }
+            .topbar { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="topbar card">
+    <div>
+        <h1>Tester API Restaurante</h1>
+        <div class="muted">Página simple para probar crear, listar, ver y borrar en tu backend.</div>
+    </div>
+    <label>
+        Base URL
+        <input id="baseUrl" value="http://localhost:7070" />
+    </label>
+</div>
+
+<div class="card stack">
+    <h2>Pruebas rápidas</h2>
+    <div class="row">
+        <button onclick="ping('/')">GET /</button>
+        <button onclick="ping('/health')">GET /health</button>
+        <button class="secondary" onclick="loadAll()">Recargar todo</button>
+        <button class="secondary" onclick="clearOutput()">Limpiar salida</button>
+    </div>
+    <div id="quickStatus" class="muted"></div>
+    <div id="output" class="result mono">Aquí saldrán las respuestas de la API.</div>
+</div>
+
+<div class="entity-grid">
+    <section class="card stack">
+        <h2>Mesas</h2>
+        <div class="grid-2">
+            <label>
+                Capacidad
+                <input id="mesaCapacidad" type="number" min="1" value="4" />
+            </label>
+        </div>
+        <div class="row">
+            <button onclick="crearMesa()">Crear mesa</button>
+            <button class="secondary" onclick="listarMesas()">Listar mesas</button>
+        </div>
+        <div id="mesasList"></div>
+    </section>
+
+    <section class="card stack">
+        <h2>Platos</h2>
+        <div class="grid-2">
+            <label>
+                Nombre
+                <input id="platoNombre" value="Croquetas" />
+            </label>
+            <label>
+                Categoría
+                <select id="platoCategoria">
+                    <option>Bebida</option>
+                    <option selected>Entrante</option>
+                    <option>Principal</option>
+                    <option>Postre</option>
+                </select>
+            </label>
+            <label>
+                Precio
+                <input id="platoPrecio" value="8.50" />
+            </label>
+            <label>
+                Activo
+                <select id="platoActivo">
+                    <option value="true" selected>true</option>
+                    <option value="false">false</option>
+                </select>
+            </label>
+        </div>
+        <label>
+            Descripción
+            <textarea id="platoDescripcion">Croquetas caseras</textarea>
+        </label>
+        <div class="row">
+            <button onclick="crearPlato()">Crear plato</button>
+            <button class="secondary" onclick="listarPlatos()">Listar platos</button>
+        </div>
+        <div id="platosList"></div>
+    </section>
+
+    <section class="card stack">
+        <h2>Reservas</h2>
+        <div class="grid-2">
+            <label>
+                Nombre
+                <input id="reservaNombre" value="Reserva prueba" />
+            </label>
+            <label>
+                Capacidad
+                <input id="reservaCapacidad" type="number" min="1" value="4" />
+            </label>
+            <label>
+                Fecha y hora (ISO)
+                <input id="reservaFecha" />
+            </label>
+        </div>
+        <div class="row">
+            <button onclick="ponerFechaActualReserva()" class="secondary">Poner fecha ejemplo</button>
+            <button onclick="crearReserva()">Crear reserva</button>
+            <button class="secondary" onclick="listarReservas()">Listar reservas</button>
+        </div>
+        <div id="reservasList"></div>
+    </section>
+
+    <section class="card stack">
+        <h2>Cuentas</h2>
+        <div class="muted">Necesita IDs de mesas existentes. Opcionalmente puedes poner una reserva.</div>
+        <div class="grid-2">
+            <label>
+                IDs de mesas (separados por comas)
+                <input id="cuentaMesasIds" placeholder="idMesa1,idMesa2" />
+            </label>
+            <label>
+                ¿Está pagada?
+                <select id="cuentaPagada">
+                    <option value="false" selected>false</option>
+                    <option value="true">true</option>
+                </select>
+            </label>
+            <label>
+                ID de reserva (opcional)
+                <input id="cuentaReservaId" placeholder="idReserva" />
+            </label>
+        </div>
+        <div class="row">
+            <button onclick="crearCuenta()">Crear cuenta</button>
+            <button class="secondary" onclick="listarCuentas()">Listar cuentas</button>
+        </div>
+        <div id="cuentasList"></div>
+    </section>
+
+    <section class="card stack">
+        <h2>Pedidos</h2>
+        <div class="muted">Necesita una cuenta existente.</div>
+        <div class="grid-2">
+            <label>
+                ID de cuenta
+                <input id="pedidoCuentaId" placeholder="idCuenta" />
+            </label>
+            <label>
+                Estado
+                <input id="pedidoEstado" value="Pendiente" />
+            </label>
+        </div>
+        <div class="row">
+            <button onclick="crearPedido()">Crear pedido</button>
+            <button class="secondary" onclick="listarPedidos()">Listar pedidos</button>
+        </div>
+        <div id="pedidosList"></div>
+    </section>
+
+    <section class="card stack">
+        <h2>Órdenes</h2>
+        <div class="muted">Necesita un pedido y un plato existentes.</div>
+        <div class="grid-2">
+            <label>
+                ID de pedido
+                <input id="ordenPedidoId" placeholder="idPedido" />
+            </label>
+            <label>
+                ID de plato
+                <input id="ordenPlatoId" placeholder="idPlato" />
+            </label>
+            <label>
+                Precio
+                <input id="ordenPrecio" value="8.50" />
+            </label>
+            <label>
+                Estado
+                <input id="ordenEstado" value="Pendiente" />
+            </label>
+        </div>
+        <label>
+            Detalles
+            <textarea id="ordenDetalles">Sin cebolla</textarea>
+        </label>
+        <div class="row">
+            <button onclick="crearOrden()">Crear orden</button>
+            <button class="secondary" onclick="listarOrdenes()">Listar órdenes</button>
+        </div>
+        <div id="ordenesList"></div>
+    </section>
+
+    <section class="card stack">
+        <h2>Notificaciones</h2>
+        <div class="muted">Necesita una cuenta existente.</div>
+        <div class="grid-2">
+            <label>
+                ID de cuenta
+                <input id="notiCuentaId" placeholder="idCuenta" />
+            </label>
+            <label>
+                Tipo
+                <input id="notiTipo" value="ATENCION" />
+            </label>
+            <label>
+                Leída
+                <select id="notiLeida">
+                    <option value="false" selected>false</option>
+                    <option value="true">true</option>
+                </select>
+            </label>
+        </div>
+        <div class="row">
+            <button onclick="crearNotificacion()">Crear notificación</button>
+            <button class="secondary" onclick="listarNotificaciones()">Listar notificaciones</button>
+        </div>
+        <div id="notificacionesList"></div>
+    </section>
+</div>
+
+<script>
+    const output = document.getElementById('output');
+    const quickStatus = document.getElementById('quickStatus');
+
+    function baseUrl() {
+        return document.getElementById('baseUrl').value.trim().replace(/\/$/, '');
+    }
+
+    function setOutput(title, data) {
+        output.textContent = `[${new Date().toLocaleTimeString()}] ${title}\n\n` +
+            (typeof data === 'string' ? data : JSON.stringify(data, null, 2));
+    }
+
+    function clearOutput() {
+        output.textContent = 'Salida limpiada.';
+        quickStatus.textContent = '';
+    }
+
+    async function api(path, options = {}) {
+        const response = await fetch(baseUrl() + path, {
+            headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+            ...options,
+        });
+
+        const text = await response.text();
+        let body;
+        try {
+            body = text ? JSON.parse(text) : null;
+        } catch {
+            body = text;
+        }
+
+        setOutput(`${options.method || 'GET'} ${path} -> ${response.status}`, body ?? '(sin cuerpo)');
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${typeof body === 'string' ? body : JSON.stringify(body)}`);
+        }
+
+        return body;
+    }
+
+    async function ping(path) {
+        try {
+            const data = await api(path);
+            quickStatus.innerHTML = `<span class="ok">OK:</span> ${path}`;
+            return data;
+        } catch (e) {
+            quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`;
+        }
+    }
+
+    function isoPlusHours(hours = 2) {
+        const d = new Date(Date.now() + hours * 60 * 60 * 1000);
+        return new Date(d.getTime() - d.getMilliseconds()).toISOString();
+    }
+
+    function ponerFechaActualReserva() {
+        document.getElementById('reservaFecha').value = isoPlusHours(2);
+    }
+    ponerFechaActualReserva();
+
+    function renderList(containerId, items, labelBuilder, pathBase) {
+        const container = document.getElementById(containerId);
+        if (!Array.isArray(items) || items.length === 0) {
+            container.innerHTML = '<div class="muted">No hay elementos.</div>';
+            return;
+        }
+
+        container.innerHTML = items.map(item => `
+        <div class="list-item">
+          <div><strong>ID:</strong> <span class="mono">${escapeHtml(item.id ?? '(sin id)')}</span></div>
+          <div style="margin:8px 0;">${labelBuilder(item)}</div>
+          <div class="row">
+            <button class="small secondary" onclick="verPorId('${pathBase}', '${escapeJs(item.id)}')">Ver por ID</button>
+            <button class="small danger" onclick="borrarPorId('${pathBase}', '${escapeJs(item.id)}', loadAll)">Borrar</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function escapeJs(value) {
+        return String(value).replace(/'/g, "\\'");
+    }
+
+    async function verPorId(pathBase, id) {
+        try {
+            await api(`/${pathBase}/${id}`);
+        } catch (e) {
+            quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`;
+        }
+    }
+
+    async function borrarPorId(pathBase, id, callback) {
+        if (!confirm(`¿Borrar ${pathBase} con id ${id}?`)) return;
+        try {
+            await api(`/${pathBase}/${id}`, { method: 'DELETE' });
+            if (callback) await callback();
+        } catch (e) {
+            quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`;
+        }
+    }
+
+    async function crearMesa() {
+        const payload = { capacidad: Number(document.getElementById('mesaCapacidad').value) };
+        try {
+            await api('/mesas', { method: 'POST', body: JSON.stringify(payload) });
+            await listarMesas();
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function listarMesas() {
+        try {
+            const items = await api('/mesas');
+            renderList('mesasList', items, item => `<span class="pill">Capacidad: ${item.capacidad}</span>`, 'mesas');
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function crearPlato() {
+        const payload = {
+            nombre: document.getElementById('platoNombre').value,
+            categoria: document.getElementById('platoCategoria').value,
+            descripcion: document.getElementById('platoDescripcion').value,
+            precio: document.getElementById('platoPrecio').value,
+            estaActivo: document.getElementById('platoActivo').value === 'true',
+        };
+        try {
+            await api('/platos', { method: 'POST', body: JSON.stringify(payload) });
+            await listarPlatos();
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function listarPlatos() {
+        try {
+            const items = await api('/platos');
+            renderList('platosList', items, item => `
+          <span class="pill">${escapeHtml(item.nombre)}</span>
+          <span class="pill">${escapeHtml(item.categoria)}</span>
+          <span class="pill">${escapeHtml(item.precio)}</span>
+          <span class="pill">Activo: ${escapeHtml(item.estaActivo)}</span>
+        `, 'platos');
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function crearReserva() {
+        const payload = {
+            nombre: document.getElementById('reservaNombre').value,
+            fecha: document.getElementById('reservaFecha').value,
+            capacidad: Number(document.getElementById('reservaCapacidad').value),
+        };
+        try {
+            await api('/reservas', { method: 'POST', body: JSON.stringify(payload) });
+            await listarReservas();
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function listarReservas() {
+        try {
+            const items = await api('/reservas');
+            renderList('reservasList', items, item => `
+          <span class="pill">${escapeHtml(item.nombre)}</span>
+          <span class="pill">Capacidad: ${escapeHtml(item.capacidad)}</span>
+          <span class="pill">${escapeHtml(item.fecha)}</span>
+        `, 'reservas');
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function crearCuenta() {
+        const mesasIdsRaw = document.getElementById('cuentaMesasIds').value.trim();
+        const reservaId = document.getElementById('cuentaReservaId').value.trim();
+        const payload = {
+            mesasIds: mesasIdsRaw ? mesasIdsRaw.split(',').map(v => v.trim()).filter(Boolean) : [],
+            estaPagada: document.getElementById('cuentaPagada').value === 'true',
+            reservaId: reservaId || null,
+        };
+        try {
+            await api('/cuentas', { method: 'POST', body: JSON.stringify(payload) });
+            await listarCuentas();
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function listarCuentas() {
+        try {
+            const items = await api('/cuentas');
+            renderList('cuentasList', items, item => `
+          <span class="pill">Pagada: ${escapeHtml(item.estaPagada)}</span>
+          <span class="pill">Mesas: ${(item.mesas || []).length}</span>
+          <span class="pill">Reserva: ${item.reserva ? 'sí' : 'no'}</span>
+        `, 'cuentas');
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function crearPedido() {
+        const payload = {
+            cuentaId: document.getElementById('pedidoCuentaId').value.trim(),
+            estado: document.getElementById('pedidoEstado').value.trim(),
+        };
+        try {
+            await api('/pedidos', { method: 'POST', body: JSON.stringify(payload) });
+            await listarPedidos();
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function listarPedidos() {
+        try {
+            const items = await api('/pedidos');
+            renderList('pedidosList', items, item => `
+          <span class="pill">Estado: ${escapeHtml(item.estado ?? item.pedidoEstado)}</span>
+          <span class="pill">Cuenta: ${escapeHtml(item.cuenta?.id ?? '')}</span>
+        `, 'pedidos');
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function crearOrden() {
+        const payload = {
+            pedidoId: document.getElementById('ordenPedidoId').value.trim(),
+            platoId: document.getElementById('ordenPlatoId').value.trim(),
+            precio: document.getElementById('ordenPrecio').value.trim(),
+            estado: document.getElementById('ordenEstado').value.trim(),
+            detalles: document.getElementById('ordenDetalles').value,
+        };
+        try {
+            await api('/ordenes', { method: 'POST', body: JSON.stringify(payload) });
+            await listarOrdenes();
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function listarOrdenes() {
+        try {
+            const items = await api('/ordenes');
+            renderList('ordenesList', items, item => `
+          <span class="pill">Estado: ${escapeHtml(item.estado ?? item.ordenEstado)}</span>
+          <span class="pill">Precio: ${escapeHtml(item.precio ?? item.price)}</span>
+          <span class="pill">Pedido: ${escapeHtml(item.pedido?.id ?? '')}</span>
+          <span class="pill">Plato: ${escapeHtml(item.plato?.id ?? '')}</span>
+        `, 'ordenes');
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function crearNotificacion() {
+        const payload = {
+            cuentaId: document.getElementById('notiCuentaId').value.trim(),
+            tipo: document.getElementById('notiTipo').value.trim(),
+            leida: document.getElementById('notiLeida').value === 'true',
+        };
+        try {
+            await api('/notificaciones', { method: 'POST', body: JSON.stringify(payload) });
+            await listarNotificaciones();
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function listarNotificaciones() {
+        try {
+            const items = await api('/notificaciones');
+            renderList('notificacionesList', items, item => `
+          <span class="pill">Tipo: ${escapeHtml(item.tipo)}</span>
+          <span class="pill">Leída: ${escapeHtml(item.leida)}</span>
+          <span class="pill">Cuenta: ${escapeHtml(item.cuenta?.id ?? '')}</span>
+        `, 'notificaciones');
+        } catch (e) { quickStatus.innerHTML = `<span class="bad">Error:</span> ${e.message}`; }
+    }
+
+    async function loadAll() {
+        await Promise.allSettled([
+            listarMesas(),
+            listarPlatos(),
+            listarReservas(),
+            listarCuentas(),
+            listarPedidos(),
+            listarOrdenes(),
+            listarNotificaciones(),
+        ]);
+    }
+
+    loadAll();
+</script>
+</body>
+</html>
