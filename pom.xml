@@ -6,7 +6,7 @@
 
     <groupId>es.ulpgc.ps</groupId>
     <artifactId>restaurante</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.2-ALPHA</version>
 
     <properties>
         <maven.compiler.source>26</maven.compiler.source>
@@ -16,27 +16,31 @@
     </properties>
 
     <dependencies>
-        <!-- Firebase Admin SDK -->
         <dependency>
             <groupId>com.google.firebase</groupId>
             <artifactId>firebase-admin</artifactId>
             <version>9.3.0</version>
         </dependency>
 
-        <!-- Javalin REST Framework -->
         <dependency>
             <groupId>io.javalin</groupId>
             <artifactId>javalin</artifactId>
             <version>7.1.0</version>
         </dependency>
 
-        <!-- TESTING (Solo JUnit 5 para Tests de Integración) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+            <version>2.0.17</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
             <version>${junit.version}</version>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
@@ -46,6 +50,21 @@
     </dependencies>
 
     <build>
+        <sourceDirectory>backend/src/main/java</sourceDirectory>
+        <testSourceDirectory>backend/src/test</testSourceDirectory>
+
+        <resources>
+            <resource>
+                <directory>backend/src/main/resources</directory>
+            </resource>
+        </resources>
+
+        <testResources>
+            <testResource>
+                <directory>backend/src/test/resources</directory>
+            </testResource>
+        </testResources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -56,6 +75,7 @@
                     <target>${maven.compiler.target}</target>
                 </configuration>
             </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
