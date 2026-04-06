@@ -97,4 +97,18 @@ public class FirestoreCuentaRepository extends AbstractFirestoreRepository<Cuent
     public List<Cuenta> findByEstaPagada(boolean estaPagada) {
         return buscarPorCampo("estaPagada", estaPagada);
     }
+
+    @Override
+    public Optional<Cuenta> findActiveByMesa(Mesa mesa) {
+        Map<String, Object> mesaMap = new HashMap<>();
+        mesaMap.put("id", mesa.id());
+        mesaMap.put("capacidad", mesa.capacidad());
+
+        return buscar(collection
+                .whereArrayContains("mesas", mesaMap)
+                .whereEqualTo("estaPagada", false)
+                .limit(1))
+                .stream()
+                .findFirst();
+    }
 }

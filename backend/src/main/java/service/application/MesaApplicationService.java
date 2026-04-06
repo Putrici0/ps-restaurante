@@ -1,4 +1,4 @@
-package service;
+package service.application;
 
 import model.Cuenta;
 import model.Mesa;
@@ -10,7 +10,6 @@ import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -48,12 +47,8 @@ public class MesaApplicationService {
 
     public Optional<Cuenta> obtenerCuentaActivaDeMesa(String mesaId) {
         Mesa mesa = obtenerMesa(mesaId);
-
-        return cuentaRepository.findAll().stream()
-                .filter(cuenta -> cuenta.mesas() != null)
-                .filter(cuenta -> cuenta.mesas().stream().anyMatch(m -> m.id().equals(mesa.id())))
-                .filter(cuenta -> !cuenta.estaPagada())
-                .findFirst();
+        // Optimización: Una sola consulta filtrada en Google Cloud
+        return cuentaRepository.findActiveByMesa(mesa);
     }
 
     public Cuenta ocuparMesa(String mesaId) {
@@ -76,45 +71,22 @@ public class MesaApplicationService {
     }
 
     public void liberarMesa(String mesaId) {
-        Optional<Cuenta> cuentaActiva = obtenerCuentaActivaDeMesa(mesaId);
-
-        if (cuentaActiva.isEmpty()) {
-            return;
+        if (estaOcupada(mesaId)) {
+            throw new IllegalArgumentException("No se puede liberar la mesa porque su cuenta sigue activa");
         }
-
-        throw new IllegalArgumentException("No se puede liberar la mesa porque su cuenta sigue activa");
     }
 
     public List<Pedido> obtenerPedidosActivosDeMesa(String mesaId) {
-        Optional<Cuenta> cuentaActiva = obtenerCuentaActivaDeMesa(mesaId);
-
-        if (cuentaActiva.isEmpty()) {
-            return List.of();
-        }
-
-        String cuentaId = cuentaActiva.get().id();
-
-        return pedidoRepository.findAll().stream()
-                .filter(pedido -> pedido.cuenta() != null)
-                .filter(pedido -> pedido.cuenta().id() != null)
-                .filter(pedido -> pedido.cuenta().id().equals(cuentaId))
-                .toList();
+        return obtenerCuentaActivaDeMesa(mesaId)
+                .map(pedidoRepository::findByCuenta) // Optimización: Búsqueda directa por ID de cuenta
+                .orElse(List.of());
     }
 
     public List<Orden> obtenerOrdenesActivasDeMesa(String mesaId) {
         List<Pedido> pedidos = obtenerPedidosActivosDeMesa(mesaId);
-        List<Orden> ordenes = new ArrayList<>();
-
-        for (Pedido pedido : pedidos) {
-            List<Orden> ordenesPedido = ordenRepository.findAll().stream()
-                    .filter(orden -> orden.pedido() != null)
-                    .filter(orden -> orden.pedido().id() != null)
-                    .filter(orden -> orden.pedido().id().equals(pedido.id()))
-                    .toList();
-
-            ordenes.addAll(ordenesPedido);
-        }
-
-        return ordenes;
+        // Optimización: flatMap para evitar bucles pesados y múltiples lecturas innecesarias
+        return pedidos.stream()
+                .flatMap(pedido -> ordenRepository.findByPedido(pedido).stream())
+                .toList();
     }
 }
