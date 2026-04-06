@@ -1,0 +1,21 @@
+.mesa-card {
+  width: 110px;
+  height: 70px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: white;
+  font-weight: bold;
+  gap: 4px;
+}
+
+.mesa-numero { font-size: 1.2rem; }
+.mesa-capacidad { font-size: 0.7rem; background: rgba(255,255,255,0.3); padding: 1px 6px; border-radius: 10px; }
+
+.libre     { background-color: #4caf50; }
+.ocupada   { background-color: #c0392b; }
+.reservada { background-color: #8e44ad; }
+.seleccionada { outline: 3px solid #333; }

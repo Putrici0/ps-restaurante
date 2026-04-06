@@ -1,0 +1,19 @@
+<div class="detalle-panel">
+  <p class="detalle-label">MESA SELECCIONADA</p>
+  <h2>{{ mesa.id }}</h2>
+  <p class="detalle-cap">{{ mesa.capacidad }} Pax</p>
+
+  <div class="acciones">
+    <button class="accion">🔒 Reservar Mesa</button>
+    <button class="accion">🍽️ Cobrar</button>
+    <button class="accion">📋 Ver Cuenta</button>
+    <button class="accion">🛒 Hacer Pedido</button>
+    <button class="accion">🔑 Mostrar Contraseña</button>
+  </div>
+
+  @if (mesa.estado === 'libre') {
+    <button class="btn-ocupar">OCUPAR MESA</button>
+  } @else {
+    <button class="btn-liberar">LIBERAR MESA</button>
+  }
+</div>

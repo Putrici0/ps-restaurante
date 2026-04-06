@@ -1,0 +1,29 @@
+.navbar {
+  display: flex;
+  align-items: center;
+  padding: 0 2rem;
+  height: 64px;
+  background-color: #c8a98a;
+}
+
+.navbar-logo img {
+  height: 40px;
+}
+
+.navbar-links {
+  display: flex;
+  gap: 3rem;
+  margin-left: 3rem;
+}
+
+.navbar-links a {
+  text-decoration: none;
+  color: #3a2a1a;
+  font-weight: 600;
+  font-size: 0.9rem;
+  letter-spacing: 0.05em;
+}
+
+.navbar-links a.active {
+  text-decoration: underline;
+}

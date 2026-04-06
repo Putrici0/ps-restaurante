@@ -1,0 +1,15 @@
+.mesas-page { padding: 1.5rem; background: #e8dcc8; min-height: calc(100vh - 64px); }
+
+.controles { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+
+.zonas button { padding: 6px 16px; border: 1px solid #aaa; background: white; cursor: pointer; font-size: 0.85rem; }
+.zonas button.activo { background: #c8a98a; color: white; border-color: #c8a98a; }
+
+.leyenda { display: flex; gap: 1rem; font-size: 0.8rem; align-items: center; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.dot.ocupada { background: #c0392b; }
+.dot.reservada { background: #8e44ad; }
+.dot.libre { background: #4caf50; }
+
+.contenido { display: flex; gap: 2rem; }
+.grid-mesas { display: grid; grid-template-columns: repeat(3, 110px); gap: 1rem; }

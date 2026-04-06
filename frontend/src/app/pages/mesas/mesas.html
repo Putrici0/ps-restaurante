@@ -1,0 +1,31 @@
+<div class="mesas-page">
+  <div class="controles">
+    <div class="zonas">
+      <button [class.activo]="zona === 'interior'" (click)="zona = 'interior'">INTERIOR</button>
+      <button [class.activo]="zona === 'terraza'" (click)="zona = 'terraza'">TERRAZA</button>
+    </div>
+    <div class="leyenda">
+      <span class="dot ocupada"></span> Ocupada
+      <span class="dot reservada"></span> Reservada
+      <span class="dot libre"></span> Libre
+    </div>
+  </div>
+
+  <div class="contenido">
+    <div class="grid-mesas">
+      @for (mesa of mesasActuales; track mesa.id) {
+        <app-mesa-card
+          [numero]="mesa.id"
+          [capacidad]="mesa.capacidad"
+          [estado]="mesa.estado"
+          [seleccionada]="mesaSeleccionada?.id === mesa.id"
+          (click)="seleccionar(mesa)">
+        </app-mesa-card>
+      }
+    </div>
+
+    @if (mesaSeleccionada) {
+      <app-mesa-detalle [mesa]="mesaSeleccionada"></app-mesa-detalle>
+    }
+  </div>
+</div>
