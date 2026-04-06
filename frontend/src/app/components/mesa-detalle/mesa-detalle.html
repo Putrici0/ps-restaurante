@@ -1,19 +1,33 @@
 <div class="detalle-panel">
-  <p class="detalle-label">MESA SELECCIONADA</p>
-  <h2>{{ mesa.id }}</h2>
-  <p class="detalle-cap">{{ mesa.capacidad }} Pax</p>
-
-  <div class="acciones">
-    <button class="accion">🔒 Reservar Mesa</button>
-    <button class="accion">🍽️ Cobrar</button>
-    <button class="accion">📋 Ver Cuenta</button>
-    <button class="accion">🛒 Hacer Pedido</button>
-    <button class="accion">🔑 Mostrar Contraseña</button>
+  <div class="header-detalle">
+    <p class="detalle-label">MESA SELECCIONADA</p>
+    <h2>MESA{{ mesa.id }}</h2>
+    <p class="detalle-cap">{{ mesa.capacidad }} Pax</p>
   </div>
 
-  @if (mesa.estado === 'libre') {
-    <button class="btn-ocupar">OCUPAR MESA</button>
-  } @else {
-    <button class="btn-liberar">LIBERAR MESA</button>
-  }
+  <div class="acciones">
+    <button class="accion">
+      <span class="iconify" data-icon="solar:calendar-bold-duotone"></span> Reservar Mesa
+    </button>
+    <button class="accion">
+      <span class="iconify" data-icon="solar:wallet-bold-duotone"></span> Cobrar
+    </button>
+    <button class="accion">
+      <span class="iconify" data-icon="solar:bill-list-bold-duotone"></span> Ver Cuenta
+    </button>
+    <button class="accion">
+      <span class="iconify" data-icon="solar:cart-large-bold-duotone"></span> Hacer Pedido
+    </button>
+    <button class="accion">
+      <span class="iconify" data-icon="solar:key-minimalistic-bold-duotone"></span> Contraseña
+    </button>
+  </div>
+
+  <div class="estado-accion">
+    @if (mesa.estado === 'libre') {
+      <button class="btn-principal ocupar">OCUPAR MESA</button>
+    } @else {
+      <button class="btn-principal liberar">LIBERAR MESA</button>
+    }
+  </div>
 </div>

@@ -1,31 +1,40 @@
-<div class="mesas-page">
-  <div class="controles">
+<div class="mesas-page"
+     (click)="cerrarSeleccion($event)"
+     [class.panel-abierto]="mesaSeleccionada()">
+
+  <div class="controles" [class.seleccion-activa]="mesaSeleccionada()">
     <div class="zonas">
-      <button [class.activo]="zona === 'interior'" (click)="zona = 'interior'">INTERIOR</button>
-      <button [class.activo]="zona === 'terraza'" (click)="zona = 'terraza'">TERRAZA</button>
+      <button [class.activo]="zona() === 'interior'" (click)="cambiarZona('interior')">INTERIOR</button>
+      <button [class.activo]="zona() === 'terraza'" (click)="cambiarZona('terraza')">TERRAZA</button>
     </div>
-    <div class="leyenda">
-      <span class="dot ocupada"></span> Ocupada
-      <span class="dot reservada"></span> Reservada
-      <span class="dot libre"></span> Libre
+
+    <div class="acciones-derecha">
+      <button class="btn-editar">EDITAR</button>
+      <div class="leyenda">
+        <div class="pill"><span class="dot ocupada"></span> Ocupado</div>
+        <div class="pill"><span class="dot reservada"></span> Reservado</div>
+        <div class="pill"><span class="dot libre"></span> Libre</div>
+      </div>
     </div>
   </div>
 
   <div class="contenido">
-    <div class="grid-mesas">
-      @for (mesa of mesasActuales; track mesa.id) {
+    <div class="grid-mesas" [class.layout-terraza]="zona() === 'terraza'">
+      @for (mesa of mesasActuales(); track mesa.id) {
         <app-mesa-card
           [numero]="mesa.id"
           [capacidad]="mesa.capacidad"
           [estado]="mesa.estado"
-          [seleccionada]="mesaSeleccionada?.id === mesa.id"
-          (click)="seleccionar(mesa)">
+          [seleccionada]="mesaSeleccionada()?.id === mesa.id"
+          (click)="seleccionar(mesa); $event.stopPropagation()">
         </app-mesa-card>
       }
     </div>
 
-    @if (mesaSeleccionada) {
-      <app-mesa-detalle [mesa]="mesaSeleccionada"></app-mesa-detalle>
+    @if (mesaSeleccionada(); as mesaSel) {
+      <div class="sidebar-detalle">
+        <app-mesa-detalle [mesa]="mesaSel"></app-mesa-detalle>
+      </div>
     }
   </div>
 </div>

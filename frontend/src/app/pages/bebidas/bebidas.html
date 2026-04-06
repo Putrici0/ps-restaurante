@@ -1,1 +1,49 @@
-<p>bebidas works!</p>
+<div class="bebidas-page">
+  <div class="header-bebidas">
+    <h1>Cola de Bebidas</h1>
+    <div class="contador-pendientes">
+      <span class="dot rojo"></span> {{ pendientesCount() }} Pendientes
+    </div>
+  </div>
+
+  <div class="lista-pedidos">
+    @for (pedido of pedidosOrdenados(); track pedido.id) {
+      <div class="pedido-card" [class.es-listo]="pedido.estado === 'listo'">
+
+        <div class="bloque-mesa">
+          <div class="indicador-color"></div>
+          <div class="mesa-texto">
+            <span>MESA</span>
+            <strong>{{ pedido.mesa }}</strong>
+          </div>
+        </div>
+
+        <div class="bloque-contenido">
+          <div class="info-superior">
+            <span class="pildora-estado">{{ pedido.estado | titlecase }}</span>
+            <span class="tiempo">{{ pedido.tiempo }}</span>
+          </div>
+          <div class="lista-items">
+            @for (item of pedido.items; track $index) {
+              <div class="item">
+                <strong>{{ item.cantidad }}</strong> {{ item.nombre }}
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="bloque-accion">
+          @if (pedido.estado === 'pendiente') {
+            <button class="btn-servir" (click)="toggleEstado(pedido)">LISTO PARA SERVIR</button>
+          } @else {
+            <button class="btn-cancelar" (click)="toggleEstado(pedido)">
+              CANCELAR
+              <span class="iconify" data-icon="solar:close-circle-bold"></span>
+            </button>
+          }
+        </div>
+
+      </div>
+    }
+  </div>
+</div>

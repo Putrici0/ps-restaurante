@@ -1,21 +1,35 @@
 .mesa-card {
-  width: 110px;
-  height: 70px;
-  border-radius: 8px;
+  width: 100%; /* Se adaptará al grid */
+  height: 120px;
+  border-radius: 12px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row; /* Horizontal */
   align-items: center;
-  justify-content: center;
+  justify-content: center; /* M1 a la izq, Pax a la der */
+  gap: 4rem;
+  padding: 0 1.5rem;
   cursor: pointer;
-  color: white;
-  font-weight: bold;
-  gap: 4px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1); /* Sombra suave de Figma */
+  box-sizing: border-box;
 }
 
-.mesa-numero { font-size: 1.2rem; }
-.mesa-capacidad { font-size: 0.7rem; background: rgba(255,255,255,0.3); padding: 1px 6px; border-radius: 10px; }
+.mesa-numero {
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: #1a1a1a;
+}
 
-.libre     { background-color: #4caf50; }
-.ocupada   { background-color: #c0392b; }
-.reservada { background-color: #8e44ad; }
-.seleccionada { outline: 3px solid #333; }
+.mesa-capacidad {
+  font-size: 1rem;
+  background: rgba(255,255,255,0.4);
+  padding: 4px 12px;
+  border-radius: 20px;
+  color: #1a1a1a;
+  font-weight: 600;
+}
+
+/* Colores vibrantes del diseño */
+.libre     { background-color: #15cc15; }
+.ocupada   { background-color: #b31c1c; }
+.reservada { background-color: #9b59b6; }
+.seleccionada { outline: 3px solid #333; outline-offset: 2px; }

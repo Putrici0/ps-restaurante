@@ -1,5 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Mesa } from '../../models/mesa.model'; // Importado
 
 @Component({
   selector: 'app-mesa-detalle',
@@ -9,5 +10,6 @@ import { CommonModule } from '@angular/common';
   styleUrl: './mesa-detalle.css',
 })
 export class MesaDetalleComponent {
-  @Input() mesa: any = null;
+  // Ahora Angular sabe exactamente qué es esto
+  @Input({ required: true }) mesa!: Mesa;
 }
