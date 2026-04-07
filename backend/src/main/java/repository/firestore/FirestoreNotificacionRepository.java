@@ -1,9 +1,7 @@
 package repository.firestore;
 
 import com.google.cloud.firestore.Firestore;
-import model.Cuenta;
-import model.Notificacion;
-import model.TipoNotificacion;
+import model.*;
 import repository.interfaces.NotificacionRepository;
 
 import java.time.Instant;
@@ -23,7 +21,15 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
         Map<String, Object> cData = (Map<String, Object>) data.get("cuenta");
         Cuenta cuenta = null;
         if (cData != null) {
-            cuenta = new Cuenta((String) cData.get("id"), List.of(), get(cData, "estaPagada", false), Optional.empty(), toInstant(cData.get("fechaCreacion")), Optional.empty());
+            cuenta = new Cuenta(
+                    (String) cData.get("id"),
+                    List.<Mesa>of(),
+                    get(cData, "estaPagada", false),
+                    Optional.<Reserva>empty(),
+                    toInstant(cData.get("fechaCreacion")),
+                    Optional.<Instant>empty(),
+                    cData.get("password") != null ? (String) cData.get("password") : ""
+            );
         }
 
         return new Notificacion(
@@ -41,7 +47,7 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
         if (notificacion.cuenta() != null) {
             Map<String, Object> cMap = new HashMap<>();
             cMap.put("id", notificacion.cuenta().id());
-            cMap.put("estaPagada", notificacion.cuenta().estaPagada());
+            cMap.put("estaPagada", notificacion.cuenta().payed());
             cMap.put("fechaCreacion", toTimestamp(notificacion.cuenta().fechaCreacion()));
             map.put("cuenta", cMap);
         }

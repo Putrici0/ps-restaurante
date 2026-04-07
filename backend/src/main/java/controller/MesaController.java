@@ -28,7 +28,6 @@ public class MesaController {
     public EndpointGroup routes() {
         return () -> {
             path("mesas", () -> {
-
                 post(ctx -> {
                     MesaRequest request = ctx.bodyAsClass(MesaRequest.class);
                     Mesa creada = service.create(request);
@@ -38,7 +37,6 @@ public class MesaController {
                 get(ctx -> ctx.json(service.findAll()));
 
                 path("{id}", () -> {
-
                     get(ctx -> {
                         String id = ctx.pathParam("id");
                         Optional<Mesa> mesa = service.findById(id);
@@ -123,8 +121,8 @@ public class MesaController {
                     path("liberar", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            applicationService.liberarMesa(id);
-                            ctx.status(204);
+                            Cuenta cuenta = applicationService.liberarMesa(id);
+                            ctx.json(cuenta);
                         });
                     });
                 });

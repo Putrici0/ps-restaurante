@@ -42,7 +42,7 @@ public class PedidoApplicationService {
         Cuenta cuenta = cuentaRepository.findById(cuentaId)
                 .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
 
-        if (cuenta.estaPagada()) {
+        if (cuenta.payed()) {
             throw new IllegalArgumentException("No se puede crear un pedido en una cuenta pagada");
         }
 

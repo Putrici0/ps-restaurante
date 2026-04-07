@@ -24,32 +24,29 @@ import repository.firestore.FirestoreReservaRepository;
 import service.CuentaService;
 import service.MesaApplicationService;
 import service.MesaService;
-import service.application.NotificacionApplicationService;
 import service.NotificacionService;
 import service.OrdenApplicationService;
 import service.OrdenService;
-import service.application.PagoApplicationService;
-import service.application.PedidoApplicationService;
 import service.PedidoService;
 import service.PlatoService;
 import service.ReservaService;
+import service.application.NotificacionApplicationService;
+import service.application.PagoApplicationService;
+import service.application.PedidoApplicationService;
 import util.ApiError;
+import util.MesaSeeder;
 
 public class Main {
 
     public static void main(String[] args) {
-
-        // Firebase / Firestore
         FirebaseConfig.init();
         Firestore db = FirestoreClientProvider.getFirestore();
 
-        // ObjectMapper
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new Jdk8Module());
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 
-        // Repositories
         FirestorePlatoRepository platoRepository = new FirestorePlatoRepository(db);
         FirestoreMesaRepository mesaRepository = new FirestoreMesaRepository(db);
         FirestoreReservaRepository reservaRepository = new FirestoreReservaRepository(db);
@@ -58,7 +55,8 @@ public class Main {
         FirestoreOrdenRepository ordenRepository = new FirestoreOrdenRepository(db);
         FirestoreNotificacionRepository notificacionRepository = new FirestoreNotificacionRepository(db);
 
-        // CRUD Services
+        MesaSeeder.seed(mesaRepository);
+
         PlatoService platoService = new PlatoService(platoRepository);
         MesaService mesaService = new MesaService(mesaRepository);
         ReservaService reservaService = new ReservaService(reservaRepository);
@@ -67,7 +65,6 @@ public class Main {
         OrdenService ordenService = new OrdenService(ordenRepository, pedidoRepository, platoRepository);
         NotificacionService notificacionService = new NotificacionService(notificacionRepository, cuentaRepository);
 
-        // Application Services
         MesaApplicationService mesaApplicationService = new MesaApplicationService(
                 mesaRepository,
                 cuentaRepository,
@@ -100,41 +97,23 @@ public class Main {
                 cuentaRepository
         );
 
-        // Controllers
         PlatoController platoController = new PlatoController(platoService);
-
-        MesaController mesaController = new MesaController(
-                mesaService,
-                mesaApplicationService
-        );
-
+        MesaController mesaController = new MesaController(mesaService, mesaApplicationService);
         ReservaController reservaController = new ReservaController(reservaService);
-
-        CuentaController cuentaController = new CuentaController(
-                cuentaService,
-                pagoApplicationService
-        );
-
-        PedidoController pedidoController = new PedidoController(
-                pedidoService,
-                pedidoApplicationService
-        );
-
+        CuentaController cuentaController = new CuentaController(cuentaService, pagoApplicationService);
+        PedidoController pedidoController = new PedidoController(pedidoService, pedidoApplicationService);
         OrdenController ordenController = new OrdenController(
                 ordenService,
                 ordenApplicationService,
                 notificacionApplicationService
         );
-
         NotificacionController notificacionController = new NotificacionController(
                 notificacionService,
                 notificacionApplicationService
         );
 
-        // Javalin
         Javalin app = Javalin.create(config -> {
-            config.jsonMapper(new JavalinJackson());
-
+            config.jsonMapper(new JavalinJackson(objectMapper, false));
             config.bundledPlugins.enableCors(cors -> cors.addRule(rule -> rule.anyHost()));
 
             config.routes.get("/", ctx -> ctx.result("API del restaurante funcionando"));

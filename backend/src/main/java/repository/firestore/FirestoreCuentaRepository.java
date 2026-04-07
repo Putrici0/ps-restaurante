@@ -1,100 +1,255 @@
 package repository.firestore;
 
+import com.google.api.core.ApiFuture;
+import com.google.cloud.Timestamp;
+import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
 import model.Cuenta;
 import model.Mesa;
 import model.Reserva;
 import repository.interfaces.CuentaRepository;
 
 import java.time.Instant;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
-public class FirestoreCuentaRepository extends AbstractFirestoreRepository<Cuenta> implements CuentaRepository {
+public class FirestoreCuentaRepository implements CuentaRepository {
+
+    private static final String COLLECTION = "cuentas";
+    private final Firestore db;
 
     public FirestoreCuentaRepository(Firestore db) {
-        super(db, "cuentas");
+        this.db = db;
     }
 
     @Override
-    protected Cuenta mapToEntity(String id, Map<String, Object> data) {
-        List<Map<String, Object>> mesasData = (List<Map<String, Object>>) data.getOrDefault("mesas", List.of());
-        List<Mesa> mesas = mesasData.stream()
-                .map(m -> new Mesa((String) m.get("id"), ((Long) m.getOrDefault("capacidad", 0L)).intValue()))
-                .collect(Collectors.toList());
+    public Cuenta save(Cuenta cuenta) {
+        try {
+            String id = cuenta.id() != null
+                    ? cuenta.id()
+                    : db.collection(COLLECTION).document().getId();
 
-        Map<String, Object> resData = (Map<String, Object>) data.get("reserva");
+            Cuenta cuentaConId = new Cuenta(
+                    id,
+                    cuenta.mesas(),
+                    cuenta.payed(),
+                    cuenta.reserva(),
+                    cuenta.fechaCreacion(),
+                    cuenta.fechaPago(),
+                    cuenta.password()
+            );
+
+            db.collection(COLLECTION)
+                    .document(id)
+                    .set(cuentaToMap(cuentaConId))
+                    .get();
+
+            return cuentaConId;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al guardar la cuenta", e);
+        }
+    }
+
+    @Override
+    public Optional<Cuenta> findById(String id) {
+        try {
+            DocumentSnapshot document = db.collection(COLLECTION).document(id).get().get();
+
+            if (!document.exists()) {
+                return Optional.empty();
+            }
+
+            return Optional.of(mapDocumentToCuenta(document));
+        } catch (Exception e) {
+            throw new RuntimeException("Error al buscar la cuenta por id", e);
+        }
+    }
+
+    @Override
+    public List<Cuenta> findAll() {
+        try {
+            ApiFuture<QuerySnapshot> future = db.collection(COLLECTION).get();
+            List<QueryDocumentSnapshot> documents = future.get().getDocuments();
+
+            List<Cuenta> cuentas = new ArrayList<>();
+            for (QueryDocumentSnapshot document : documents) {
+                cuentas.add(mapDocumentToCuenta(document));
+            }
+
+            return cuentas;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al listar las cuentas", e);
+        }
+    }
+
+    @Override
+    public Optional<Cuenta> findByMesa(Mesa mesa) {
+        try {
+            return findAll().stream()
+                    .filter(cuenta -> cuenta.mesas() != null)
+                    .filter(cuenta -> cuenta.mesas().stream().anyMatch(m -> m.id().equals(mesa.id())))
+                    .filter(cuenta -> !cuenta.payed())
+                    .findFirst();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al buscar cuenta por mesa", e);
+        }
+    }
+
+    @Override
+    public List<Cuenta> findByEstaPagada(boolean estaPagada) {
+        try {
+            return findAll().stream()
+                    .filter(cuenta -> cuenta.payed() == estaPagada)
+                    .toList();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al buscar cuentas por estado de pago", e);
+        }
+    }
+
+    @Override
+    public Cuenta update(String id, Cuenta cuenta) {
+        try {
+            if (!existsById(id)) {
+                throw new IllegalArgumentException("La cuenta no existe");
+            }
+
+            Cuenta cuentaActualizada = new Cuenta(
+                    id,
+                    cuenta.mesas(),
+                    cuenta.payed(),
+                    cuenta.reserva(),
+                    cuenta.fechaCreacion(),
+                    cuenta.fechaPago(),
+                    cuenta.password()
+            );
+
+            db.collection(COLLECTION)
+                    .document(id)
+                    .set(cuentaToMap(cuentaActualizada))
+                    .get();
+
+            return cuentaActualizada;
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al actualizar la cuenta", e);
+        }
+    }
+
+    @Override
+    public void deleteById(String id) {
+        try {
+            if (!existsById(id)) {
+                throw new IllegalArgumentException("La cuenta no existe");
+            }
+
+            db.collection(COLLECTION).document(id).delete().get();
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al borrar la cuenta", e);
+        }
+    }
+
+    @Override
+    public boolean existsById(String id) {
+        try {
+            DocumentSnapshot document = db.collection(COLLECTION).document(id).get().get();
+            return document.exists();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al comprobar si existe la cuenta", e);
+        }
+    }
+
+    private Cuenta mapDocumentToCuenta(DocumentSnapshot document) {
+        String id = document.contains("id") ? document.getString("id") : document.getId();
+
+        List<Mesa> mesas = mapMesas(document.get("mesas"));
+        boolean payed = Boolean.TRUE.equals(document.getBoolean("payed"));
+
         Optional<Reserva> reserva = Optional.empty();
-        if (resData != null) {
-            reserva = Optional.of(new Reserva(
-                    (String) resData.get("id"),
-                    (String) resData.get("nombre"),
-                    toInstant(resData.get("fecha")),
-                    ((Long) resData.getOrDefault("capacidad", 0L)).intValue(),
-                    toInstant(resData.get("fechaCreacion"))
-            ));
+
+        Timestamp fechaCreacionTimestamp = document.getTimestamp("fechaCreacion");
+        Instant fechaCreacion = fechaCreacionTimestamp != null
+                ? fechaCreacionTimestamp.toDate().toInstant()
+                : Instant.now();
+
+        Timestamp fechaPagoTimestamp = document.getTimestamp("fechaPago");
+        Optional<Instant> fechaPago = fechaPagoTimestamp != null
+                ? Optional.of(fechaPagoTimestamp.toDate().toInstant())
+                : Optional.empty();
+
+        String password = document.getString("password");
+        if (password == null) {
+            password = "";
         }
 
         return new Cuenta(
                 id,
                 mesas,
-                get(data, "estaPagada", false),
+                payed,
                 reserva,
-                toInstant(data.get("fechaCreacion")),
-                Optional.ofNullable(toInstant(data.get("fechaPago")))
+                fechaCreacion,
+                fechaPago,
+                password
         );
     }
 
-    @Override
-    protected Map<String, Object> entityToMap(Cuenta cuenta) {
-        Map<String, Object> map = new HashMap<>();
-        
-        List<Map<String, Object>> mesasMap = cuenta.mesas().stream()
-                .map(m -> {
-                    Map<String, Object> mData = new HashMap<>();
-                    mData.put("id", m.id());
-                    mData.put("capacidad", m.capacidad());
-                    return mData;
-                }).collect(Collectors.toList());
-        
-        map.put("mesas", mesasMap);
-        map.put("estaPagada", cuenta.estaPagada());
-        map.put("fechaCreacion", toTimestamp(cuenta.fechaCreacion()));
-        cuenta.fechaPago().ifPresent(f -> map.put("fechaPago", toTimestamp(f)));
-
-        cuenta.reserva().ifPresent(r -> {
-            Map<String, Object> rMap = new HashMap<>();
-            rMap.put("id", r.id());
-            rMap.put("nombre", r.nombre());
-            rMap.put("fecha", toTimestamp(r.fecha()));
-            rMap.put("capacidad", r.capacidad());
-            rMap.put("fechaCreacion", toTimestamp(r.fechaCreacion()));
-            map.put("reserva", rMap);
-        });
-
-        return map;
+    private Map<String, Object> cuentaToMap(Cuenta cuenta) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("id", cuenta.id());
+        data.put("mesas", mesasToList(cuenta.mesas()));
+        data.put("payed", cuenta.payed());
+        data.put("reserva", null);
+        data.put("fechaCreacion", cuenta.fechaCreacion());
+        data.put("fechaPago", cuenta.fechaPago().orElse(null));
+        data.put("password", cuenta.password());
+        return data;
     }
 
-    @Override
-    protected String getEntityId(Cuenta cuenta) {
-        return cuenta.id();
+    private List<Map<String, Object>> mesasToList(List<Mesa> mesas) {
+        List<Map<String, Object>> lista = new ArrayList<>();
+
+        if (mesas == null) {
+            return lista;
+        }
+
+        for (Mesa mesa : mesas) {
+            Map<String, Object> mesaMap = new HashMap<>();
+            mesaMap.put("id", mesa.id());
+            mesaMap.put("capacidad", mesa.capacidad());
+            lista.add(mesaMap);
+        }
+
+        return lista;
     }
 
-    @Override
-    protected Cuenta createWithId(Cuenta cuenta, String id) {
-        return new Cuenta(id, cuenta.mesas(), cuenta.estaPagada(), cuenta.reserva(), cuenta.fechaCreacion(), cuenta.fechaPago());
-    }
+    @SuppressWarnings("unchecked")
+    private List<Mesa> mapMesas(Object mesasObj) {
+        List<Mesa> mesas = new ArrayList<>();
 
-    @Override
-    public Optional<Cuenta> findByMesa(Mesa mesa) {
-        Map<String, Object> mesaMap = new HashMap<>();
-        mesaMap.put("id", mesa.id());
-        mesaMap.put("capacidad", mesa.capacidad());
-        return buscar(collection.whereArrayContains("mesas", mesaMap)).stream().findFirst();
-    }
+        if (!(mesasObj instanceof List<?> listaMesas)) {
+            return mesas;
+        }
 
-    @Override
-    public List<Cuenta> findByEstaPagada(boolean estaPagada) {
-        return buscarPorCampo("estaPagada", estaPagada);
+        for (Object obj : listaMesas) {
+            if (obj instanceof Map<?, ?> mesaMap) {
+                String id = mesaMap.get("id") != null ? mesaMap.get("id").toString() : null;
+
+                Number capacidadNumber = (Number) mesaMap.get("capacidad");
+                int capacidad = capacidadNumber != null ? capacidadNumber.intValue() : 0;
+
+                if (id != null) {
+                    mesas.add(new Mesa(id, capacidad));
+                }
+            }
+        }
+
+        return mesas;
     }
 }

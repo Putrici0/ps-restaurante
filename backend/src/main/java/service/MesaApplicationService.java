@@ -9,6 +9,7 @@ import repository.interfaces.MesaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,9 @@ public class MesaApplicationService {
     private final CuentaRepository cuentaRepository;
     private final PedidoRepository pedidoRepository;
     private final OrdenRepository ordenRepository;
+
+    private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public MesaApplicationService(
             MesaRepository mesaRepository,
@@ -48,12 +52,7 @@ public class MesaApplicationService {
 
     public Optional<Cuenta> obtenerCuentaActivaDeMesa(String mesaId) {
         Mesa mesa = obtenerMesa(mesaId);
-
-        return cuentaRepository.findAll().stream()
-                .filter(cuenta -> cuenta.mesas() != null)
-                .filter(cuenta -> cuenta.mesas().stream().anyMatch(m -> m.id().equals(mesa.id())))
-                .filter(cuenta -> !cuenta.estaPagada())
-                .findFirst();
+        return cuentaRepository.findByMesa(mesa);
     }
 
     public Cuenta ocuparMesa(String mesaId) {
@@ -69,20 +68,28 @@ public class MesaApplicationService {
                 false,
                 Optional.empty(),
                 Instant.now(),
-                Optional.empty()
+                Optional.empty(),
+                generarPassword()
         );
 
         return cuentaRepository.save(nuevaCuenta);
     }
 
-    public void liberarMesa(String mesaId) {
-        Optional<Cuenta> cuentaActiva = obtenerCuentaActivaDeMesa(mesaId);
+    public Cuenta liberarMesa(String mesaId) {
+        Cuenta cuentaActiva = obtenerCuentaActivaDeMesa(mesaId)
+                .orElseThrow(() -> new IllegalArgumentException("La mesa ya está libre"));
 
-        if (cuentaActiva.isEmpty()) {
-            return;
-        }
+        Cuenta cuentaLiberada = new Cuenta(
+                cuentaActiva.id(),
+                cuentaActiva.mesas(),
+                true,
+                cuentaActiva.reserva(),
+                cuentaActiva.fechaCreacion(),
+                Optional.of(Instant.now()),
+                ""
+        );
 
-        throw new IllegalArgumentException("No se puede liberar la mesa porque su cuenta sigue activa");
+        return cuentaRepository.update(cuentaActiva.id(), cuentaLiberada);
     }
 
     public List<Pedido> obtenerPedidosActivosDeMesa(String mesaId) {
@@ -116,5 +123,10 @@ public class MesaApplicationService {
         }
 
         return ordenes;
+    }
+
+    private String generarPassword() {
+        int pin = RANDOM.nextInt(9000) + 1000;
+        return String.valueOf(pin);
     }
 }

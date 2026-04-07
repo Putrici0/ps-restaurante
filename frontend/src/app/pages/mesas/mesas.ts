@@ -1,8 +1,9 @@
-import { Component, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { Component, computed, inject, signal } from '@angular/core';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MesaCardComponent } from '../../components/mesa-card/mesa-card';
 import { MesaDetalleComponent } from '../../components/mesa-detalle/mesa-detalle';
-import { Mesa } from '../../models/mesa.model'; // Importamos la interfaz
+import { Mesa, ZonaMesa } from '../../models/mesa.model';
+import { MesasApiService } from '../../services/mesas-api.service';
 
 @Component({
   selector: 'app-mesas',
@@ -12,64 +13,153 @@ import { Mesa } from '../../models/mesa.model'; // Importamos la interfaz
   styleUrl: './mesas.css',
 })
 export class MesasComponent {
-  // Convertimos el estado en Signals
-  zona = signal<'interior' | 'terraza'>('interior');
-  mesaSeleccionada = signal<Mesa | null>(null);
+  private readonly mesasApi = inject(MesasApiService);
 
-  // Arrays de mesas
-  mesasInterior = signal<Mesa[]>([
-    { id: '1', capacidad: 2, estado: 'ocupada' },
-    { id: '2', capacidad: 4, estado: 'libre' },
-    { id: '3', capacidad: 2, estado: 'ocupada' },
-    { id: '4', capacidad: 2, estado: 'ocupada' },
-    { id: '5', capacidad: 4, estado: 'ocupada' },
-    { id: '6', capacidad: 4, estado: 'libre' },
-    { id: '7', capacidad: 2, estado: 'ocupada' },
-    { id: '8', capacidad: 4, estado: 'libre' },
-    { id: '9', capacidad: 4, estado: 'libre' },
-    { id: '10', capacidad: 2, estado: 'reservada' },
-    { id: '11', capacidad: 4, estado: 'reservada' },
-    { id: '12', capacidad: 2, estado: 'ocupada' },
-  ]);
+  readonly zona = signal<ZonaMesa>('interior');
+  readonly mesaSeleccionada = signal<Mesa | null>(null);
+  readonly mesas = signal<Mesa[]>([]);
+  readonly cargando = signal(true);
+  readonly error = signal<string | null>(null);
+  readonly accionMesaId = signal<string | null>(null);
 
-  mesasTerraza = signal<Mesa[]>([
-    { id: '13', capacidad: 4, estado: 'ocupada' },
-    { id: '14', capacidad: 4, estado: 'libre' },
-    { id: '15', capacidad: 4, estado: 'libre' },
-    { id: '16', capacidad: 2, estado: 'ocupada' },
-    { id: '17', capacidad: 2, estado: 'ocupada' },
-    { id: '18', capacidad: 4, estado: 'reservada' },
-    { id: '19', capacidad: 4, estado: 'ocupada' },
-    { id: '20', capacidad: 4, estado: 'reservada' },
-  ]);
+  readonly mostrarModalCobro = signal(false);
+  readonly cuentaCobroId = signal<string | null>(null);
+  readonly mesaCobroId = signal<string | null>(null);
+  readonly totalCobro = signal<number | null>(null);
+  readonly cargandoCobro = signal(false);
+  readonly procesandoCobro = signal(false);
 
-  // Computed: Reacciona automáticamente si cambia la zona o las mesas
-  mesasActuales = computed(() =>
-    this.zona() === 'interior' ? this.mesasInterior() : this.mesasTerraza(),
+  readonly mesasActuales = computed(() =>
+    this.mesas()
+      .filter((mesa) => mesa.zona === this.zona())
+      .sort((a, b) => Number(a.id) - Number(b.id))
   );
 
-  seleccionar(mesa: Mesa) {
-    // Si hace clic en la misma, la deselecciona (toggle)
+  constructor() {
+    this.recargarMesas();
+  }
+
+  seleccionar(mesa: Mesa): void {
     if (this.mesaSeleccionada()?.id === mesa.id) {
       this.mesaSeleccionada.set(null);
-    } else {
-      this.mesaSeleccionada.set(mesa);
+      return;
     }
+
+    this.mesaSeleccionada.set(mesa);
   }
 
-// 1. Modificamos la función de cambiar zona para que limpie la selección
-  cambiarZona(nuevaZona: 'interior' | 'terraza') {
+  cambiarZona(nuevaZona: ZonaMesa): void {
     this.zona.set(nuevaZona);
-    this.mesaSeleccionada.set(null); // Cierra el panel al cambiar de pestaña
+    this.mesaSeleccionada.set(null);
   }
 
-// 2. Método para cerrar al tocar el fondo
-  cerrarSeleccion(event: MouseEvent) {
-    const target = event.target as HTMLElement;
+  ocuparMesa(mesaId: string): void {
+    this.error.set(null);
+    this.accionMesaId.set(mesaId);
 
-    // Si el clic NO es en una mesa Y NO es en el panel de detalles
-    if (!target.closest('app-mesa-card') && !target.closest('.sidebar-detalle')) {
-      this.mesaSeleccionada.set(null);
+    this.mesasApi.ocuparMesa(mesaId).subscribe({
+      next: () => this.recargarMesas(mesaId),
+      error: (err) => {
+        console.error('Error ocupando mesa:', err);
+        this.accionMesaId.set(null);
+        this.error.set(this.extraerMensaje(err));
+      },
+    });
+  }
+
+  abrirCobro(payload: { mesaId: string; cuentaId: string }): void {
+    this.error.set(null);
+    this.cargandoCobro.set(true);
+    this.mesaCobroId.set(payload.mesaId);
+    this.cuentaCobroId.set(payload.cuentaId);
+    this.totalCobro.set(null);
+    this.mostrarModalCobro.set(true);
+
+    this.mesasApi.obtenerTotalCuenta(payload.cuentaId).subscribe({
+      next: (respuesta) => {
+        this.totalCobro.set(Number(respuesta.importe));
+        this.cargandoCobro.set(false);
+      },
+      error: (err) => {
+        console.error('Error obteniendo total de la cuenta:', err);
+        this.cargandoCobro.set(false);
+        this.cerrarModalCobro();
+        this.error.set(this.extraerMensaje(err));
+      },
+    });
+  }
+
+  confirmarCobro(): void {
+    const cuentaId = this.cuentaCobroId();
+    const mesaId = this.mesaCobroId();
+
+    if (!cuentaId || !mesaId) {
+      return;
     }
+
+    this.error.set(null);
+    this.procesandoCobro.set(true);
+    this.accionMesaId.set(mesaId);
+
+    this.mesasApi.pagarCuentaCompleta(cuentaId).subscribe({
+      next: () => {
+        this.procesandoCobro.set(false);
+        this.cerrarModalCobro();
+        this.recargarMesas(mesaId);
+      },
+      error: (err) => {
+        console.error('Error cobrando cuenta:', err);
+        this.procesandoCobro.set(false);
+        this.accionMesaId.set(null);
+        this.error.set(this.extraerMensaje(err));
+      },
+    });
+  }
+
+  cerrarModalCobro(): void {
+    this.mostrarModalCobro.set(false);
+    this.cargandoCobro.set(false);
+    this.procesandoCobro.set(false);
+    this.cuentaCobroId.set(null);
+    this.mesaCobroId.set(null);
+    this.totalCobro.set(null);
+  }
+
+  private recargarMesas(mesaAReseleccionar?: string): void {
+    this.cargando.set(true);
+    this.error.set(null);
+
+    this.mesasApi.cargarMesasParaVista().subscribe({
+      next: (mesas) => {
+        this.mesas.set(mesas);
+        this.cargando.set(false);
+        this.accionMesaId.set(null);
+
+        if (mesaAReseleccionar) {
+          const nuevaMesa = mesas.find((m) => m.id === mesaAReseleccionar) ?? null;
+          this.mesaSeleccionada.set(nuevaMesa);
+          return;
+        }
+
+        const seleccionActual = this.mesaSeleccionada();
+        if (!seleccionActual) {
+          return;
+        }
+
+        const mesaRefrescada = mesas.find((m) => m.id === seleccionActual.id) ?? null;
+        this.mesaSeleccionada.set(mesaRefrescada);
+      },
+      error: (err) => {
+        console.error('Error recargar mesa:', err);
+        this.cargando.set(false);
+        this.accionMesaId.set(null);
+        this.error.set(this.extraerMensaje(err));
+      },
+    });
+  }
+
+  private extraerMensaje(error: unknown): string {
+    const err = error as { error?: { message?: string } };
+    return err?.error?.message ?? 'Ha ocurrido un error al comunicar con el backend';
   }
 }

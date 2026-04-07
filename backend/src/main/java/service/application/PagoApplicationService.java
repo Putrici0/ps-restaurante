@@ -62,7 +62,7 @@ public class PagoApplicationService {
     public BigDecimal calcularPendienteCuenta(String cuentaId) {
         Cuenta cuenta = obtenerCuentaPorId(cuentaId);
 
-        if (cuenta.estaPagada()) {
+        if (cuenta.payed()) {
             return BigDecimal.ZERO;
         }
 
@@ -76,13 +76,8 @@ public class PagoApplicationService {
     public Cuenta pagarCuentaCompleta(String cuentaId) {
         Cuenta cuenta = obtenerCuentaPorId(cuentaId);
 
-        if (cuenta.estaPagada()) {
+        if (cuenta.payed()) {
             throw new IllegalArgumentException("La cuenta ya está pagada");
-        }
-
-        BigDecimal pendiente = calcularPendienteCuenta(cuentaId);
-        if (pendiente.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("La cuenta no tiene importe pendiente");
         }
 
         Cuenta actualizada = new Cuenta(
@@ -91,7 +86,8 @@ public class PagoApplicationService {
                 true,
                 cuenta.reserva(),
                 cuenta.fechaCreacion(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         return cuentaRepository.update(cuenta.id(), actualizada);
@@ -104,7 +100,7 @@ public class PagoApplicationService {
             throw new IllegalArgumentException("La cuenta todavía tiene saldo pendiente");
         }
 
-        if (cuenta.estaPagada()) {
+        if (cuenta.payed()) {
             return cuenta;
         }
 
@@ -114,7 +110,8 @@ public class PagoApplicationService {
                 true,
                 cuenta.reserva(),
                 cuenta.fechaCreacion(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         return cuentaRepository.update(cuenta.id(), actualizada);
