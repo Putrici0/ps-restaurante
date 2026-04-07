@@ -80,11 +80,6 @@ public class PagoApplicationService {
             throw new IllegalArgumentException("La cuenta ya está pagada");
         }
 
-        BigDecimal pendiente = calcularPendienteCuenta(cuentaId);
-        if (pendiente.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("La cuenta no tiene importe pendiente");
-        }
-
         Cuenta actualizada = new Cuenta(
                 cuenta.id(),
                 cuenta.mesas(),

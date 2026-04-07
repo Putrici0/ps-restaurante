@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, map, Observable } from 'rxjs';
-import { CuentaApi, Mesa, MesaApi } from '../models/mesa.model';
+import { CuentaApi, ImporteCuentaApi, Mesa, MesaApi } from '../models/mesa.model';
 import { MESAS_LAYOUT } from '../data/mesas-layout';
 
 @Injectable({
@@ -17,6 +17,14 @@ export class MesasApiService {
 
   obtenerCuentas(): Observable<CuentaApi[]> {
     return this.http.get<CuentaApi[]>(`${this.apiUrl}/cuentas`);
+  }
+
+  obtenerTotalCuenta(cuentaId: string): Observable<ImporteCuentaApi> {
+    return this.http.get<ImporteCuentaApi>(`${this.apiUrl}/cuentas/${cuentaId}/total`);
+  }
+
+  pagarCuentaCompleta(cuentaId: string): Observable<CuentaApi> {
+    return this.http.post<CuentaApi>(`${this.apiUrl}/cuentas/${cuentaId}/pagar-total`, {});
   }
 
   ocuparMesa(id: string): Observable<unknown> {

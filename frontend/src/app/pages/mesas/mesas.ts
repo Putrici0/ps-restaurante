@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, CurrencyPipe } from '@angular/common';
 import { MesaCardComponent } from '../../components/mesa-card/mesa-card';
 import { MesaDetalleComponent } from '../../components/mesa-detalle/mesa-detalle';
 import { Mesa, ZonaMesa } from '../../models/mesa.model';
@@ -21,6 +21,13 @@ export class MesasComponent {
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly accionMesaId = signal<string | null>(null);
+
+  readonly mostrarModalCobro = signal(false);
+  readonly cuentaCobroId = signal<string | null>(null);
+  readonly mesaCobroId = signal<string | null>(null);
+  readonly totalCobro = signal<number | null>(null);
+  readonly cargandoCobro = signal(false);
+  readonly procesandoCobro = signal(false);
 
   readonly mesasActuales = computed(() =>
     this.mesas()
@@ -46,14 +53,6 @@ export class MesasComponent {
     this.mesaSeleccionada.set(null);
   }
 
-  cerrarSeleccion(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-
-    if (!target.closest('app-mesa-card') && !target.closest('.sidebar-detalle')) {
-      this.mesaSeleccionada.set(null);
-    }
-  }
-
   ocuparMesa(mesaId: string): void {
     this.error.set(null);
     this.accionMesaId.set(mesaId);
@@ -68,18 +67,62 @@ export class MesasComponent {
     });
   }
 
-  liberarMesa(mesaId: string): void {
+  abrirCobro(payload: { mesaId: string; cuentaId: string }): void {
     this.error.set(null);
+    this.cargandoCobro.set(true);
+    this.mesaCobroId.set(payload.mesaId);
+    this.cuentaCobroId.set(payload.cuentaId);
+    this.totalCobro.set(null);
+    this.mostrarModalCobro.set(true);
+
+    this.mesasApi.obtenerTotalCuenta(payload.cuentaId).subscribe({
+      next: (respuesta) => {
+        this.totalCobro.set(Number(respuesta.importe));
+        this.cargandoCobro.set(false);
+      },
+      error: (err) => {
+        console.error('Error obteniendo total de la cuenta:', err);
+        this.cargandoCobro.set(false);
+        this.cerrarModalCobro();
+        this.error.set(this.extraerMensaje(err));
+      },
+    });
+  }
+
+  confirmarCobro(): void {
+    const cuentaId = this.cuentaCobroId();
+    const mesaId = this.mesaCobroId();
+
+    if (!cuentaId || !mesaId) {
+      return;
+    }
+
+    this.error.set(null);
+    this.procesandoCobro.set(true);
     this.accionMesaId.set(mesaId);
 
-    this.mesasApi.liberarMesa(mesaId).subscribe({
-      next: () => this.recargarMesas(mesaId),
+    this.mesasApi.pagarCuentaCompleta(cuentaId).subscribe({
+      next: () => {
+        this.procesandoCobro.set(false);
+        this.cerrarModalCobro();
+        this.recargarMesas(mesaId);
+      },
       error: (err) => {
-        console.error('Error liberando mesa:', err);
+        console.error('Error cobrando cuenta:', err);
+        this.procesandoCobro.set(false);
         this.accionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
       },
     });
+  }
+
+  cerrarModalCobro(): void {
+    this.mostrarModalCobro.set(false);
+    this.cargandoCobro.set(false);
+    this.procesandoCobro.set(false);
+    this.cuentaCobroId.set(null);
+    this.mesaCobroId.set(null);
+    this.totalCobro.set(null);
   }
 
   private recargarMesas(mesaAReseleccionar?: string): void {
@@ -108,6 +151,7 @@ export class MesasComponent {
       },
       error: (err) => {
         console.error('Error recargar mesa:', err);
+        this.cargando.set(false);
         this.accionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
       },

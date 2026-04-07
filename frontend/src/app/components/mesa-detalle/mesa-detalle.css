@@ -183,3 +183,7 @@
 .accion-principal--red {
   background: #c71919;
 }
+
+.accion-principal--disabled {
+  background: #9da3ae;
+}

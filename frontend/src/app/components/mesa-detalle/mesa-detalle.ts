@@ -14,7 +14,7 @@ export class MesaDetalleComponent implements OnChanges {
   @Input() accionEnCurso = false;
 
   @Output() ocupar = new EventEmitter<string>();
-  @Output() liberar = new EventEmitter<string>();
+  @Output() cobrar = new EventEmitter<{ mesaId: string; cuentaId: string }>();
 
   mostrarCuenta = false;
 
@@ -30,5 +30,16 @@ export class MesaDetalleComponent implements OnChanges {
     }
 
     this.mostrarCuenta = !this.mostrarCuenta;
+  }
+
+  solicitarCobro(): void {
+    if (this.mesa.estado !== 'ocupada' || !this.mesa.cuentaActiva) {
+      return;
+    }
+
+    this.cobrar.emit({
+      mesaId: this.mesa.id,
+      cuentaId: this.mesa.cuentaActiva.id,
+    });
   }
 }

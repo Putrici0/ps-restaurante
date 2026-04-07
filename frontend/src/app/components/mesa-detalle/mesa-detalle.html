@@ -10,7 +10,11 @@
       Reservar mesa
     </button>
 
-    <button type="button" class="accion-secundaria" disabled>
+    <button
+      type="button"
+      class="accion-secundaria"
+      [disabled]="mesa.estado !== 'ocupada' || !mesa.cuentaActiva || accionEnCurso"
+      (click)="solicitarCobro()">
       Cobrar
     </button>
 
@@ -63,16 +67,7 @@
     </button>
   </div>
 
-  <button
-    *ngIf="mesa.estado === 'ocupada'; else ocuparBtn"
-    type="button"
-    class="accion-principal accion-principal--red"
-    (click)="liberar.emit(mesa.id)"
-    [disabled]="accionEnCurso">
-    Liberar mesa
-  </button>
-
-  <ng-template #ocuparBtn>
+  @if (mesa.estado === 'libre') {
     <button
       type="button"
       class="accion-principal accion-principal--green"
@@ -80,5 +75,12 @@
       [disabled]="accionEnCurso">
       Ocupar mesa
     </button>
-  </ng-template>
+  } @else {
+    <button
+      type="button"
+      class="accion-principal accion-principal--disabled"
+      disabled>
+      Mesa ocupada
+    </button>
+  }
 </div>

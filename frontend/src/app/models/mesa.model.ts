@@ -17,6 +17,11 @@ export interface CuentaApi {
   fechaPago?: string | null;
 }
 
+export interface ImporteCuentaApi {
+  cuentaId: string;
+  importe: number;
+}
+
 export interface Mesa {
   id: string;
   capacidad: number;
