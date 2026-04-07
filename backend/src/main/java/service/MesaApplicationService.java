@@ -69,7 +69,7 @@ public class MesaApplicationService {
                 Optional.empty(),
                 Instant.now(),
                 Optional.empty(),
-                generarPassword(8)
+                generarPassword()
         );
 
         return cuentaRepository.save(nuevaCuenta);
@@ -125,13 +125,8 @@ public class MesaApplicationService {
         return ordenes;
     }
 
-    private String generarPassword(int longitud) {
-        StringBuilder sb = new StringBuilder();
-
-        for (int i = 0; i < longitud; i++) {
-            sb.append(PASSWORD_CHARS.charAt(RANDOM.nextInt(PASSWORD_CHARS.length())));
-        }
-
-        return sb.toString();
+    private String generarPassword() {
+        int pin = RANDOM.nextInt(9000) + 1000;
+        return String.valueOf(pin);
     }
 }
