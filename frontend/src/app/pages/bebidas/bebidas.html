@@ -1,0 +1,56 @@
+<div class="bebidas-page">
+  <div class="header-bebidas">
+    <h1>Cola de Bebidas</h1>
+    <div class="contador-pendientes">
+      <span class="dot rojo"></span> {{ pendientesCount() }} Pendientes
+    </div>
+  </div>
+
+  <div class="lista-pedidos">
+    @for (pedido of pedidosOrdenados(); track pedido.id) {
+      <div class="pedido-card" [class.es-listo]="pedido.estado === 'listo'" [class.es-preparando]="pedido.estado === 'preparando'">
+
+        <div class="bloque-mesa">
+          <div class="indicador-color"></div>
+          <div class="mesa-texto">
+            <span>MESA</span>
+            <strong>{{ pedido.mesa }}</strong>
+          </div>
+        </div>
+
+        <div class="bloque-contenido">
+          <div class="info-superior">
+            <span class="pildora-estado">{{ pedido.estado | titlecase }}</span>
+            <span class="tiempo">{{ pedido.tiempo }}</span>
+          </div>
+          <div class="lista-items">
+            @for (item of pedido.items; track $index) {
+              <div class="item">
+                <strong>{{ item.cantidad }}</strong> {{ item.nombre }}
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="bloque-accion">
+          @if (pedido.estado === 'pendiente') {
+            <button class="btn-preparar" (click)="avanzarEstado(pedido)">PREPARAR</button>
+          } @else if (pedido.estado === 'preparando') {
+            <div class="grupo-botones-preparando">
+              <button class="btn-deshacer" (click)="retrocederEstado(pedido)">
+                <span class="iconify" data-icon="solar:undo-left-round-bold"></span>
+              </button>
+              <button class="btn-servir" (click)="avanzarEstado(pedido)">LISTO PARA SERVIR</button>
+            </div>
+          } @else {
+            <button class="btn-cancelar" (click)="retrocederEstado(pedido)">
+              CANCELAR
+              <span class="iconify" data-icon="solar:close-circle-bold"></span>
+            </button>
+          }
+        </div>
+
+      </div>
+    }
+  </div>
+</div>

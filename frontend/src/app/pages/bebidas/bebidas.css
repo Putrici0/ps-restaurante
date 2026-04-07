@@ -1,0 +1,212 @@
+/* Contenedor principal */
+.bebidas-page {
+  padding: 2.5rem 4rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* --- CABECERA --- */
+.header-bebidas {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2.5rem;
+}
+
+.header-bebidas h1 {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 0;
+}
+
+.contador-pendientes {
+  background: rgba(255, 255, 255, 0.4);
+  border: 1px solid #c5b6a7;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #333;
+}
+
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+.dot.rojo { background: #b31c1c; }
+
+/* --- LISTA Y TARJETAS --- */
+.lista-pedidos {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.pedido-card {
+  display: flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid #d4c5b3;
+  border-radius: 16px;
+  padding: 1.2rem;
+  gap: 2rem;
+  transition: all 0.3s ease;
+}
+
+/* El truco visual de Figma: los elementos listos se atenúan */
+.pedido-card.es-listo {
+  opacity: 0.4;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* --- BLOQUE: MESA --- */
+.bloque-mesa {
+  position: relative;
+  background: #e8dcc8; /* Fondo igual al de la página */
+  border: 1px solid #c5b6a7;
+  border-radius: 12px;
+  padding: 12px 24px;
+  min-width: 100px;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* La línea de color incrustada en el recuadro de la mesa */
+.indicador-color {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: #b31c1c;
+}
+.pedido-card.es-listo .indicador-color { background: #15cc15; }
+
+.mesa-texto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.mesa-texto span { font-size: 0.75rem; font-weight: 800; color: #1a1a1a; letter-spacing: 0.5px; }
+.mesa-texto strong { font-size: 1.6rem; color: #1a1a1a; margin-top: -2px; }
+
+/* --- BLOQUE: CONTENIDO --- */
+.bloque-contenido {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.info-superior {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.pildora-estado {
+  background: #a52a2a;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+.pedido-card.es-listo .pildora-estado { background: #90ee90; color: #1a5e1a; }
+
+.tiempo { font-size: 0.75rem; color: #444; font-weight: 500; }
+
+.lista-items {
+  display: flex;
+  gap: 2.5rem;
+  font-size: 0.95rem;
+  color: #1a1a1a;
+}
+.lista-items strong { font-size: 1.1rem; margin-right: 4px; }
+
+/* --- BLOQUE: BOTONES TPV --- */
+.bloque-accion { margin-left: auto; }
+
+.btn-servir, .btn-cancelar {
+  padding: 16px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 1rem;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.1s;
+}
+
+.btn-servir { background: #11c011; }
+.btn-cancelar { background: #b31c1c; }
+
+/* Efecto táctil TPV */
+.btn-servir:active, .btn-cancelar:active { transform: scale(0.96); }
+.btn-cancelar .iconify { font-size: 1.2rem; }
+
+/* --- NUEVO ESTADO: PREPARANDO --- */
+.pedido-card.es-preparando {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: #c9a3ff; /* Borde suave morado */
+}
+
+/* Cambiamos el color de la línea y la píldora al morado que pediste */
+.pedido-card.es-preparando .indicador-color { background: #8800FF; }
+.pedido-card.es-preparando .pildora-estado { background: #8800FF; color: white; }
+
+/* --- NUEVO BOTÓN: PREPARAR --- */
+.btn-preparar {
+  background: #8800FF;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 1rem;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.1s;
+}
+
+.btn-preparar:active {
+  transform: scale(0.96);
+}
+
+/* --- GRUPO DE BOTONES (ESTADO INTERMEDIO) --- */
+.grupo-botones-preparando {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Botón de volver atrás (Discreto pero accesible) */
+.btn-deshacer {
+  background: #b2b6bc; /* Gris suave */
+  color: #4a5568;      /* Icono oscuro */
+  border: none;
+  border-radius: 8px;
+  padding: 16px;       /* Mismo alto que el resto de botones para no fallar el toque */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.btn-deshacer:active {
+  transform: scale(0.92);
+  background: #cbd5e0;
+}
+
+.btn-deshacer .iconify {
+  font-size: 1.5rem;
+}

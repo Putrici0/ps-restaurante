@@ -1,0 +1,122 @@
+<div class="mesas-page">
+  <div class="mesas-topbar" [class.panel-abierto]="!!mesaSeleccionada()">
+    <div class="tabs-zona">
+      <button
+        type="button"
+        [class.active]="zona() === 'interior'"
+        (click)="cambiarZona('interior')">
+        Interior
+      </button>
+
+      <button
+        type="button"
+        [class.active]="zona() === 'terraza'"
+        (click)="cambiarZona('terraza')">
+        Terraza
+      </button>
+    </div>
+
+    <div></div>
+
+    <div class="mesas-topbar-right">
+      <button type="button" class="edit-btn" disabled>Editar</button>
+
+      <div class="estado-legend">
+        <span class="legend-item">
+          <span class="legend-dot legend-dot--ocupada"></span>
+          Ocupado
+        </span>
+
+        <span class="legend-item">
+          <span class="legend-dot legend-dot--reservada"></span>
+          Reservado
+        </span>
+
+        <span class="legend-item">
+          <span class="legend-dot legend-dot--libre"></span>
+          Libre
+        </span>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+
+  @if (cargando()) {
+    <p>Cargando mesas...</p>
+  } @else {
+    <div class="mesas-layout" [class.panel-abierto]="!!mesaSeleccionada()">
+      <section class="grid-mesas">
+        @for (mesa of mesasActuales(); track mesa.id) {
+          <div (click)="seleccionar(mesa)">
+            <app-mesa-card
+              [numero]="mesa.id"
+              [capacidad]="mesa.capacidad"
+              [estado]="mesa.estado"
+              [seleccionada]="mesaSeleccionada()?.id === mesa.id">
+            </app-mesa-card>
+          </div>
+        }
+      </section>
+
+      @if (mesaSeleccionada(); as mesaSel) {
+        <aside class="detalle-columna">
+          <app-mesa-detalle
+            [mesa]="mesaSel"
+            [accionEnCurso]="accionMesaId() === mesaSel.id || procesandoCobro()"
+            (ocupar)="ocuparMesa($event)"
+            (cobrar)="abrirCobro($event)">
+          </app-mesa-detalle>
+        </aside>
+      }
+    </div>
+  }
+
+  @if (mostrarModalCobro()) {
+    <div class="modal-overlay" (click)="cerrarModalCobro()">
+      <div class="modal-cobro" (click)="$event.stopPropagation()">
+        <h3>Confirmar cobro</h3>
+
+        @if (cargandoCobro()) {
+          <p>Cargando total de la cuenta...</p>
+        } @else {
+          <p class="modal-texto">
+            Se va a cobrar el total de la cuenta asociada a la mesa
+            <strong>{{ mesaCobroId() }}</strong>.
+          </p>
+
+          <div class="modal-total">
+            <span>Total</span>
+            <strong>{{ totalCobro() == null ? '0,00 €' : (totalCobro() | currency:'EUR':'symbol':'1.2-2') }}</strong>
+          </div>
+
+          <p class="modal-aviso">
+            Al confirmar el pago, la cuenta quedará pagada y la mesa pasará automáticamente a libre.
+          </p>
+
+          <div class="modal-acciones">
+            <button
+              type="button"
+              class="modal-btn modal-btn--secundario"
+              (click)="cerrarModalCobro()"
+              [disabled]="procesandoCobro()">
+              Cancelar
+            </button>
+
+            <button
+              type="button"
+              class="modal-btn modal-btn--principal"
+              (click)="confirmarCobro()"
+              [disabled]="procesandoCobro()">
+  <span class="modal-btn__label">
+    {{ procesandoCobro() ? 'Cobrando...' : 'Confirmar pago' }}
+  </span>
+            </button>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

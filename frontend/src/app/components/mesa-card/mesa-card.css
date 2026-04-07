@@ -1,0 +1,70 @@
+.mesa-card {
+  position: relative;
+  min-height: 104px;
+  border-radius: 12px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    border-color 0.16s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.mesa-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.11);
+}
+
+.mesa-card:active {
+  transform: scale(0.99);
+}
+
+.mesa-card.libre {
+  background: #19df0f;
+}
+
+.mesa-card.ocupada {
+  background: #c71919;
+}
+
+.mesa-card.seleccionada {
+  border-color: #4a4a4a;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 0 0 5px rgba(64, 64, 64, 0.78),
+    0 8px 16px rgba(0, 0, 0, 0.14);
+}
+
+.mesa-card__content {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 38px;
+  padding: 10px 16px;
+  box-sizing: border-box;
+}
+
+.mesa-card__title {
+  font-size: 2.28rem;
+  font-weight: 500;
+  line-height: 1;
+  color: #111111;
+  letter-spacing: 0.01em;
+}
+
+.mesa-card__pill {
+  background: rgba(255, 255, 255, 0.42);
+  color: #4a4a4a;
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  min-width: 54px;
+  text-align: center;
+}

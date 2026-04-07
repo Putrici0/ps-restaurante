@@ -1,0 +1,10 @@
+<div
+  class="mesa-card"
+  [class.seleccionada]="seleccionada"
+  [class.ocupada]="estado === 'ocupada'"
+  [class.libre]="estado === 'libre'">
+  <div class="mesa-card__content">
+    <div class="mesa-card__title">M{{ numero }}</div>
+    <div class="mesa-card__pill">{{ capacidad }} Pax</div>
+  </div>
+</div>

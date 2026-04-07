@@ -1,0 +1,99 @@
+<div class="sidebar-detalle">
+  <div class="detalle-header">
+    <p class="detalle-label">Mesa seleccionada</p>
+    <h2>MESA{{ mesa.id }}</h2>
+    <div class="detalle-pill">{{ mesa.capacidad }} Pax</div>
+  </div>
+
+  <div class="acciones-superiores">
+    <button type="button" class="accion-secundaria" disabled>
+      Reservar mesa
+    </button>
+
+    <button
+      type="button"
+      class="accion-secundaria"
+      [disabled]="mesa.estado !== 'ocupada' || !mesa.cuentaActiva || accionEnCurso"
+      (click)="solicitarCobro()">
+      Cobrar
+    </button>
+
+    <button
+      type="button"
+      class="accion-secundaria"
+      [disabled]="mesa.estado !== 'ocupada' || !mesa.cuentaActiva"
+      (click)="toggleCuenta()">
+      Ver cuenta
+    </button>
+
+    @if (mostrarCuenta && mesa.estado === 'ocupada' && mesa.cuentaActiva) {
+      <div class="cuenta-dropdown">
+        <div class="cuenta-row">
+          <span class="cuenta-key">ID</span>
+          <span class="cuenta-value">{{ mesa.cuentaActiva.id }}</span>
+        </div>
+
+        <div class="cuenta-row">
+          <span class="cuenta-key">Estado</span>
+          <span class="cuenta-value">
+            {{ mesa.cuentaActiva.payed ? 'Pagada' : 'Activa' }}
+          </span>
+        </div>
+
+        <div class="cuenta-row">
+          <span class="cuenta-key">Creación</span>
+          <span class="cuenta-value">
+            {{ mesa.cuentaActiva.fechaCreacion | date:'dd/MM/yyyy HH:mm' }}
+          </span>
+        </div>
+
+        @if (mesa.cuentaActiva.fechaPago) {
+          <div class="cuenta-row">
+            <span class="cuenta-key">Pago</span>
+            <span class="cuenta-value">
+              {{ mesa.cuentaActiva.fechaPago | date:'dd/MM/yyyy HH:mm' }}
+            </span>
+          </div>
+        }
+      </div>
+    }
+
+    <button
+      type="button"
+      class="accion-secundaria"
+      [disabled]="mesa.estado !== 'ocupada' || !mesa.cuentaActiva"
+      (click)="togglePassword()">
+      Contraseña
+    </button>
+
+    @if (mostrarPassword && mesa.estado === 'ocupada' && mesa.cuentaActiva) {
+      <div class="cuenta-dropdown">
+        <div class="cuenta-row">
+          <span class="cuenta-key">Contraseña</span>
+          <span class="cuenta-value cuenta-password">{{ mesa.cuentaActiva.password }}</span>
+        </div>
+      </div>
+    }
+
+    <button type="button" class="accion-secundaria" disabled>
+      Hacer pedido
+    </button>
+  </div>
+
+  @if (mesa.estado === 'libre') {
+    <button
+      type="button"
+      class="accion-principal accion-principal--green"
+      (click)="ocupar.emit(mesa.id)"
+      [disabled]="accionEnCurso">
+      Ocupar mesa
+    </button>
+  } @else {
+    <button
+      type="button"
+      class="accion-principal accion-principal--disabled"
+      disabled>
+      Mesa ocupada
+    </button>
+  }
+</div>

@@ -1,0 +1,56 @@
+/* Contenedor principal: Header grande y centrado absoluto */
+.navbar {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Centra los enlaces matemáticamente en el medio */
+  position: relative; /* Clave: permite anclar el logo a la izquierda */
+  height: 150px; /* Header grande para que el logo de 120px respire bien */
+  background-color: var(--bg-header); /* O #CEA98C si no pusiste la variable */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Sombra suave para separarlo del fondo */
+  padding: 0 3rem;
+  z-index: 100; /* Asegura que la sombra se vea por encima de las mesas */
+}
+
+/* El logo "flota" a la izquierda sin empujar a los enlaces */
+.navbar-logo {
+  position: absolute;
+  left: 4rem; /* Distancia desde el borde izquierdo de la pantalla */
+  display: flex;
+  align-items: center;
+}
+
+.navbar-logo img {
+  height: 150px; /* Tu tamaño personalizado */
+  width: auto;
+  transition: transform 0.3s ease;
+}
+
+.navbar-logo img:hover {
+  transform: scale(1.02); /* Efecto súper sutil al pasar el ratón */
+}
+
+/* Contenedor de enlaces */
+.navbar-links {
+  display: flex;
+  gap: 6rem; /* Mucha separación para darle un toque limpio y moderno */
+}
+
+.navbar-links a {
+  text-decoration: none;
+  color: var(--text-dark); /* O #3a2a1a */
+  font-weight: 600;
+  font-size: 1.15rem; /* Fuente más grande para compensar el header de 160px */
+  letter-spacing: 0.1em;
+  padding-bottom: 6px; /* Espacio para el subrayado */
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+/* Indicador de pestaña activa más moderno */
+.navbar-links a.active {
+  border-bottom: 2px solid var(--text-dark); /* Línea inferior en lugar del text-decoration clásico */
+}
+
+.navbar-links a:hover:not(.active) {
+  opacity: 0.7; /* Pequeño feedback visual antes de hacer clic */
+}
