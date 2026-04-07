@@ -1,0 +1,35 @@
+<div class="login-container">
+  <div class="login-card">
+    <h2>¡Bienvenido!</h2>
+
+    <p class="table-info">Estás en la Mesa {{ tableId() }}</p>
+
+    <p class="instructions">Introduce el código que te ha dado el camarero para ver la carta y pedir.</p>
+
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <div class="input-group">
+        <label for="password">Código de acceso</label>
+        <input
+          id="password"
+          type="password"
+          formControlName="password"
+          placeholder="Ej: 4582"
+        >
+      </div>
+
+      @if (errorMessage()) {
+        <div class="error-message">
+          {{ errorMessage() }}
+        </div>
+      }
+
+      <button type="submit" [disabled]="loginForm.invalid || isLoading()">
+        @if (isLoading()) {
+          Comprobando...
+        } @else {
+          Ver la Carta
+        }
+      </button>
+    </form>
+  </div>
+</div>

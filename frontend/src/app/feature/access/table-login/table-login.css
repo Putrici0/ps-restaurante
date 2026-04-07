@@ -1,0 +1,115 @@
+/* Centramos todo en la pantalla del móvil con el fondo beige */
+.login-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #E6D3B8; /* Mismo beige que el fondo del menú */
+  padding: 20px;
+  font-family: sans-serif;
+}
+
+/* La tarjeta blanca donde va el formulario */
+.login-card {
+  background-color: #fff;
+  padding: 30px 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 380px; /* Para que no se estire en pantallas grandes */
+  text-align: center;
+}
+
+.login-card h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.8rem;
+}
+
+/* Destacamos el número de la mesa con el color principal */
+.table-info {
+  font-weight: bold;
+  color: #c09d7a; /* Un tono un poco más oscuro que el header para leerse bien */
+  font-size: 1.3rem;
+  margin: 10px 0;
+}
+
+.instructions {
+  color: #666;
+  font-size: 0.95rem;
+  margin-bottom: 25px;
+  line-height: 1.4;
+}
+
+/* Estilos del formulario */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  font-size: 0.9rem;
+  color: #444;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+/* Un input grande y cómodo para móviles */
+.input-group input {
+  padding: 14px;
+  font-size: 1.1rem;
+  border: 2px solid #ddd;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.3s;
+  text-align: center;
+  letter-spacing: 2px; /* Espacio entre los números para que parezca un PIN */
+}
+
+
+.input-group input:focus {
+  border-color: #D4B596;
+}
+
+/* Mensaje de error en rojo */
+.error-message {
+  color: #d32f2f;
+  background-color: #ffebee;
+  padding: 10px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 15px;
+  font-weight: bold;
+}
+
+
+button[type="submit"] {
+  width: 100%;
+  background-color: #D4B596; /* Color del header de tu diseño */
+  color: #111;
+  font-weight: bold;
+  border: none;
+  padding: 15px;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  transition: background-color 0.3s, transform 0.1s;
+}
+
+button[type="submit"]:hover:not(:disabled) {
+  background-color: #c09d7a;
+}
+
+button[type="submit"]:active:not(:disabled) {
+  transform: scale(0.98); /* Pequeño efecto de hundimiento al tocar */
+}
+
+
+button[type="submit"]:disabled {
+  background-color: #e0e0e0;
+  color: #999;
+  cursor: not-allowed;
+}

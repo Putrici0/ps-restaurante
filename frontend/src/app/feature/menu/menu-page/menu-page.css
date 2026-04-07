@@ -1,0 +1,179 @@
+.menu-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #E6D3B8; /* Color beige de fondo principal */
+}
+
+.menu-content {
+  flex: 1; /* Esto empuja el footer hacia abajo */
+  padding: 30px 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.platos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* 3 columnas iguales */
+  gap: 20px;
+  width: 100%;
+  max-width: 600px; /* Para que no se estire demasiado en pantallas grandes */
+}
+
+/*
+.plato-card {
+  background-color: #fff;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+* /
+
+ */
+.plato-img-placeholder {
+  background-color: #e0e0e0;
+  aspect-ratio: 4 / 5; /* proporción vertical */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  color: #999;
+}
+
+.plato-title {
+  background-color: #d6d6d6;
+  text-align: center;
+  padding: 8px 5px 18px 5px;
+  font-size: 0.8rem;
+  font-family: sans-serif;
+  color: #333;
+}
+
+.app-footer {
+  height: 60px;
+  background-color: #D4B596;
+}
+
+/* -- NUEVOS ESTILOS PARA LOS PLATOS INTERACTIVOS -- */
+
+.plato-card-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 20px; /* Dejamos espacio para que quepa la píldora */
+}
+
+/* Efecto de sombra para imitar tu diseño */
+.plato-card {
+  width: 100%;
+  background-color: #fff;
+  border-radius: 2px;
+  overflow: hidden;
+  box-shadow: 2px 4px 6px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease;
+}
+
+/* Solo muestra el cursor de la mano si aún no se ha pedido el plato */
+.plato-card.clickable {
+  cursor: pointer;
+}
+
+/* Pequeño efecto visual al hacer clic en el plato por primera vez */
+.plato-card.clickable:active {
+  transform: scale(0.96);
+}
+
+/* --- LA PÍLDORA DEL CONTADOR --- */
+.cantidad-control {
+  position: absolute;
+  bottom: -16px; /* <-- Lo bajamos un poquito más (antes estaba en -12px) */
+  background-color: #D4B596;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  width: 85%;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+/* Botones + y - */
+.btn-circular {
+  background-color: #000;
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  line-height: 1; /* Centra el número de la cantidad */
+  padding: 0;
+  margin: 0;
+}
+
+.btn-circular:active {
+  transform: scale(0.9);
+}
+
+.cantidad-numero {
+  font-family: sans-serif;
+  font-weight: normal;
+  color: #000;
+  font-size: 1rem;
+}
+
+/* --- ADAPTACIÓN PARA MÓVILES --- */
+@media (max-width: 600px) {
+  .platos-grid {
+    grid-template-columns: repeat(2, 1fr); /* En móvil, muestra 2 columnas en lugar de 3 */
+    gap: 15px;
+  }
+
+  .cantidad-control {
+    width: 95%; /* Hace la píldora un pelín más ancha para que los botones de + y - no se aplasten */
+  }
+}
+
+.barra-pedido-flotante {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background-color: #fff;
+  padding: 15px 20px;
+  box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+  display: flex;
+  justify-content: center;
+  z-index: 50;
+  box-sizing: border-box;
+}
+
+.btn-realizar-pedido {
+  width: 100%;
+  max-width: 400px;
+  background-color: #D4B596;
+  color: #000;
+  font-weight: bold;
+  font-size: 1.1rem;
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  text-transform: uppercase;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+}
+
+.btn-realizar-pedido:active {
+  transform: scale(0.98);
+}

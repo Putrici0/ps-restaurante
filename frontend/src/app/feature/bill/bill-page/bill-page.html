@@ -1,0 +1,96 @@
+<div class="bill-layout">
+  <app-header></app-header>
+
+  <main class="bill-content">
+    <div [class.blurred]="showDetailPopup()">
+      @if (viewMode() === 'normal') {
+        <div class="bill-header-row">
+          <span class="col-desc">DESCRIPCIÓN</span>
+          <span class="col-cant">CANTIDAD</span>
+          <span class="col-precio">PRECIO</span>
+        </div>
+
+        <div class="items-list">
+          @for (item of pedidos(); track $index) {
+            <div class="bill-row">
+              <span class="col-desc">{{ item.nombre }}</span>
+              <span class="col-cant">x{{ item.cantidad }}</span>
+              <span class="col-precio">{{ item.cantidad * item.precioUnitario | number:'1.0-2' }}</span>
+            </div>
+          }
+        </div>
+
+        <div class="bill-total">
+          <span>TOTAL A PAGAR:</span>
+          <span>{{ totalNormal() | number:'1.2-2' }} €</span>
+        </div>
+
+      } @else {
+        <div class="items-list">
+          @for (item of pedidos(); track $index; let i = $index) {
+            <div class="split-group">
+              <div class="split-header">
+                <span class="col-desc">{{ item.nombre }}</span>
+                <span class="split-qty">x{{ item.cantidad }}</span>
+              </div>
+
+              <div class="split-box">
+                @for (sub of item.subItems; track sub.id) {
+                  <div class="split-row" (click)="toggleSubItem(i, sub.id)">
+                    <span class="col-desc">{{ item.nombre }}</span>
+                    <div class="custom-checkbox" [class.checked]="sub.seleccionado">
+                      @if (sub.seleccionado) { <span class="check-mark">✓</span> }
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    @if (showDetailPopup()) {
+      <div class="popup-container">
+        <div class="popup-card">
+          <div class="bill-header-row">
+            <span class="col-desc">DESCRIPCIÓN</span>
+            <span class="col-cant">CANTIDAD</span>
+            <span class="col-precio">PRECIO</span>
+          </div>
+          <div class="items-list">
+            @for (item of pedidosSeleccionados(); track $index) {
+              <div class="bill-row">
+                <span class="col-desc">{{ item.nombre }}</span>
+                <span class="col-cant">x{{ item.cantidad }}</span>
+                <span class="col-precio">{{ item.cantidad * item.precioUnitario | number:'1.0-2' }}</span>
+              </div>
+            }
+            @if (pedidosSeleccionados().length === 0) {
+              <div class="empty-selection">No has seleccionado ningún plato.</div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </main>
+
+  <footer class="bill-footer">
+    @if (viewMode() === 'normal') {
+      <button class="btn-footer active-btn">Pagar total</button>
+      <button class="btn-footer" (click)="viewMode.set('dividida')">Cuenta dividida</button>
+
+    } @else if (!showDetailPopup()) {
+      <button class="btn-footer active-btn btn-right" (click)="showDetailPopup.set(true)">Detalle</button>
+
+    } @else {
+      <div class="footer-split-pay">
+        <div class="split-totals">
+          <span class="split-label">Total cuenta dividida</span>
+          <span class="split-amount">{{ totalDividida() | number:'1.2-2' }} €</span>
+        </div>
+        <button class="btn-footer active-btn">PAGAR</button>
+      </div>
+    }
+  </footer>
+</div>

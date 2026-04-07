@@ -1,0 +1,28 @@
+<div class="generator-container">
+  <h2>Generador de QR por Mesa</h2>
+
+  <div class="controls">
+    <label for="tableInput">Elige el número de mesa:</label>
+    <input
+      id="tableInput"
+      type="number"
+      [ngModel]="tableNumber()"
+      (ngModelChange)="tableNumber.set($event)"
+      min="1"
+    >
+  </div>
+
+  <div class="qr-box">
+    <qrcode
+      [qrdata]="qrUrl"
+      [width]="256"
+      [errorCorrectionLevel]="'M'">
+    </qrcode>
+  </div>
+
+  <div class="info">
+    <p>URL generada:</p>
+    <code>{{ qrUrl }}</code>
+    <p class="hint">Escanea este código con tu móvil ahora mismo para probarlo.</p>
+  </div>
+</div>

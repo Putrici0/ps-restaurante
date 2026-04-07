@@ -1,0 +1,45 @@
+<div class="menu-layout">
+  <app-header></app-header>
+
+  <main class="menu-content">
+    <div class="platos-grid">
+      @for (plato of platos(); track plato.id) {
+
+        <div class="plato-card-wrapper">
+
+          <div class="plato-card"
+               [class.clickable]="plato.cantidad === 0"
+               (click)="plato.cantidad === 0 ? incrementar(plato.id) : null">
+
+            <div class="plato-img-placeholder">
+              <span class="icon">🖼️</span>
+            </div>
+            <div class="plato-title">
+              {{ plato.nombre }}
+            </div>
+          </div>
+
+          @if (plato.cantidad > 0) {
+            <div class="cantidad-control">
+              <button class="btn-circular" (click)="decrementar(plato.id)">−</button>
+              <span class="cantidad-numero">{{ plato.cantidad }}</span>
+              <button class="btn-circular" (click)="incrementar(plato.id)">+</button>
+            </div>
+          }
+
+        </div>
+
+      }
+    </div>
+  </main>
+
+  <footer class="app-footer"></footer>
+
+  @if (totalSeleccionado() > 0) {
+    <div class="barra-pedido-flotante">
+      <button class="btn-realizar-pedido" (click)="enviarPedido()">
+        REALIZAR PEDIDO ({{ totalSeleccionado() }})
+      </button>
+    </div>
+  }
+</div>
