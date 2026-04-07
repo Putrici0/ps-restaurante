@@ -150,3 +150,63 @@
 /* Efecto táctil TPV */
 .btn-servir:active, .btn-cancelar:active { transform: scale(0.96); }
 .btn-cancelar .iconify { font-size: 1.2rem; }
+
+/* --- NUEVO ESTADO: PREPARANDO --- */
+.pedido-card.es-preparando {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: #c9a3ff; /* Borde suave morado */
+}
+
+/* Cambiamos el color de la línea y la píldora al morado que pediste */
+.pedido-card.es-preparando .indicador-color { background: #8800FF; }
+.pedido-card.es-preparando .pildora-estado { background: #8800FF; color: white; }
+
+/* --- NUEVO BOTÓN: PREPARAR --- */
+.btn-preparar {
+  background: #8800FF;
+  padding: 16px 24px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 1rem;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: transform 0.1s;
+}
+
+.btn-preparar:active {
+  transform: scale(0.96);
+}
+
+/* --- GRUPO DE BOTONES (ESTADO INTERMEDIO) --- */
+.grupo-botones-preparando {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Botón de volver atrás (Discreto pero accesible) */
+.btn-deshacer {
+  background: #b2b6bc; /* Gris suave */
+  color: #4a5568;      /* Icono oscuro */
+  border: none;
+  border-radius: 8px;
+  padding: 16px;       /* Mismo alto que el resto de botones para no fallar el toque */
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.btn-deshacer:active {
+  transform: scale(0.92);
+  background: #cbd5e0;
+}
+
+.btn-deshacer .iconify {
+  font-size: 1.5rem;
+}

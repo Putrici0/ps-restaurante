@@ -8,7 +8,7 @@
 
   <div class="lista-pedidos">
     @for (pedido of pedidosOrdenados(); track pedido.id) {
-      <div class="pedido-card" [class.es-listo]="pedido.estado === 'listo'">
+      <div class="pedido-card" [class.es-listo]="pedido.estado === 'listo'" [class.es-preparando]="pedido.estado === 'preparando'">
 
         <div class="bloque-mesa">
           <div class="indicador-color"></div>
@@ -34,9 +34,16 @@
 
         <div class="bloque-accion">
           @if (pedido.estado === 'pendiente') {
-            <button class="btn-servir" (click)="toggleEstado(pedido)">LISTO PARA SERVIR</button>
+            <button class="btn-preparar" (click)="avanzarEstado(pedido)">PREPARAR</button>
+          } @else if (pedido.estado === 'preparando') {
+            <div class="grupo-botones-preparando">
+              <button class="btn-deshacer" (click)="retrocederEstado(pedido)">
+                <span class="iconify" data-icon="solar:undo-left-round-bold"></span>
+              </button>
+              <button class="btn-servir" (click)="avanzarEstado(pedido)">LISTO PARA SERVIR</button>
+            </div>
           } @else {
-            <button class="btn-cancelar" (click)="toggleEstado(pedido)">
+            <button class="btn-cancelar" (click)="retrocederEstado(pedido)">
               CANCELAR
               <span class="iconify" data-icon="solar:close-circle-bold"></span>
             </button>
