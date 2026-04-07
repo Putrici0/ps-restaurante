@@ -17,10 +17,12 @@ export class MesaDetalleComponent implements OnChanges {
   @Output() cobrar = new EventEmitter<{ mesaId: string; cuentaId: string }>();
 
   mostrarCuenta = false;
+  mostrarPassword = false;
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['mesa']) {
       this.mostrarCuenta = false;
+      this.mostrarPassword = false;
     }
   }
 
@@ -30,6 +32,14 @@ export class MesaDetalleComponent implements OnChanges {
     }
 
     this.mostrarCuenta = !this.mostrarCuenta;
+  }
+
+  togglePassword(): void {
+    if (this.mesa.estado !== 'ocupada' || !this.mesa.cuentaActiva) {
+      return;
+    }
+
+    this.mostrarPassword = !this.mostrarPassword;
   }
 
   solicitarCobro(): void {

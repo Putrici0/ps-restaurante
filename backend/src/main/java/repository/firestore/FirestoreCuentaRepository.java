@@ -40,7 +40,8 @@ public class FirestoreCuentaRepository implements CuentaRepository {
                     cuenta.payed(),
                     cuenta.reserva(),
                     cuenta.fechaCreacion(),
-                    cuenta.fechaPago()
+                    cuenta.fechaPago(),
+                    cuenta.password()
             );
 
             db.collection(COLLECTION)
@@ -123,7 +124,8 @@ public class FirestoreCuentaRepository implements CuentaRepository {
                     cuenta.payed(),
                     cuenta.reserva(),
                     cuenta.fechaCreacion(),
-                    cuenta.fechaPago()
+                    cuenta.fechaPago(),
+                    cuenta.password()
             );
 
             db.collection(COLLECTION)
@@ -182,13 +184,19 @@ public class FirestoreCuentaRepository implements CuentaRepository {
                 ? Optional.of(fechaPagoTimestamp.toDate().toInstant())
                 : Optional.empty();
 
+        String password = document.getString("password");
+        if (password == null) {
+            password = "";
+        }
+
         return new Cuenta(
                 id,
                 mesas,
                 payed,
                 reserva,
                 fechaCreacion,
-                fechaPago
+                fechaPago,
+                password
         );
     }
 
@@ -200,6 +208,7 @@ public class FirestoreCuentaRepository implements CuentaRepository {
         data.put("reserva", null);
         data.put("fechaCreacion", cuenta.fechaCreacion());
         data.put("fechaPago", cuenta.fechaPago().orElse(null));
+        data.put("password", cuenta.password());
         return data;
     }
 

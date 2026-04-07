@@ -15,6 +15,7 @@ export interface CuentaApi {
   payed: boolean;
   fechaCreacion: string;
   fechaPago?: string | null;
+  password: string;
 }
 
 export interface ImporteCuentaApi {

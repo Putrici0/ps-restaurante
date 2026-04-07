@@ -86,7 +86,8 @@ public class PagoApplicationService {
                 true,
                 cuenta.reserva(),
                 cuenta.fechaCreacion(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         return cuentaRepository.update(cuenta.id(), actualizada);
@@ -109,7 +110,8 @@ public class PagoApplicationService {
                 true,
                 cuenta.reserva(),
                 cuenta.fechaCreacion(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         return cuentaRepository.update(cuenta.id(), actualizada);

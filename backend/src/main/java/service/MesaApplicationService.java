@@ -9,6 +9,7 @@ import repository.interfaces.MesaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 
+import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,9 @@ public class MesaApplicationService {
     private final CuentaRepository cuentaRepository;
     private final PedidoRepository pedidoRepository;
     private final OrdenRepository ordenRepository;
+
+    private static final String PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     public MesaApplicationService(
             MesaRepository mesaRepository,
@@ -46,8 +50,6 @@ public class MesaApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("La mesa no existe"));
     }
 
-
-
     public Optional<Cuenta> obtenerCuentaActivaDeMesa(String mesaId) {
         Mesa mesa = obtenerMesa(mesaId);
         return cuentaRepository.findByMesa(mesa);
@@ -66,7 +68,8 @@ public class MesaApplicationService {
                 false,
                 Optional.empty(),
                 Instant.now(),
-                Optional.empty()
+                Optional.empty(),
+                generarPassword(8)
         );
 
         return cuentaRepository.save(nuevaCuenta);
@@ -82,7 +85,8 @@ public class MesaApplicationService {
                 true,
                 cuentaActiva.reserva(),
                 cuentaActiva.fechaCreacion(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         return cuentaRepository.update(cuentaActiva.id(), cuentaLiberada);
@@ -119,5 +123,15 @@ public class MesaApplicationService {
         }
 
         return ordenes;
+    }
+
+    private String generarPassword(int longitud) {
+        StringBuilder sb = new StringBuilder();
+
+        for (int i = 0; i < longitud; i++) {
+            sb.append(PASSWORD_CHARS.charAt(RANDOM.nextInt(PASSWORD_CHARS.length())));
+        }
+
+        return sb.toString();
     }
 }

@@ -1,9 +1,7 @@
 package repository.firestore;
 
 import com.google.cloud.firestore.Firestore;
-import model.Cuenta;
-import model.Pedido;
-import model.PedidoEstado;
+import model.*;
 import repository.interfaces.PedidoRepository;
 
 import java.time.Instant;
@@ -24,12 +22,13 @@ public class FirestorePedidoRepository extends AbstractFirestoreRepository<Pedid
         Cuenta cuenta = null;
         if (cData != null) {
             cuenta = new Cuenta(
-                (String) cData.get("id"),
-                List.of(),
-                get(cData, "estaPagada", false),
-                Optional.empty(),
-                toInstant(cData.get("fechaCreacion")),
-                Optional.empty()
+                    (String) cData.get("id"),
+                    List.<Mesa>of(),
+                    get(cData, "estaPagada", false),
+                    Optional.<Reserva>empty(),
+                    toInstant(cData.get("fechaCreacion")),
+                    Optional.<Instant>empty(),
+                    cData.get("password") != null ? (String) cData.get("password") : ""
             );
         }
 
