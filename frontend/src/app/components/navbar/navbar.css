@@ -1,10 +1,9 @@
-/* Contenedor principal: Header grande y centrado absoluto */
 .navbar {
   display: flex;
   align-items: center;
   justify-content: center; /* Centra los enlaces matemáticamente en el medio */
   position: relative; /* Clave: permite anclar el logo a la izquierda */
-  height: 150px; /* Header grande para que el logo de 120px respire bien */
+  height: 120px; /* Header grande para que el logo de 120px respire bien */
   background-color: var(--bg-header); /* O #CEA98C si no pusiste la variable */
   box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Sombra suave para separarlo del fondo */
   padding: 0 3rem;
@@ -24,11 +23,6 @@
   width: auto;
   transition: transform 0.3s ease;
 }
-
-.navbar-logo img:hover {
-  transform: scale(1.02); /* Efecto súper sutil al pasar el ratón */
-}
-
 /* Contenedor de enlaces */
 .navbar-links {
   display: flex;

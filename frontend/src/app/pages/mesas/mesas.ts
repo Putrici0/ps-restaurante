@@ -162,4 +162,13 @@ export class MesasComponent {
     const err = error as { error?: { message?: string } };
     return err?.error?.message ?? 'Ha ocurrido un error al comunicar con el backend';
   }
+  cerrarSeleccion(event: MouseEvent) {
+    const target = event.target as HTMLElement;
+
+    // Si el clic NO es en una mesa Y NO es en el panel de detalles
+    if (!target.closest('app-mesa-card') && !target.closest('.sidebar-detalle')) {
+      this.mesaSeleccionada.set(null);
+    }
+  }
+
 }
