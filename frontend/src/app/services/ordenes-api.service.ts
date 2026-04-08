@@ -19,7 +19,7 @@ export interface OrdenCocinaResponse {
       id: string;
       payed?: boolean;
       mesas?: Array<{
-        id: string;
+        id: string | number;
         capacidad?: number;
       }>;
     };
@@ -38,11 +38,8 @@ export interface OrdenCocinaResponse {
 })
 export class OrdenesApiService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = `http://${window.location.hostname}:7070`;
+  private readonly apiUrl = 'http://localhost:7070';
 
-  // =========================
-  // COCINA
-  // =========================
   obtenerPendientesCocina(): Observable<OrdenCocinaResponse[]> {
     return this.http.get<OrdenCocinaResponse[]>(
       `${this.apiUrl}/ordenes/cocina/pendientes`,
@@ -61,9 +58,6 @@ export class OrdenesApiService {
     );
   }
 
-  // =========================
-  // BARRA / BEBIDAS
-  // =========================
   obtenerPendientesBarra(): Observable<OrdenCocinaResponse[]> {
     return this.http.get<OrdenCocinaResponse[]>(
       `${this.apiUrl}/ordenes/barra/pendientes`,
@@ -82,9 +76,6 @@ export class OrdenesApiService {
     );
   }
 
-  // =========================
-  // CAMBIOS DE ESTADO
-  // =========================
   marcarPendiente(ordenId: string): Observable<OrdenCocinaResponse> {
     return this.http.post<OrdenCocinaResponse>(
       `${this.apiUrl}/ordenes/${ordenId}/pendiente`,

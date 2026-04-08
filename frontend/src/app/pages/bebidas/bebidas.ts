@@ -1,14 +1,8 @@
-import {
-  Component,
-  DestroyRef,
-  computed,
-  inject,
-  signal,
-} from '@angular/core';
+import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { combineLatest, interval, of } from 'rxjs';
-import { catchError, startWith, switchMap } from 'rxjs/operators';
+import { combineLatest, forkJoin, interval, of } from 'rxjs';
+import { catchError, startWith, switchMap, take } from 'rxjs/operators';
 
 import {
   EstadoOrdenBackend,
@@ -75,7 +69,7 @@ export class BebidasComponent {
   );
 
   constructor() {
-    interval(3000)
+    interval(2000)
       .pipe(
         startWith(0),
         switchMap(() =>
@@ -100,7 +94,6 @@ export class BebidasComponent {
       )
       .subscribe(([pendientes, enPreparacion, listas]) => {
         const todas = [...pendientes, ...enPreparacion, ...listas];
-
         this.pedidos.set(this.agruparPorPedido(todas));
         this.cargando.set(false);
         this.error.set(null);
@@ -114,12 +107,29 @@ export class BebidasComponent {
 
     this.procesandoPedidoId.set(pedido.pedidoId);
 
+    const nuevoEstado: EstadoVisualPedido =
+      pedido.estado === 'pendiente' ? 'preparando' : 'listo';
+
+    this.actualizarEstadoLocal(pedido.pedidoId, nuevoEstado);
+
     const accion =
       pedido.estado === 'pendiente'
         ? this.ordenesApi.marcarEnPreparacion.bind(this.ordenesApi)
         : this.ordenesApi.marcarLista.bind(this.ordenesApi);
 
-    this.actualizarTodasLasOrdenes(pedido.ordenesIds, accion);
+    forkJoin(pedido.ordenesIds.map((id) => accion(id)))
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          this.procesandoPedidoId.set(null);
+        },
+        error: (error) => {
+          console.error(error);
+          this.error.set('No se pudo actualizar el estado del pedido de bebidas.');
+          this.procesandoPedidoId.set(null);
+          this.recargar();
+        },
+      });
   }
 
   retrocederEstado(pedido: PedidoBebidaAgrupado): void {
@@ -129,20 +139,18 @@ export class BebidasComponent {
 
     this.procesandoPedidoId.set(pedido.pedidoId);
 
+    const nuevoEstado: EstadoVisualPedido =
+      pedido.estado === 'listo' ? 'preparando' : 'pendiente';
+
+    this.actualizarEstadoLocal(pedido.pedidoId, nuevoEstado);
+
     const accion =
       pedido.estado === 'listo'
         ? this.ordenesApi.marcarEnPreparacion.bind(this.ordenesApi)
         : this.ordenesApi.marcarPendiente.bind(this.ordenesApi);
 
-    this.actualizarTodasLasOrdenes(pedido.ordenesIds, accion);
-  }
-
-  private actualizarTodasLasOrdenes(
-    ordenesIds: string[],
-    accion: (ordenId: string) => ReturnType<OrdenesApiService['marcarLista']>,
-  ): void {
-    combineLatest(ordenesIds.map((id) => accion(id)))
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    forkJoin(pedido.ordenesIds.map((id) => accion(id)))
+      .pipe(take(1))
       .subscribe({
         next: () => {
           this.procesandoPedidoId.set(null);
@@ -151,8 +159,35 @@ export class BebidasComponent {
           console.error(error);
           this.error.set('No se pudo actualizar el estado del pedido de bebidas.');
           this.procesandoPedidoId.set(null);
+          this.recargar();
         },
       });
+  }
+
+  private recargar(): void {
+    combineLatest([
+      this.ordenesApi.obtenerPendientesBarra(),
+      this.ordenesApi.obtenerEnPreparacionBarra(),
+      this.ordenesApi.obtenerListasBarra(),
+    ])
+      .pipe(take(1))
+      .subscribe({
+        next: ([pendientes, enPreparacion, listas]) => {
+          const todas = [...pendientes, ...enPreparacion, ...listas];
+          this.pedidos.set(this.agruparPorPedido(todas));
+        },
+      });
+  }
+
+  private actualizarEstadoLocal(
+    pedidoId: string,
+    estado: EstadoVisualPedido,
+  ): void {
+    this.pedidos.update((lista) =>
+      lista.map((pedido) =>
+        pedido.pedidoId === pedidoId ? { ...pedido, estado } : pedido,
+      ),
+    );
   }
 
   private agruparPorPedido(ordenes: OrdenCocinaResponse[]): PedidoBebidaAgrupado[] {
