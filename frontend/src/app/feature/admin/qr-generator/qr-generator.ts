@@ -1,6 +1,6 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { QRCodeComponent } from 'angularx-qrcode'; // Importamos la librería
+import { QRCodeComponent } from 'angularx-qrcode';
 
 @Component({
   selector: 'app-qr-generator',
@@ -10,12 +10,22 @@ import { QRCodeComponent } from 'angularx-qrcode'; // Importamos la librería
   styleUrls: ['./qr-generator.css'],
 })
 export class QrGenerator {
-  // Empezamos por defecto en la mesa 1
-  tableNumber = signal<number>(1);
 
-  // Esta función genera la URL exacta que el móvil va a leer
+  tableNumber = signal(1);
+
+  // ⚠️ CAMBIA SOLO ESTA IP POR LA TUYA
+  private readonly fallbackIp = '192.168.X.XX';
+
+  get baseUrl(): string {
+    const { protocol, hostname, port } = window.location;
+
+    // Si estás en localhost, sustituimos por la IP
+    const host = hostname === 'localhost' ? this.fallbackIp : hostname;
+
+    return `${protocol}//${host}${port ? ':' + port : ''}`;
+  }
+
   get qrUrl(): string {
-    // Nota: Cuando subas el proyecto a internet, cambiarás 'http://localhost:4200' por 'https://turestaurante.com'
-    return `http://localhost:4200/acceso/${this.tableNumber()}`;
+    return `${this.baseUrl}/acceso/${this.tableNumber()}`;
   }
 }
