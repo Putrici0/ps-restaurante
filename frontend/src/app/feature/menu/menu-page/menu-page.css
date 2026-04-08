@@ -60,6 +60,36 @@
   max-width: 60ch;
 }
 
+.status-card {
+  border-radius: 22px;
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  border: 1px solid transparent;
+  box-shadow: 0 14px 30px rgba(76, 52, 36, 0.08);
+}
+
+.status-card h2 {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+}
+
+.status-card p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.status-card--warning {
+  background: #fff7e8;
+  border-color: #eed4a3;
+  color: #6a4a15;
+}
+
+.status-card--success {
+  background: #eef8f0;
+  border-color: #b8ddc0;
+  color: #235534;
+}
+
 .filtros-card {
   display: flex;
   gap: 0.65rem;
@@ -150,6 +180,11 @@
   overflow: hidden;
   box-shadow: 0 18px 38px rgba(76, 52, 36, 0.1);
   border: 1px solid rgba(212, 181, 150, 0.28);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.plato-card--disabled {
+  opacity: 0.7;
 }
 
 .plato-imagen-wrapper {
@@ -330,6 +365,11 @@
 
 .pedido-bar__button:active {
   transform: scale(0.99);
+}
+
+.pedido-bar__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .overlay {

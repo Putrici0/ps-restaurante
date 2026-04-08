@@ -1,186 +1,115 @@
 <div class="bill-page">
   <app-header></app-header>
 
-  <main class="bill-main" [class.bill-main--blurred]="showDetailPopup()">
+  <main class="bill-main">
     <section class="bill-hero">
-      <p class="bill-hero__eyebrow">Tu mesa</p>
-      <h1 class="bill-hero__title">Resumen de la cuenta</h1>
-      <p class="bill-hero__subtitle">
-        Consulta lo pedido y revisa el importe antes de pagar.
-      </p>
+      <div>
+        <p class="bill-hero__eyebrow">Tu mesa</p>
+        <h1 class="bill-hero__title">Resumen de la cuenta</h1>
+        <p class="bill-hero__subtitle">
+          Aquí verás en tiempo real lo que se vaya añadiendo o actualizando desde el resto de interfaces.
+        </p>
+      </div>
+
+      @if (cuentaCerrada()) {
+        <span class="bill-status-chip bill-status-chip--success">Pagada / cerrada</span>
+      } @else if (cuentaActiva()) {
+        <span class="bill-status-chip bill-status-chip--warning">Abierta</span>
+      }
     </section>
 
-    <section class="bill-tabs">
-      <button
-        type="button"
-        class="bill-tab"
-        [class.bill-tab--active]="viewMode() === 'normal'"
-        (click)="cambiarVista('normal')"
-      >
-        Cuenta total
-      </button>
-
-      <button
-        type="button"
-        class="bill-tab"
-        [class.bill-tab--active]="viewMode() === 'dividida'"
-        (click)="cambiarVista('dividida')"
-      >
-        Cuenta dividida
-      </button>
-    </section>
-
-    @if (pedidos().length === 0) {
-      <section class="bill-empty">
-        <h2>Aún no hay pedidos</h2>
-        <p>Cuando confirmes platos desde la carta, aparecerán aquí.</p>
+    @if (cargando()) {
+      <section class="bill-state-card">
+        <div class="spinner"></div>
+        <p>Cargando cuenta...</p>
       </section>
-    } @else if (viewMode() === 'normal') {
-      <section class="bill-card">
-        <div class="bill-card__header">
-          <span>Descripción</span>
-          <span>Cantidad</span>
-          <span>Importe</span>
-        </div>
+    } @else if (error()) {
+      <section class="bill-state-card">
+        <p class="bill-state-card__error">{{ error() }}</p>
+        <button type="button" class="bill-retry-btn" (click)="recargar()">
+          Reintentar
+        </button>
+      </section>
+    } @else if (sinCuentaActiva()) {
+      <section class="bill-state-card">
+        <h2>No hay una cuenta activa para esta mesa</h2>
+        <p>
+          Cuando central o sala abra una cuenta, esta pantalla se actualizará sola.
+        </p>
+      </section>
+    } @else {
+      <section class="bill-summary-grid">
+        <article class="summary-card">
+          <span class="summary-card__label">Productos en cuenta</span>
+          <strong class="summary-card__value">{{ totalItems() }}</strong>
+        </article>
 
-        <div class="bill-list">
-          @for (item of pedidos(); track $index) {
-            <article class="bill-row">
-              <div class="bill-row__desc">
-                <strong>{{ item.nombre }}</strong>
-                <span>{{ item.precioUnitario | number:'1.2-2' }} € / ud.</span>
+        <article class="summary-card">
+          <span class="summary-card__label">Importe pendiente</span>
+          <strong class="summary-card__value">{{ importePendiente() | number:'1.2-2' }} €</strong>
+        </article>
+      </section>
+
+      <section class="central-note-card">
+        <h2>Pago deshabilitado en cliente</h2>
+        <p>
+          En este sprint el cobro lo gestiona central. Esta pantalla es solo de consulta y se actualiza automáticamente.
+        </p>
+      </section>
+
+      @if (itemsAgrupados().length === 0) {
+        <section class="bill-state-card">
+          <h2>Aún no hay pedidos en la cuenta</h2>
+          <p>Cuando envíes platos desde la carta aparecerán aquí automáticamente.</p>
+        </section>
+      } @else {
+        <section class="bill-list">
+          @for (item of itemsAgrupados(); track item.platoId) {
+            <article class="bill-item-card">
+              <div class="bill-item-card__image-wrap">
+                <img
+                  class="bill-item-card__image"
+                  [src]="item.imagen"
+                  [alt]="item.nombre"
+                  loading="lazy"
+                  (error)="onImageError($event)"
+                />
               </div>
 
-              <div class="bill-row__qty">
-                x{{ item.cantidad }}
-              </div>
+              <div class="bill-item-card__content">
+                <div class="bill-item-card__top">
+                  <div>
+                    <p class="bill-item-card__category">{{ item.categoria }}</p>
+                    <h2 class="bill-item-card__name">{{ item.nombre }}</h2>
+                  </div>
 
-              <div class="bill-row__price">
-                {{ item.cantidad * item.precioUnitario | number:'1.2-2' }} €
+                  <strong class="bill-item-card__subtotal">
+                    {{ item.subtotal | number:'1.2-2' }} €
+                  </strong>
+                </div>
+
+                <p class="bill-item-card__description">
+                  {{ item.descripcion }}
+                </p>
+
+                <div class="bill-item-card__meta">
+                  <span class="bill-badge">
+                    {{ item.cantidad }} {{ item.cantidad === 1 ? 'unidad' : 'unidades' }}
+                  </span>
+
+                  <span class="bill-badge bill-badge--light">
+                    {{ item.precioUnitario | number:'1.2-2' }} € / ud.
+                  </span>
+                </div>
+
+                <p class="bill-item-card__status">
+                  Estado: {{ obtenerResumenEstado(item) }}
+                </p>
               </div>
             </article>
           }
-        </div>
-      </section>
-
-      <section class="bill-total-card">
-        <span>Total a pagar</span>
-        <strong>{{ totalNormal() | number:'1.2-2' }} €</strong>
-      </section>
-
-      <section class="bill-actions">
-        <button type="button" class="bill-primary-btn">
-          Pagar total
-        </button>
-      </section>
-    } @else {
-      <section class="split-list">
-        @for (item of pedidos(); track $index; let i = $index) {
-          <article class="split-card">
-            <div class="split-card__header">
-              <div>
-                <h3>{{ item.nombre }}</h3>
-                <p>{{ item.precioUnitario | number:'1.2-2' }} € por unidad</p>
-              </div>
-
-              <span class="split-card__badge">
-                {{ cantidadSeleccionada(i) }}/{{ item.cantidad }}
-              </span>
-            </div>
-
-            <div class="split-card__items">
-              @for (sub of item.subItems; track sub.id; let j = $index) {
-                <button
-                  type="button"
-                  class="split-pill"
-                  [class.split-pill--selected]="sub.seleccionado"
-                  (click)="toggleSubItem(i, sub.id)"
-                >
-                  Unidad {{ j + 1 }}
-                </button>
-              }
-            </div>
-          </article>
-        }
-      </section>
-
-      <section class="bill-total-card">
-        <span>Total seleccionado</span>
-        <strong>{{ totalDividida() | number:'1.2-2' }} €</strong>
-      </section>
-
-      <section class="bill-actions bill-actions--split">
-        <button type="button" class="bill-secondary-btn" (click)="abrirDetalle()">
-          Ver detalle
-        </button>
-
-        <button type="button" class="bill-primary-btn">
-          Pagar selección
-        </button>
-      </section>
+        </section>
+      }
     }
   </main>
-
-  @if (showDetailPopup()) {
-    <div class="bill-overlay" (click)="cerrarDetalle()">
-      <section
-        class="bill-modal"
-        (click)="$event.stopPropagation()"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div class="bill-modal__header">
-          <div>
-            <p class="bill-modal__eyebrow">Detalle</p>
-            <h2 class="bill-modal__title">Cuenta dividida</h2>
-          </div>
-
-          <button
-            type="button"
-            class="bill-modal__close"
-            (click)="cerrarDetalle()"
-            aria-label="Cerrar"
-          >
-            ×
-          </button>
-        </div>
-
-        <div class="bill-modal__content">
-          @if (pedidosSeleccionados().length === 0) {
-            <div class="bill-modal__empty">
-              No has seleccionado ningún plato.
-            </div>
-          } @else {
-            @for (item of pedidosSeleccionados(); track $index) {
-              <div class="bill-modal__row">
-                <div>
-                  <strong>{{ item.nombre }}</strong>
-                  <span>{{ item.cantidad }} × {{ item.precioUnitario | number:'1.2-2' }} €</span>
-                </div>
-
-                <strong>
-                  {{ item.cantidad * item.precioUnitario | number:'1.2-2' }} €
-                </strong>
-              </div>
-            }
-
-            <div class="bill-modal__total">
-              <span>Total</span>
-              <strong>{{ totalDividida() | number:'1.2-2' }} €</strong>
-            </div>
-          }
-        </div>
-
-        <div class="bill-modal__actions">
-          <button type="button" class="bill-secondary-btn" (click)="cerrarDetalle()">
-            Cerrar
-          </button>
-
-          <button type="button" class="bill-primary-btn">
-            Pagar
-          </button>
-        </div>
-      </section>
-    </div>
-  }
 </div>

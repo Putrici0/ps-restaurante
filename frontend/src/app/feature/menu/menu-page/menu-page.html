@@ -7,11 +7,26 @@
         <p class="hero-kicker">Carta digital</p>
         <h1 class="hero-title">Descubre nuestro menú</h1>
         <p class="hero-subtitle">
-          Consulta los platos disponibles, elige lo que te apetezca y prepara tu pedido
-          cómodamente desde el móvil.
+          Consulta los platos disponibles y prepara tu pedido cómodamente desde el móvil.
         </p>
       </div>
     </section>
+
+    @if (sinCuentaActiva()) {
+      <section class="status-card status-card--warning">
+        <h2>No hay una cuenta activa para esta mesa</h2>
+        <p>
+          Cuando central o sala abra una cuenta para esta mesa, aquí se actualizará automáticamente.
+        </p>
+      </section>
+    } @else if (cuentaCerrada()) {
+      <section class="status-card status-card--success">
+        <h2>Cuenta cerrada</h2>
+        <p>
+          Esta mesa ya ha sido marcada como pagada desde central. Ya no se pueden enviar más pedidos.
+        </p>
+      </section>
+    }
 
     <section class="filtros-card">
       <button
@@ -54,7 +69,7 @@
     } @else {
       <section class="platos-grid">
         @for (plato of platosFiltrados(); track trackByPlato($index, plato)) {
-          <article class="plato-card">
+          <article class="plato-card" [class.plato-card--disabled]="!puedePedir()">
             <div class="plato-imagen-wrapper">
               <img
                 class="plato-imagen"
@@ -81,7 +96,7 @@
                   type="button"
                   class="cantidad-btn"
                   (click)="decrementar(plato.id)"
-                  [disabled]="plato.cantidad === 0"
+                  [disabled]="plato.cantidad === 0 || !puedePedir()"
                   aria-label="Quitar una unidad"
                 >
                   −
@@ -96,6 +111,7 @@
                   type="button"
                   class="cantidad-btn cantidad-btn--primary"
                   (click)="incrementar(plato.id)"
+                  [disabled]="!puedePedir()"
                   aria-label="Añadir una unidad"
                 >
                   +
@@ -123,6 +139,7 @@
         type="button"
         class="pedido-bar__button"
         (click)="abrirConfirmacionPedido()"
+        [disabled]="!puedePedir()"
       >
         Realizar pedido
       </button>
@@ -190,7 +207,7 @@
             type="button"
             class="btn-primary"
             (click)="confirmarPedido()"
-            [disabled]="enviando()"
+            [disabled]="enviando() || !puedePedir()"
           >
             {{ enviando() ? 'Enviando...' : 'Confirmar pedido' }}
           </button>

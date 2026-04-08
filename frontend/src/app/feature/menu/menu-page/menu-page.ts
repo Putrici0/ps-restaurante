@@ -1,14 +1,17 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { take } from 'rxjs';
 import { Header } from '../../../shared/components/header/header';
-import { OrderService } from '../../../shared/services/order';
 import {
   PedidosApiService,
   CrearPedidoClienteRequest,
 } from '../../../services/pedidos-api.service';
 import { PlatosApiService } from '../../../services/platos-api.service';
+import {
+  CuentaActivaResponse,
+  CuentaApiService,
+} from '../../../services/cuenta-api.service';
 import { CategoriaPlato, PlatoApi, PlatoMenu } from '../../../models/plato.model';
 
 @Component({
@@ -18,18 +21,23 @@ import { CategoriaPlato, PlatoApi, PlatoMenu } from '../../../models/plato.model
   templateUrl: './menu-page.html',
   styleUrls: ['./menu-page.css'],
 })
-export class MenuPage {
+export class MenuPage implements OnInit, OnDestroy {
   private readonly platosApiService = inject(PlatosApiService);
   private readonly pedidosApiService = inject(PedidosApiService);
-  private readonly orderService = inject(OrderService);
+  private readonly cuentaApiService = inject(CuentaApiService);
   private readonly route = inject(ActivatedRoute);
 
+  private intervaloRefresco?: number;
+  private readonly mesaId = this.route.snapshot.paramMap.get('id') ?? '';
+
   readonly cargando = signal(true);
+  readonly cargandoEstadoMesa = signal(true);
   readonly enviando = signal(false);
   readonly error = signal<string | null>(null);
   readonly categoriaSeleccionada = signal<CategoriaPlato | 'Todos'>('Todos');
   readonly platos = signal<PlatoMenu[]>([]);
   readonly showConfirmPopup = signal(false);
+  readonly cuentaActiva = signal<CuentaActivaResponse | null>(null);
 
   readonly categorias: ReadonlyArray<CategoriaPlato> = [
     'Bebida',
@@ -37,6 +45,22 @@ export class MenuPage {
     'Principal',
     'Postre',
   ];
+
+  readonly cuentaCerrada = computed(() => !!this.cuentaActiva()?.payed);
+
+  readonly sinCuentaActiva = computed(
+    () => !this.cargandoEstadoMesa() && this.cuentaActiva() === null,
+  );
+
+  readonly puedePedir = computed(() => {
+    return (
+      !this.cargando() &&
+      !this.cargandoEstadoMesa() &&
+      !this.enviando() &&
+      !this.cuentaCerrada() &&
+      this.cuentaActiva() !== null
+    );
+  });
 
   readonly platosFiltrados = computed(() => {
     const categoria = this.categoriaSeleccionada();
@@ -64,8 +88,20 @@ export class MenuPage {
     ),
   );
 
-  constructor() {
-    this.cargarMenu();
+  ngOnInit(): void {
+    this.cargarMenu(true);
+    this.cargarEstadoMesa(true);
+
+    this.intervaloRefresco = window.setInterval(() => {
+      this.cargarEstadoMesa(false);
+      this.cargarMenu(false);
+    }, 4000);
+  }
+
+  ngOnDestroy(): void {
+    if (this.intervaloRefresco) {
+      window.clearInterval(this.intervaloRefresco);
+    }
   }
 
   seleccionarCategoria(categoria: CategoriaPlato | 'Todos'): void {
@@ -73,6 +109,10 @@ export class MenuPage {
   }
 
   incrementar(id: string): void {
+    if (!this.puedePedir()) {
+      return;
+    }
+
     this.platos.update((lista) =>
       lista.map((plato) =>
         plato.id === id
@@ -83,6 +123,10 @@ export class MenuPage {
   }
 
   decrementar(id: string): void {
+    if (!this.puedePedir()) {
+      return;
+    }
+
     this.platos.update((lista) =>
       lista.map((plato) =>
         plato.id === id && plato.cantidad > 0
@@ -93,7 +137,7 @@ export class MenuPage {
   }
 
   abrirConfirmacionPedido(): void {
-    if (this.totalSeleccionado() === 0 || this.enviando()) {
+    if (!this.puedePedir() || this.totalSeleccionado() === 0) {
       return;
     }
 
@@ -109,13 +153,11 @@ export class MenuPage {
   }
 
   confirmarPedido(): void {
-    if (this.enviando()) {
+    if (!this.puedePedir() || this.enviando()) {
       return;
     }
 
-    const mesaId = this.route.snapshot.paramMap.get('id');
-
-    if (!mesaId) {
+    if (!this.mesaId) {
       this.error.set('No se ha podido identificar la mesa.');
       alert('No se ha podido identificar la mesa.');
       return;
@@ -125,7 +167,6 @@ export class MenuPage {
 
     if (platosSeleccionados.length === 0) {
       this.error.set('Debes seleccionar al menos un plato.');
-      alert('Debes seleccionar al menos un plato.');
       return;
     }
 
@@ -141,28 +182,17 @@ export class MenuPage {
     };
 
     this.pedidosApiService
-      .crearPedidoDesdeMesa(mesaId, body)
+      .crearPedidoDesdeMesa(this.mesaId, body)
       .pipe(take(1))
       .subscribe({
         next: () => {
-          this.orderService.agregarPedido(
-            platosSeleccionados.map((plato) => ({
-              id: plato.id,
-              nombre: plato.nombre,
-              precio: Number(plato.precio),
-              cantidad: plato.cantidad,
-              categoria: plato.categoria,
-              descripcion: plato.descripcion,
-              imagen: plato.imagen,
-            })),
-          );
-
           this.platos.update((lista) =>
             lista.map((plato) => ({ ...plato, cantidad: 0 })),
           );
 
           this.enviando.set(false);
           this.showConfirmPopup.set(false);
+
           alert('¡Pedido enviado correctamente!');
         },
         error: (err) => {
@@ -173,13 +203,13 @@ export class MenuPage {
 
           this.error.set(mensaje);
           this.enviando.set(false);
-          alert(mensaje);
         },
       });
   }
 
   recargar(): void {
-    this.cargarMenu();
+    this.cargarMenu(true);
+    this.cargarEstadoMesa(true);
   }
 
   onImageError(event: Event): void {
@@ -192,9 +222,48 @@ export class MenuPage {
     return plato.id;
   }
 
-  private cargarMenu(): void {
-    this.cargando.set(true);
-    this.error.set(null);
+  private cargarEstadoMesa(mostrarLoading: boolean): void {
+    if (!this.mesaId) {
+      this.cargandoEstadoMesa.set(false);
+      this.cuentaActiva.set(null);
+      return;
+    }
+
+    if (mostrarLoading) {
+      this.cargandoEstadoMesa.set(true);
+    }
+
+    this.cuentaApiService
+      .obtenerCuentaActivaDeMesa(this.mesaId)
+      .pipe(take(1))
+      .subscribe({
+        next: (cuenta) => {
+          this.cuentaActiva.set(cuenta);
+
+          if (cuenta?.payed) {
+            this.showConfirmPopup.set(false);
+            this.platos.update((lista) =>
+              lista.map((plato) => ({ ...plato, cantidad: 0 })),
+            );
+          }
+
+          this.cargandoEstadoMesa.set(false);
+        },
+        error: () => {
+          this.cargandoEstadoMesa.set(false);
+        },
+      });
+  }
+
+  private cargarMenu(mostrarLoading: boolean): void {
+    if (mostrarLoading) {
+      this.cargando.set(true);
+      this.error.set(null);
+    }
+
+    const cantidadesPrevias = new Map(
+      this.platos().map((plato) => [plato.id, plato.cantidad]),
+    );
 
     this.platosApiService
       .obtenerPlatos()
@@ -207,7 +276,7 @@ export class MenuPage {
             .map((plato) => ({
               ...plato,
               precio: Number(plato.precio),
-              cantidad: 0,
+              cantidad: cantidadesPrevias.get(plato.id) ?? 0,
             }));
 
           this.platos.set(platosMenu);
