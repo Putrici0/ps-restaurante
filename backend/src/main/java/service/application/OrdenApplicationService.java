@@ -51,14 +51,14 @@ public class OrdenApplicationService {
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new IllegalArgumentException("El pedido no existe"));
 
-        pedido = hidratarPedido(pedido);
+        Pedido pedidoHidratado = hidratarPedido(pedido);
 
         Plato plato = platoRepository.findById(platoId)
                 .orElseThrow(() -> new IllegalArgumentException("El plato no existe"));
 
         Orden orden = new Orden(
                 null,
-                pedido,
+                pedidoHidratado,
                 plato,
                 plato.precio(),
                 OrdenEstado.Pendiente,
@@ -119,7 +119,7 @@ public class OrdenApplicationService {
         return ordenRepository.findAll().stream()
                 .map(this::hidratarOrden)
                 .filter(orden -> orden.ordenEstado() == OrdenEstado.Pendiente)
-                .filter(this::cuentaNoPagada)
+                .filter(this::cuentaNoPagadaYaHidratada)
                 .toList();
     }
 
@@ -127,7 +127,7 @@ public class OrdenApplicationService {
         return ordenRepository.findAll().stream()
                 .map(this::hidratarOrden)
                 .filter(orden -> orden.ordenEstado() == OrdenEstado.Preparación)
-                .filter(this::cuentaNoPagada)
+                .filter(this::cuentaNoPagadaYaHidratada)
                 .toList();
     }
 
@@ -135,7 +135,7 @@ public class OrdenApplicationService {
         return ordenRepository.findAll().stream()
                 .map(this::hidratarOrden)
                 .filter(orden -> orden.ordenEstado() == OrdenEstado.Listo)
-                .filter(this::cuentaNoPagada)
+                .filter(this::cuentaNoPagadaYaHidratada)
                 .toList();
     }
 
@@ -170,7 +170,7 @@ public class OrdenApplicationService {
                 .filter(orden -> orden.plato().categoria() != null)
                 .filter(orden -> orden.plato().categoria() != Categoria.Bebida)
                 .filter(orden -> orden.ordenEstado() == OrdenEstado.Listo || orden.ordenEstado() == OrdenEstado.Entregado)
-                .filter(this::cuentaNoPagada)
+                .filter(this::cuentaNoPagadaYaHidratada)
                 .sorted((a, b) -> {
                     Instant fechaPedidoA = a.pedido() != null ? a.pedido().fechaPedido() : a.fecha();
                     Instant fechaPedidoB = b.pedido() != null ? b.pedido().fechaPedido() : b.fecha();
@@ -266,7 +266,7 @@ public class OrdenApplicationService {
                 .filter(orden -> orden.plato() != null)
                 .filter(orden -> orden.plato().categoria() != null)
                 .filter(orden -> orden.plato().categoria() != Categoria.Bebida)
-                .filter(this::cuentaNoPagada)
+                .filter(this::cuentaNoPagadaYaHidratada)
                 .sorted((a, b) -> a.fecha().compareTo(b.fecha()))
                 .toList();
     }
@@ -278,7 +278,7 @@ public class OrdenApplicationService {
                 .filter(orden -> orden.plato() != null)
                 .filter(orden -> orden.plato().categoria() != null)
                 .filter(orden -> orden.plato().categoria() == Categoria.Bebida)
-                .filter(this::cuentaNoPagada)
+                .filter(this::cuentaNoPagadaYaHidratada)
                 .sorted((a, b) -> {
                     Instant fechaPedidoA = a.pedido() != null ? a.pedido().fechaPedido() : a.fecha();
                     Instant fechaPedidoB = b.pedido() != null ? b.pedido().fechaPedido() : b.fecha();
@@ -287,18 +287,12 @@ public class OrdenApplicationService {
                 .toList();
     }
 
-    private boolean cuentaNoPagada(Orden orden) {
-        if (orden == null) {
-            return false;
-        }
-
-        Orden ordenHidratada = hidratarOrden(orden);
-
-        if (ordenHidratada == null || ordenHidratada.pedido() == null || ordenHidratada.pedido().cuenta() == null) {
+    private boolean cuentaNoPagadaYaHidratada(Orden orden) {
+        if (orden == null || orden.pedido() == null || orden.pedido().cuenta() == null) {
             return true;
         }
 
-        return !ordenHidratada.pedido().cuenta().payed();
+        return !orden.pedido().cuenta().payed();
     }
 
     private Orden hidratarOrden(Orden orden) {

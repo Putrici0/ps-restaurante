@@ -72,6 +72,8 @@ export class BebidasComponent {
     () => this.pedidos().filter((p) => p.estado !== 'listo').length,
   );
 
+  readonly hayDatos = computed(() => this.pedidosOrdenados().length > 0);
+
   constructor() {
     interval(this.pollingMs)
       .pipe(
@@ -113,7 +115,10 @@ export class BebidasComponent {
         const todas = [...pendientes, ...enPreparacion, ...listas];
         this.pedidos.set(this.agruparPorPedido(todas));
         this.cargando.set(false);
-        this.error.set(null);
+
+        if (!this.hayDatos()) {
+          this.error.set(null);
+        }
       });
   }
 
@@ -211,19 +216,32 @@ export class BebidasComponent {
   }
 
   private recargar(): void {
-    combineLatest([
-      this.ordenesApi.obtenerPendientesBarra(),
-      this.ordenesApi.obtenerEnPreparacionBarra(),
-      this.ordenesApi.obtenerListasBarra(),
-    ])
+    this.ordenesApi
+      .obtenerPendientesBarra()
       .pipe(take(1))
       .subscribe({
-        next: ([pendientes, enPreparacion, listas]) => {
-          const todas = [...pendientes, ...enPreparacion, ...listas];
-          this.pedidos.set(this.agruparPorPedido(todas));
-          this.cargando.set(false);
-          this.error.set(null);
-          this.procesandoPedidoId.set(null);
+        next: () => {
+          combineLatest([
+            this.ordenesApi.obtenerPendientesBarra(),
+            this.ordenesApi.obtenerEnPreparacionBarra(),
+            this.ordenesApi.obtenerListasBarra(),
+          ])
+            .pipe(take(1))
+            .subscribe({
+              next: ([pendientes, enPreparacion, listas]) => {
+                const todas = [...pendientes, ...enPreparacion, ...listas];
+                this.pedidos.set(this.agruparPorPedido(todas));
+                this.cargando.set(false);
+                this.error.set(null);
+                this.procesandoPedidoId.set(null);
+              },
+              error: (error) => {
+                console.error(error);
+                this.error.set('No se pudieron recargar las bebidas.');
+                this.cargando.set(false);
+                this.procesandoPedidoId.set(null);
+              },
+            });
         },
         error: (error) => {
           console.error(error);

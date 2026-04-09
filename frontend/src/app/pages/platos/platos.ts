@@ -44,6 +44,8 @@ export class PlatosComponent {
     () => this.ordenes().filter((orden) => orden.ordenEstado !== 'Entregado').length,
   );
 
+  readonly hayDatos = computed(() => this.ordenesOrdenadas().length > 0);
+
   constructor() {
     interval(this.pollingMs)
       .pipe(
@@ -71,7 +73,10 @@ export class PlatosComponent {
 
         this.ordenes.set(this.filtrarVisibles(resultado));
         this.cargando.set(false);
-        this.error.set(null);
+
+        if (!this.hayDatos()) {
+          this.error.set(null);
+        }
       });
 
     interval(30000)
@@ -145,9 +150,7 @@ export class PlatosComponent {
 
   detallesVisibles(orden: OrdenCocinaResponse): string {
     const detalles = orden.detalles?.trim();
-    return detalles && detalles.length > 0
-      ? detalles
-      : 'Sin detalles adicionales';
+    return detalles && detalles.length > 0 ? detalles : 'Sin detalles adicionales';
   }
 
   tiempoLista(orden: OrdenCocinaResponse): string {

@@ -2,22 +2,22 @@
 
 <div class="bebidas-page">
   <div class="header-bebidas">
-    <h1>Cola de Bebidas</h1>
+    <h1>Cola de bebidas</h1>
 
     <div class="contador-pendientes">
       <span class="dot rojo"></span> {{ pendientesCount() }} pendientes
     </div>
   </div>
 
-  @if (cargando()) {
+  @if (cargando() && !hayDatos()) {
     <div class="estado-vacio">
       <p>Cargando bebidas...</p>
     </div>
-  } @else if (error()) {
+  } @else if (error() && !hayDatos()) {
     <div class="estado-vacio error">
       <p>{{ error() }}</p>
     </div>
-  } @else if (pedidosOrdenados().length === 0) {
+  } @else if (!hayDatos()) {
     <div class="estado-vacio">
       <p>No hay bebidas activas.</p>
     </div>
@@ -40,14 +40,22 @@
 
           <div class="bloque-contenido">
             <div class="info-superior">
-              <span class="pildora-estado">{{ pedido.estado | titlecase }}</span>
-              <span class="tiempo">{{ tiempoPedido(pedido) }}</span>
+              <span class="pildora-estado">
+                {{
+                  pedido.estado === 'pendiente'
+                    ? 'Pendiente'
+                    : pedido.estado === 'preparando'
+                      ? 'En preparación'
+                      : 'Listo'
+                }}
+              </span>
+              <span class="tiempo">Pedido {{ pedido.pedidoId }} · {{ pedido.totalItems }} bebidas</span>
             </div>
 
             <div class="lista-items">
-              @for (item of pedido.items; track $index) {
+              @for (item of pedido.items; track item.nombre) {
                 <div class="item">
-                  <strong>{{ item.cantidad }}</strong> {{ item.nombre }}
+                  <strong>{{ item.cantidad }}x</strong> {{ item.nombre }}
                 </div>
               }
             </div>
@@ -61,10 +69,7 @@
             } @else if (pedido.estado === 'preparando') {
               <div class="grupo-botones-preparando">
                 <button class="btn-deshacer" (click)="retrocederEstado(pedido)">
-                  <span
-                    class="iconify"
-                    data-icon="solar:undo-left-round-bold"
-                  ></span>
+                  ←
                 </button>
 
                 <button class="btn-servir" (click)="avanzarEstado(pedido)">
@@ -73,11 +78,7 @@
               </div>
             } @else {
               <button class="btn-cancelar" (click)="retrocederEstado(pedido)">
-                CANCELAR
-                <span
-                  class="iconify"
-                  data-icon="solar:close-circle-bold"
-                ></span>
+                VOLVER
               </button>
             }
           </div>
