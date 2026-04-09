@@ -1,19 +1,13 @@
 <app-navbar></app-navbar>
-<section class="bebidas-page">
-  <header class="header-bebidas">
-    <div>
-      <p class="eyebrow">Barra / Central</p>
-      <h1>Cola de bebidas</h1>
-      <p class="subtitulo">
-        Se muestran solo bebidas, agrupadas por pedido y ocultando cuentas ya pagadas.
-      </p>
-    </div>
+
+<div class="bebidas-page">
+  <div class="header-bebidas">
+    <h1>Cola de Bebidas</h1>
 
     <div class="contador-pendientes">
-      <span class="dot rojo"></span>
-      <span>{{ pendientesCount() }} pendientes</span>
+      <span class="dot rojo"></span> {{ pendientesCount() }} pendientes
     </div>
-  </header>
+  </div>
 
   @if (cargando()) {
     <div class="estado-vacio">
@@ -30,13 +24,13 @@
   } @else {
     <div class="lista-pedidos">
       @for (pedido of pedidosOrdenados(); track pedido.pedidoId) {
-        <article
+        <div
           class="pedido-card"
           [class.es-listo]="pedido.estado === 'listo'"
           [class.es-preparando]="pedido.estado === 'preparando'"
         >
           <div class="bloque-mesa">
-            <span class="indicador-color"></span>
+            <div class="indicador-color"></div>
 
             <div class="mesa-texto">
               <span>MESA</span>
@@ -46,25 +40,14 @@
 
           <div class="bloque-contenido">
             <div class="info-superior">
-              <span class="pildora-estado">
-                {{
-                  pedido.estado === 'pendiente'
-                    ? 'Pendiente'
-                    : pedido.estado === 'preparando'
-                      ? 'En preparación'
-                      : 'Listo'
-                }}
-              </span>
-
-              <span class="dato-secundario">Pedido {{ pedido.pedidoId }}</span>
-              <span class="dato-secundario">{{ pedido.totalItems }} bebidas</span>
+              <span class="pildora-estado">{{ pedido.estado | titlecase }}</span>
+              <span class="tiempo">{{ tiempoPedido(pedido) }}</span>
             </div>
 
             <div class="lista-items">
-              @for (item of pedido.items; track item.nombre) {
-                <div class="item-bebida">
-                  <strong>{{ item.cantidad }}x</strong>
-                  <span>{{ item.nombre }}</span>
+              @for (item of pedido.items; track $index) {
+                <div class="item">
+                  <strong>{{ item.cantidad }}</strong> {{ item.nombre }}
                 </div>
               }
             </div>
@@ -72,48 +55,34 @@
 
           <div class="bloque-accion">
             @if (pedido.estado === 'pendiente') {
-              <button
-                class="btn-preparar"
-                type="button"
-                [disabled]="procesandoPedidoId() === pedido.pedidoId"
-                (click)="avanzarEstado(pedido)"
-              >
+              <button class="btn-preparar" (click)="avanzarEstado(pedido)">
                 PREPARAR
               </button>
             } @else if (pedido.estado === 'preparando') {
               <div class="grupo-botones-preparando">
-                <button
-                  class="btn-deshacer"
-                  type="button"
-                  [disabled]="procesandoPedidoId() === pedido.pedidoId"
-                  (click)="retrocederEstado(pedido)"
-                  title="Volver a pendiente"
-                >
-                  ←
+                <button class="btn-deshacer" (click)="retrocederEstado(pedido)">
+                  <span
+                    class="iconify"
+                    data-icon="solar:undo-left-round-bold"
+                  ></span>
                 </button>
 
-                <button
-                  class="btn-servir"
-                  type="button"
-                  [disabled]="procesandoPedidoId() === pedido.pedidoId"
-                  (click)="avanzarEstado(pedido)"
-                >
+                <button class="btn-servir" (click)="avanzarEstado(pedido)">
                   LISTO PARA SERVIR
                 </button>
               </div>
             } @else {
-              <button
-                class="btn-cancelar"
-                type="button"
-                [disabled]="procesandoPedidoId() === pedido.pedidoId"
-                (click)="retrocederEstado(pedido)"
-              >
-                VOLVER
+              <button class="btn-cancelar" (click)="retrocederEstado(pedido)">
+                CANCELAR
+                <span
+                  class="iconify"
+                  data-icon="solar:close-circle-bold"
+                ></span>
               </button>
             }
           </div>
-        </article>
+        </div>
       }
     </div>
   }
-</section>
+</div>

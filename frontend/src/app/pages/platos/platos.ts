@@ -30,13 +30,12 @@ export class PlatosComponent {
   readonly procesandoOrdenId = signal<string | null>(null);
   readonly pausadoHasta = signal<number>(0);
   readonly ahora = signal(Date.now());
-
   readonly ordenes = signal<OrdenCocinaResponse[]>([]);
 
   readonly ordenesOrdenadas = computed(() =>
     [...this.ordenes()].sort((a, b) => {
-      const fechaA = new Date(a.fecha).getTime();
-      const fechaB = new Date(b.fecha).getTime();
+      const fechaA = new Date(a.pedido?.fechaPedido ?? a.fecha).getTime();
+      const fechaB = new Date(b.pedido?.fechaPedido ?? b.fecha).getTime();
       return fechaA - fechaB;
     }),
   );
@@ -108,35 +107,20 @@ export class PlatosComponent {
 
   mesaDeOrden(orden: OrdenCocinaResponse): string {
     const mesas = orden.pedido?.cuenta?.mesas ?? [];
-
-    if (mesas.length > 0) {
-      if (mesas.length === 1) {
-        return `Mesa ${mesas[0].id}`;
-      }
-
-      return `Mesas ${mesas.map((mesa) => mesa.id).join(', ')}`;
+    if (mesas.length === 1) {
+      return `Mesa ${mesas[0].id}`;
     }
-
-    const mesaDesdeDetalles = this.extraerMesaDesdeTexto(orden.detalles);
-    if (mesaDesdeDetalles) {
-      return `Mesa ${mesaDesdeDetalles}`;
+    if (mesas.length > 1) {
+      return `Mesas ${mesas.map((m) => m.id).join(', ')}`;
     }
-
     return 'Mesa sin asignar';
   }
 
   numeroMesaPlano(orden: OrdenCocinaResponse): string {
     const mesas = orden.pedido?.cuenta?.mesas ?? [];
-
     if (mesas.length > 0) {
-      return mesas.map((mesa) => String(mesa.id)).join(', ');
+      return mesas.map((m) => String(m.id)).join(', ');
     }
-
-    const mesaDesdeDetalles = this.extraerMesaDesdeTexto(orden.detalles);
-    if (mesaDesdeDetalles) {
-      return mesaDesdeDetalles;
-    }
-
     return 'Sin mesa';
   }
 
@@ -161,47 +145,34 @@ export class PlatosComponent {
 
   detallesVisibles(orden: OrdenCocinaResponse): string {
     const detalles = orden.detalles?.trim();
-    return detalles && detalles.length > 0 ? detalles : 'Sin detalles adicionales';
+    return detalles && detalles.length > 0
+      ? detalles
+      : 'Sin detalles adicionales';
   }
 
   tiempoLista(orden: OrdenCocinaResponse): string {
-    const diffMin = this.diferenciaEnMinutos(orden.fecha);
+    const referencia = orden.pedido?.fechaPedido ?? orden.fecha;
+    const diffMin = this.diferenciaEnMinutos(referencia);
 
     if (orden.ordenEstado === 'Entregado') {
-      if (diffMin < 1) {
-        return 'Entregado hace < 1 min';
-      }
-
-      if (diffMin < 60) {
-        return `Entregado hace ${diffMin} min`;
-      }
+      if (diffMin < 1) return 'Entregado hace < 1 min';
+      if (diffMin < 60) return `Entregado hace ${diffMin} min`;
 
       const horas = Math.floor(diffMin / 60);
       const minutosRestantes = diffMin % 60;
-
-      if (minutosRestantes === 0) {
-        return `Entregado hace ${horas} h`;
-      }
-
-      return `Entregado hace ${horas} h ${minutosRestantes} min`;
+      return minutosRestantes === 0
+        ? `Entregado hace ${horas} h`
+        : `Entregado hace ${horas} h ${minutosRestantes} min`;
     }
 
-    if (diffMin < 1) {
-      return 'Lista hace < 1 min';
-    }
-
-    if (diffMin < 60) {
-      return `Lista hace ${diffMin} min`;
-    }
+    if (diffMin < 1) return 'Lista hace < 1 min';
+    if (diffMin < 60) return `Lista hace ${diffMin} min`;
 
     const horas = Math.floor(diffMin / 60);
     const minutosRestantes = diffMin % 60;
-
-    if (minutosRestantes === 0) {
-      return `Lista hace ${horas} h`;
-    }
-
-    return `Lista hace ${horas} h ${minutosRestantes} min`;
+    return minutosRestantes === 0
+      ? `Lista hace ${horas} h`
+      : `Lista hace ${horas} h ${minutosRestantes} min`;
   }
 
   pedidoIdDeOrden(orden: OrdenCocinaResponse): string {
@@ -215,11 +186,11 @@ export class PlatosComponent {
   private filtrarVisibles(ordenes: OrdenCocinaResponse[]): OrdenCocinaResponse[] {
     return ordenes.filter((orden) => {
       const esComida = orden.plato?.categoria !== 'Bebida';
-      const estaVisibleEnSala =
+      const estadoVisible =
         orden.ordenEstado === 'Listo' || orden.ordenEstado === 'Entregado';
       const cuentaPagada = orden.pedido?.cuenta?.payed === true;
 
-      return esComida && estaVisibleEnSala && !cuentaPagada;
+      return esComida && estadoVisible && !cuentaPagada;
     });
   }
 
@@ -232,9 +203,7 @@ export class PlatosComponent {
   }
 
   private recargarConRetardo(ms: number): void {
-    window.setTimeout(() => {
-      this.recargar();
-    }, ms);
+    window.setTimeout(() => this.recargar(), ms);
   }
 
   private recargar(): void {
@@ -251,6 +220,7 @@ export class PlatosComponent {
         error: (error) => {
           console.error(error);
           this.error.set('No se pudieron recargar los platos de sala.');
+          this.cargando.set(false);
           this.procesandoOrdenId.set(null);
         },
       });
@@ -258,20 +228,9 @@ export class PlatosComponent {
 
   private diferenciaEnMinutos(fechaIso: string): number {
     const fecha = new Date(fechaIso).getTime();
-
     if (Number.isNaN(fecha)) {
       return 0;
     }
-
     return Math.max(0, Math.floor((this.ahora() - fecha) / 60000));
-  }
-
-  private extraerMesaDesdeTexto(texto?: string | null): string | null {
-    if (!texto) {
-      return null;
-    }
-
-    const match = texto.match(/\bmesa\s*[:#-]?\s*(\d+)\b/i);
-    return match?.[1] ?? null;
   }
 }

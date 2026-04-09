@@ -1,10 +1,10 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { NavbarComponent } from '../../components/navbar/navbar';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { combineLatest, forkJoin, interval, of } from 'rxjs';
 import { catchError, startWith, switchMap, take } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
+import { NavbarComponent } from '../../components/navbar/navbar';
 import {
   EstadoOrdenBackend,
   OrdenCocinaResponse,
@@ -47,7 +47,6 @@ export class BebidasComponent {
   readonly error = signal<string | null>(null);
   readonly procesandoPedidoId = signal<string | null>(null);
   readonly pausadoHasta = signal<number>(0);
-
   readonly pedidos = signal<PedidoBebidaAgrupado[]>([]);
 
   readonly pedidosOrdenados = computed(() => {
@@ -95,7 +94,11 @@ export class BebidasComponent {
                 [] as OrdenCocinaResponse[],
                 [] as OrdenCocinaResponse[],
                 [] as OrdenCocinaResponse[],
-              ] as [OrdenCocinaResponse[], OrdenCocinaResponse[], OrdenCocinaResponse[]]);
+              ] as [
+                OrdenCocinaResponse[],
+                OrdenCocinaResponse[],
+                OrdenCocinaResponse[],
+              ]);
             }),
           );
         }),
@@ -136,7 +139,9 @@ export class BebidasComponent {
         },
         error: (error) => {
           console.error(error);
-          this.error.set('No se pudo actualizar el estado del pedido de bebidas.');
+          this.error.set(
+            'No se pudo actualizar el estado del pedido de bebidas.',
+          );
           this.recargarConRetardo(this.refreshAfterWriteMs);
         },
       });
@@ -164,10 +169,31 @@ export class BebidasComponent {
         },
         error: (error) => {
           console.error(error);
-          this.error.set('No se pudo actualizar el estado del pedido de bebidas.');
+          this.error.set(
+            'No se pudo actualizar el estado del pedido de bebidas.',
+          );
           this.recargarConRetardo(this.refreshAfterWriteMs);
         },
       });
+  }
+
+  tiempoPedido(pedido: PedidoBebidaAgrupado): string {
+    const fecha = new Date(pedido.fechaPedido).getTime();
+    if (Number.isNaN(fecha)) {
+      return '';
+    }
+
+    const mins = Math.max(0, Math.floor((Date.now() - fecha) / 60000));
+    if (mins < 1) {
+      return '< 1 min';
+    }
+    if (mins < 60) {
+      return `${mins} min`;
+    }
+
+    const horas = Math.floor(mins / 60);
+    const resto = mins % 60;
+    return resto === 0 ? `${horas} h` : `${horas} h ${resto} min`;
   }
 
   private pausarSincronizacion(ms: number): void {
@@ -202,12 +228,15 @@ export class BebidasComponent {
         error: (error) => {
           console.error(error);
           this.error.set('No se pudieron recargar las bebidas.');
+          this.cargando.set(false);
           this.procesandoPedidoId.set(null);
         },
       });
   }
 
-  private agruparPorPedido(ordenes: OrdenCocinaResponse[]): PedidoBebidaAgrupado[] {
+  private agruparPorPedido(
+    ordenes: OrdenCocinaResponse[],
+  ): PedidoBebidaAgrupado[] {
     const visibles = ordenes.filter((orden) => {
       const esBebida = orden.plato?.categoria === 'Bebida';
       const cuentaPagada = orden.pedido?.cuenta?.payed === true;
@@ -225,8 +254,7 @@ export class BebidasComponent {
       const cuentaId = orden.pedido?.cuenta?.id ?? '';
       const mesaId =
         orden.pedido?.cuenta?.mesas?.[0]?.id?.toString?.() ??
-        orden.pedido?.cuenta?.mesas?.[0]?.id ??
-        'Sin asignar';
+        String(orden.pedido?.cuenta?.mesas?.[0]?.id ?? 'Sin asignar');
 
       const estado = this.mapearEstado(orden.ordenEstado);
 
@@ -234,7 +262,7 @@ export class BebidasComponent {
         mapa.set(pedidoId, {
           pedidoId,
           cuentaId,
-          mesaId: String(mesaId),
+          mesaId,
           fechaPedido: orden.pedido?.fechaPedido ?? orden.fecha,
           estado,
           ordenesIds: [],
@@ -244,6 +272,7 @@ export class BebidasComponent {
       }
 
       const grupo = mapa.get(pedidoId)!;
+
       grupo.ordenesIds.push(orden.id);
       grupo.totalItems += 1;
 
@@ -253,12 +282,12 @@ export class BebidasComponent {
         grupo.estado = 'preparando';
       }
 
-      const itemExistente = grupo.items.find(
+      const existente = grupo.items.find(
         (item) => item.nombre === orden.plato.nombre,
       );
 
-      if (itemExistente) {
-        itemExistente.cantidad += 1;
+      if (existente) {
+        existente.cantidad += 1;
       } else {
         grupo.items.push({
           nombre: orden.plato.nombre,
