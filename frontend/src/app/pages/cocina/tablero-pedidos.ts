@@ -337,7 +337,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
   }
 
   private filtrarNoPagadas(ordenes: OrdenCocinaResponse[]): OrdenCocinaResponse[] {
-    return ordenes.filter((orden) => orden.pedido?.cuenta?.payed !== true);
+    return ordenes;
   }
 
   private cargarTablero(mostrarLoading: boolean): void {
@@ -364,9 +364,9 @@ export class TableroPedidos implements OnInit, OnDestroy {
       .pipe(take(1))
       .subscribe({
         next: ({ pendientes, preparacion, listas }) => {
-          const pendientesFiltradas = this.filtrarNoPagadas(pendientes.data);
-          const preparacionFiltradas = this.filtrarNoPagadas(preparacion.data);
-          const listasFiltradas = this.filtrarNoPagadas(listas.data);
+          const pendientesFiltradas = pendientes.data;
+          const preparacionFiltradas = preparacion.data;
+          const listasFiltradas = listas.data;
 
           this.ordenesPendientes.set(pendientesFiltradas);
           this.ordenesPreparacion.set(preparacionFiltradas);

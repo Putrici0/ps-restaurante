@@ -174,7 +174,7 @@ export class PlatosComponent implements OnInit, OnDestroy {
     }
 
     this.ordenesApi
-      .obtenerTodas()
+      .obtenerPlatosSala()
       .pipe(
         take(1),
         catchError((err) => {
