@@ -6,7 +6,14 @@ import {
   OrdenCocinaResponse,
   OrdenesApiService,
 } from '../../services/ordenes-api.service';
-import {NavbarComponent} from '../../components/navbar/navbar';
+import { NavbarComponent } from '../../components/navbar/navbar';
+
+type EstadoVisualOrden = OrdenCocinaResponse['ordenEstado'];
+
+type TransicionOrden = {
+  estadoObjetivo: EstadoVisualOrden;
+  expiraEn: number;
+};
 
 @Component({
   selector: 'app-platos',
@@ -23,6 +30,7 @@ export class PlatosComponent implements OnInit, OnDestroy {
 
   private readonly pollingMs = 3000;
   private readonly refreshAfterWriteMs = 1500;
+  private readonly transicionVisualMs = 2500;
 
   readonly cargando = signal<boolean>(true);
   readonly error = signal<string | null>(null);
@@ -31,6 +39,7 @@ export class PlatosComponent implements OnInit, OnDestroy {
   readonly ahora = signal(Date.now());
 
   readonly ordenes = signal<OrdenCocinaResponse[]>([]);
+  readonly transiciones = signal<Record<string, TransicionOrden>>({});
 
   readonly ordenesOrdenadas = computed(() =>
     [...this.ordenes()].sort((a, b) => {
@@ -41,7 +50,7 @@ export class PlatosComponent implements OnInit, OnDestroy {
   );
 
   readonly pendientesDeEntregaCount = computed(
-    () => this.ordenes().filter((orden) => orden.ordenEstado === 'Listo').length,
+    () => this.ordenes().filter((orden) => this.estadoVisual(orden) === 'Listo').length,
   );
 
   readonly hayDatos = computed(() => this.ordenesOrdenadas().length > 0);
@@ -50,6 +59,8 @@ export class PlatosComponent implements OnInit, OnDestroy {
     this.cargarPlatos(true);
 
     this.intervaloRefresco = window.setInterval(() => {
+      this.limpiarTransicionesExpiradas();
+
       if (!this.estaSincronizacionPausada()) {
         this.cargarPlatos(false);
       }
@@ -57,6 +68,7 @@ export class PlatosComponent implements OnInit, OnDestroy {
 
     this.intervaloReloj = window.setInterval(() => {
       this.ahora.set(Date.now());
+      this.limpiarTransicionesExpiradas();
     }, 30000);
   }
 
@@ -70,12 +82,15 @@ export class PlatosComponent implements OnInit, OnDestroy {
   }
 
   entregarOrden(orden: OrdenCocinaResponse): void {
-    if (this.procesandoOrdenId() || orden.ordenEstado === 'Entregado') {
+    const estadoActual = this.estadoVisual(orden);
+
+    if (this.procesandoOrdenId() || estadoActual === 'Entregado') {
       return;
     }
 
     this.procesandoOrdenId.set(orden.id);
     this.error.set(null);
+    this.marcarTransicion(orden.id, 'Entregado');
     this.pausarSincronizacion(this.refreshAfterWriteMs + 500);
 
     this.ordenesApi
@@ -86,6 +101,8 @@ export class PlatosComponent implements OnInit, OnDestroy {
         error: (err) => {
           console.error(err);
           this.error.set('No se pudo marcar la orden como entregada.');
+          this.limpiarTransicion(orden.id);
+          this.procesandoOrdenId.set(null);
           this.recargarConRetardo(this.refreshAfterWriteMs);
         },
       });
@@ -123,8 +140,22 @@ export class PlatosComponent implements OnInit, OnDestroy {
     }
   }
 
+  estadoVisual(orden: OrdenCocinaResponse): EstadoVisualOrden {
+    return this.transiciones()[orden.id]?.estadoObjetivo ?? orden.ordenEstado;
+  }
+
+  estaCambiando(orden: OrdenCocinaResponse): boolean {
+    return this.procesandoOrdenId() === orden.id;
+  }
+
   etiquetaEstado(orden: OrdenCocinaResponse): string {
-    return orden.ordenEstado === 'Entregado' ? 'ENTREGADO' : 'LISTO';
+    const estado = this.estadoVisual(orden);
+
+    if (this.estaCambiando(orden)) {
+      return 'CAMBIANDO...';
+    }
+
+    return estado === 'Entregado' ? 'ENTREGADO' : 'LISTO';
   }
 
   detallesVisibles(orden: OrdenCocinaResponse): string {
@@ -136,7 +167,7 @@ export class PlatosComponent implements OnInit, OnDestroy {
     const referencia = orden.pedido?.fechaPedido ?? orden.fecha;
     const diffMin = this.diferenciaEnMinutos(referencia);
 
-    if (orden.ordenEstado === 'Entregado') {
+    if (this.estadoVisual(orden) === 'Entregado') {
       if (diffMin < 1) return 'Entregado hace < 1 min';
       if (diffMin < 60) return `Entregado hace ${diffMin} min`;
 
@@ -164,7 +195,13 @@ export class PlatosComponent implements OnInit, OnDestroy {
   }
 
   yaEntregada(orden: OrdenCocinaResponse): boolean {
-    return orden.ordenEstado === 'Entregado';
+    return this.estadoVisual(orden) === 'Entregado';
+  }
+
+  textoBotonEntrega(orden: OrdenCocinaResponse): string {
+    if (this.estaCambiando(orden)) return 'ENTREGANDO...';
+    if (this.yaEntregada(orden)) return 'ENTREGADO';
+    return 'MARCAR COMO ENTREGADO';
   }
 
   private cargarPlatos(mostrarLoading: boolean): void {
@@ -187,11 +224,20 @@ export class PlatosComponent implements OnInit, OnDestroy {
         }),
       )
       .subscribe((ordenes) => {
-        this.ordenes.set(this.filtrarVisibles(ordenes));
-        this.cargando.set(false);
-        this.procesandoOrdenId.set(null);
+        const visibles = this.filtrarVisibles(ordenes);
+        const reconciliadas = visibles.map((orden) => this.reconciliarTransicion(orden));
 
-        if (this.ordenes().length > 0 || !this.error()) {
+        this.ordenes.set(reconciliadas);
+        this.cargando.set(false);
+
+        if (this.procesandoOrdenId()) {
+          const sigueEnLista = reconciliadas.some((o) => o.id === this.procesandoOrdenId());
+          if (!sigueEnLista || !this.transiciones()[this.procesandoOrdenId()!]) {
+            this.procesandoOrdenId.set(null);
+          }
+        }
+
+        if (reconciliadas.length > 0 || !this.error()) {
           this.error.set(null);
         }
       });
@@ -213,6 +259,59 @@ export class PlatosComponent implements OnInit, OnDestroy {
       | ({ payed?: boolean; paid?: boolean } | undefined);
 
     return cuenta?.payed === true || cuenta?.paid === true;
+  }
+
+  private reconciliarTransicion(orden: OrdenCocinaResponse): OrdenCocinaResponse {
+    const transicion = this.transiciones()[orden.id];
+    if (!transicion) return orden;
+
+    if (orden.ordenEstado === transicion.estadoObjetivo) {
+      this.limpiarTransicion(orden.id);
+      if (this.procesandoOrdenId() === orden.id) {
+        this.procesandoOrdenId.set(null);
+      }
+      return orden;
+    }
+
+    return {
+      ...orden,
+      ordenEstado: transicion.estadoObjetivo,
+    };
+  }
+
+  private marcarTransicion(ordenId: string, estadoObjetivo: EstadoVisualOrden): void {
+    this.transiciones.update((actual) => ({
+      ...actual,
+      [ordenId]: {
+        estadoObjetivo,
+        expiraEn: Date.now() + this.transicionVisualMs,
+      },
+    }));
+  }
+
+  private limpiarTransicion(ordenId: string): void {
+    this.transiciones.update((actual) => {
+      const copia = { ...actual };
+      delete copia[ordenId];
+      return copia;
+    });
+  }
+
+  private limpiarTransicionesExpiradas(): void {
+    const ahora = Date.now();
+
+    this.transiciones.update((actual) => {
+      const nuevas = Object.fromEntries(
+        Object.entries(actual).filter(([, valor]) => valor.expiraEn > ahora),
+      ) as Record<string, TransicionOrden>;
+
+      return nuevas;
+    });
+
+    const procesandoId = this.procesandoOrdenId();
+    if (procesandoId && !this.transiciones()[procesandoId]) {
+      this.procesandoOrdenId.set(null);
+    }
   }
 
   private pausarSincronizacion(ms: number): void {

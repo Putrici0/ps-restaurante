@@ -5,11 +5,18 @@ import {
   OrdenCocinaResponse,
   OrdenesApiService,
 } from '../../services/ordenes-api.service';
-import {NavbarComponent} from '../../components/navbar/navbar';
+import { NavbarComponent } from '../../components/navbar/navbar';
 
 type ResultadoCarga = {
   ok: boolean;
   data: OrdenCocinaResponse[];
+};
+
+type EstadoVisualOrden = OrdenCocinaResponse['ordenEstado'];
+
+type TransicionOrden = {
+  estadoObjetivo: EstadoVisualOrden;
+  expiraEn: number;
 };
 
 @Component({
@@ -27,6 +34,7 @@ export class BebidasComponent implements OnInit, OnDestroy {
 
   private readonly pollingMs = 3000;
   private readonly refreshAfterWriteMs = 1500;
+  private readonly transicionVisualMs = 2500;
 
   readonly cargando = signal<boolean>(true);
   readonly error = signal<string | null>(null);
@@ -35,6 +43,7 @@ export class BebidasComponent implements OnInit, OnDestroy {
   readonly ahora = signal(Date.now());
 
   readonly ordenes = signal<OrdenCocinaResponse[]>([]);
+  readonly transiciones = signal<Record<string, TransicionOrden>>({});
 
   readonly ordenesOrdenadas = computed(() => {
     const prioridad: Record<string, number> = {
@@ -44,7 +53,10 @@ export class BebidasComponent implements OnInit, OnDestroy {
     };
 
     return [...this.ordenes()].sort((a, b) => {
-      const porEstado = (prioridad[a.ordenEstado] ?? 99) - (prioridad[b.ordenEstado] ?? 99);
+      const estadoA = this.estadoVisual(a);
+      const estadoB = this.estadoVisual(b);
+
+      const porEstado = (prioridad[estadoA] ?? 99) - (prioridad[estadoB] ?? 99);
       if (porEstado !== 0) return porEstado;
 
       const fechaA = new Date(a.pedido?.fechaPedido ?? a.fecha).getTime();
@@ -54,11 +66,11 @@ export class BebidasComponent implements OnInit, OnDestroy {
   });
 
   readonly pendientesCount = computed(
-    () => this.ordenes().filter((o) => o.ordenEstado !== 'Listo').length,
+    () => this.ordenes().filter((o) => this.estadoVisual(o) !== 'Listo').length,
   );
 
   readonly listasCount = computed(
-    () => this.ordenes().filter((o) => o.ordenEstado === 'Listo').length,
+    () => this.ordenes().filter((o) => this.estadoVisual(o) === 'Listo').length,
   );
 
   readonly hayDatos = computed(() => this.ordenesOrdenadas().length > 0);
@@ -67,6 +79,8 @@ export class BebidasComponent implements OnInit, OnDestroy {
     this.cargarBebidas(true);
 
     this.intervaloRefresco = window.setInterval(() => {
+      this.limpiarTransicionesExpiradas();
+
       if (!this.estaSincronizacionPausada()) {
         this.cargarBebidas(false);
       }
@@ -74,6 +88,7 @@ export class BebidasComponent implements OnInit, OnDestroy {
 
     this.intervaloReloj = window.setInterval(() => {
       this.ahora.set(Date.now());
+      this.limpiarTransicionesExpiradas();
     }, 30000);
   }
 
@@ -89,14 +104,19 @@ export class BebidasComponent implements OnInit, OnDestroy {
   avanzarEstado(orden: OrdenCocinaResponse): void {
     if (this.procesandoOrdenId()) return;
 
-    if (orden.ordenEstado === 'Listo') return;
+    const estadoActual = this.estadoVisual(orden);
+    if (estadoActual === 'Listo') return;
+
+    const estadoObjetivo: EstadoVisualOrden =
+      estadoActual === 'Pendiente' ? 'Preparación' : 'Listo';
 
     this.procesandoOrdenId.set(orden.id);
     this.error.set(null);
+    this.marcarTransicion(orden.id, estadoObjetivo);
     this.pausarSincronizacion(this.refreshAfterWriteMs + 500);
 
     const accion =
-      orden.ordenEstado === 'Pendiente'
+      estadoActual === 'Pendiente'
         ? this.ordenesApi.marcarEnPreparacion(orden.id)
         : this.ordenesApi.marcarLista(orden.id);
 
@@ -105,6 +125,8 @@ export class BebidasComponent implements OnInit, OnDestroy {
       error: (err) => {
         console.error(err);
         this.error.set('No se pudo actualizar la bebida.');
+        this.limpiarTransicion(orden.id);
+        this.procesandoOrdenId.set(null);
         this.recargarConRetardo(this.refreshAfterWriteMs);
       },
     });
@@ -112,10 +134,13 @@ export class BebidasComponent implements OnInit, OnDestroy {
 
   retrocederEstado(orden: OrdenCocinaResponse): void {
     if (this.procesandoOrdenId()) return;
-    if (orden.ordenEstado === 'Pendiente') return;
+
+    const estadoActual = this.estadoVisual(orden);
+    if (estadoActual === 'Pendiente') return;
 
     this.procesandoOrdenId.set(orden.id);
     this.error.set(null);
+    this.marcarTransicion(orden.id, 'Pendiente');
     this.pausarSincronizacion(this.refreshAfterWriteMs + 500);
 
     this.ordenesApi
@@ -126,6 +151,8 @@ export class BebidasComponent implements OnInit, OnDestroy {
         error: (err) => {
           console.error(err);
           this.error.set('No se pudo actualizar la bebida.');
+          this.limpiarTransicion(orden.id);
+          this.procesandoOrdenId.set(null);
           this.recargarConRetardo(this.refreshAfterWriteMs);
         },
       });
@@ -147,16 +174,26 @@ export class BebidasComponent implements OnInit, OnDestroy {
     return this.extraerMesaDesdeTexto(orden.detalles) ?? 'Sin mesa';
   }
 
+  estadoVisual(orden: OrdenCocinaResponse): EstadoVisualOrden {
+    return this.transiciones()[orden.id]?.estadoObjetivo ?? orden.ordenEstado;
+  }
+
+  estaCambiando(orden: OrdenCocinaResponse): boolean {
+    return this.procesandoOrdenId() === orden.id;
+  }
+
   etiquetaEstado(orden: OrdenCocinaResponse): string {
-    switch (orden.ordenEstado) {
+    const estado = this.estadoVisual(orden);
+
+    switch (estado) {
       case 'Pendiente':
-        return 'PENDIENTE';
+        return this.estaCambiando(orden) ? 'CAMBIANDO...' : 'PENDIENTE';
       case 'Preparación':
-        return 'PREPARANDO';
+        return this.estaCambiando(orden) ? 'CAMBIANDO...' : 'PREPARANDO';
       case 'Listo':
-        return 'LISTO';
+        return this.estaCambiando(orden) ? 'CAMBIANDO...' : 'LISTO';
       default:
-        return orden.ordenEstado.toUpperCase();
+        return estado.toUpperCase();
     }
   }
 
@@ -176,7 +213,15 @@ export class BebidasComponent implements OnInit, OnDestroy {
   }
 
   accionPrincipalTexto(orden: OrdenCocinaResponse): string {
-    switch (orden.ordenEstado) {
+    if (this.estaCambiando(orden)) {
+      const estado = this.estadoVisual(orden);
+
+      if (estado === 'Preparación') return 'PREPARANDO...';
+      if (estado === 'Listo') return 'MARCANDO LISTO...';
+      return 'CAMBIANDO...';
+    }
+
+    switch (this.estadoVisual(orden)) {
       case 'Pendiente':
         return 'PASAR A PREPARACIÓN';
       case 'Preparación':
@@ -186,6 +231,16 @@ export class BebidasComponent implements OnInit, OnDestroy {
       default:
         return 'ACTUALIZAR';
     }
+  }
+
+  accionSecundariaTexto(orden: OrdenCocinaResponse): string {
+    if (this.estaCambiando(orden)) {
+      return 'CAMBIANDO...';
+    }
+
+    return this.estadoVisual(orden) === 'Pendiente'
+      ? 'PENDIENTE'
+      : 'VOLVER A PENDIENTE';
   }
 
   detallesVisibles(orden: OrdenCocinaResponse): string {
@@ -224,18 +279,26 @@ export class BebidasComponent implements OnInit, OnDestroy {
           ];
 
           const visibles = this.filtrarVisibles(combinadas);
-          this.ordenes.set(visibles);
+          const reconciliadas = visibles.map((orden) => this.reconciliarTransicion(orden));
+
+          this.ordenes.set(reconciliadas);
 
           const peticionesOk = [pendientes.ok, preparacion.ok, listas.ok].filter(Boolean).length;
 
-          if (peticionesOk === 0 && visibles.length === 0) {
+          if (peticionesOk === 0 && reconciliadas.length === 0) {
             this.error.set('No se pudieron cargar las bebidas.');
           } else {
             this.error.set(null);
           }
 
           this.cargando.set(false);
-          this.procesandoOrdenId.set(null);
+
+          if (this.procesandoOrdenId()) {
+            const sigueEnLista = reconciliadas.some((o) => o.id === this.procesandoOrdenId());
+            if (!sigueEnLista || !this.transiciones()[this.procesandoOrdenId()!]) {
+              this.procesandoOrdenId.set(null);
+            }
+          }
         },
         error: (err) => {
           console.error(err);
@@ -253,11 +316,63 @@ export class BebidasComponent implements OnInit, OnDestroy {
         orden.ordenEstado === 'Pendiente' ||
         orden.ordenEstado === 'Preparación' ||
         orden.ordenEstado === 'Listo';
-
       const cuentaPagada = orden.pedido?.cuenta?.payed === true;
 
       return esBebida && estadoVisible && !cuentaPagada;
     });
+  }
+
+  private reconciliarTransicion(orden: OrdenCocinaResponse): OrdenCocinaResponse {
+    const transicion = this.transiciones()[orden.id];
+    if (!transicion) return orden;
+
+    if (orden.ordenEstado === transicion.estadoObjetivo) {
+      this.limpiarTransicion(orden.id);
+      if (this.procesandoOrdenId() === orden.id) {
+        this.procesandoOrdenId.set(null);
+      }
+      return orden;
+    }
+
+    return {
+      ...orden,
+      ordenEstado: transicion.estadoObjetivo,
+    };
+  }
+
+  private marcarTransicion(ordenId: string, estadoObjetivo: EstadoVisualOrden): void {
+    this.transiciones.update((actual) => ({
+      ...actual,
+      [ordenId]: {
+        estadoObjetivo,
+        expiraEn: Date.now() + this.transicionVisualMs,
+      },
+    }));
+  }
+
+  private limpiarTransicion(ordenId: string): void {
+    this.transiciones.update((actual) => {
+      const copia = { ...actual };
+      delete copia[ordenId];
+      return copia;
+    });
+  }
+
+  private limpiarTransicionesExpiradas(): void {
+    const ahora = Date.now();
+
+    this.transiciones.update((actual) => {
+      const nuevas = Object.fromEntries(
+        Object.entries(actual).filter(([, valor]) => valor.expiraEn > ahora),
+      ) as Record<string, TransicionOrden>;
+
+      return nuevas;
+    });
+
+    const procesandoId = this.procesandoOrdenId();
+    if (procesandoId && !this.transiciones()[procesandoId]) {
+      this.procesandoOrdenId.set(null);
+    }
   }
 
   private diferenciaEnMinutos(fechaIso: string): number {
