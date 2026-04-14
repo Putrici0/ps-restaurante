@@ -12,13 +12,13 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
-public class PagoApplicationService {
+public class PagoService {
 
     private final CuentaRepository cuentaRepository;
     private final PedidoRepository pedidoRepository;
     private final OrdenRepository ordenRepository;
 
-    public PagoApplicationService(
+    public PagoService(
             CuentaRepository cuentaRepository,
             PedidoRepository pedidoRepository,
             OrdenRepository ordenRepository

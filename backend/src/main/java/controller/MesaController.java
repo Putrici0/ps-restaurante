@@ -6,7 +6,6 @@ import model.Cuenta;
 import model.Mesa;
 import model.Orden;
 import model.Pedido;
-import service.MesaApplicationService;
 import service.MesaService;
 import util.ApiError;
 
@@ -18,11 +17,9 @@ import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class MesaController {
     private final MesaService service;
-    private final MesaApplicationService applicationService;
 
-    public MesaController(MesaService service, MesaApplicationService applicationService) {
+    public MesaController(MesaService service) {
         this.service = service;
-        this.applicationService = applicationService;
     }
 
     public EndpointGroup routes() {
@@ -76,7 +73,7 @@ public class MesaController {
                     path("ocupada", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            boolean ocupada = applicationService.estaOcupada(id);
+                            boolean ocupada = service.estaOcupada(id);
                             ctx.json(new EstadoMesaResponse(id, ocupada));
                         });
                     });
@@ -84,7 +81,7 @@ public class MesaController {
                     path("ocupar", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Cuenta cuenta = applicationService.ocuparMesa(id);
+                            Cuenta cuenta = service.ocuparMesa(id);
                             ctx.status(201).json(cuenta);
                         });
                     });
@@ -92,7 +89,7 @@ public class MesaController {
                     path("cuenta-activa", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            Optional<Cuenta> cuenta = applicationService.obtenerCuentaActivaDeMesa(id);
+                            Optional<Cuenta> cuenta = service.obtenerCuentaActivaDeMesa(id);
 
                             if (cuenta.isPresent()) {
                                 ctx.json(cuenta.get());
@@ -114,7 +111,7 @@ public class MesaController {
                                         ? body.get("password").toString()
                                         : "";
 
-                                Cuenta cuenta = applicationService.validarAccesoMesa(id, password);
+                                Cuenta cuenta = service.validarAccesoMesa(id, password);
 
                                 ctx.json(Map.of(
                                         "mesaId", id,
@@ -130,7 +127,7 @@ public class MesaController {
                     path("pedidos-activos", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            List<Pedido> pedidos = applicationService.obtenerPedidosActivosDeMesa(id);
+                            List<Pedido> pedidos = service.obtenerPedidosActivosDeMesa(id);
                             ctx.json(pedidos);
                         });
                     });
@@ -138,7 +135,7 @@ public class MesaController {
                     path("ordenes-activas", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            List<Orden> ordenes = applicationService.obtenerOrdenesActivasDeMesa(id);
+                            List<Orden> ordenes = service.obtenerOrdenesActivasDeMesa(id);
                             ctx.json(ordenes);
                         });
                     });
@@ -146,7 +143,7 @@ public class MesaController {
                     path("liberar", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Cuenta cuenta = applicationService.liberarMesa(id);
+                            Cuenta cuenta = service.liberarMesa(id);
                             ctx.json(cuenta);
                         });
                     });

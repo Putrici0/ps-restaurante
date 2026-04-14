@@ -51,6 +51,77 @@ public class NotificacionService {
         repository.deleteById(id);
     }
 
+    // Business Methods from NotificacionApplicationService
+
+    public Notificacion crearNotificacionAtencion(String cuentaId) {
+        Cuenta cuenta = cuentaRepository.findById(cuentaId)
+                .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
+
+        Notificacion notificacion = new Notificacion(
+                null,
+                cuenta,
+                TipoNotificacion.Atencion,
+                false,
+                Instant.now()
+        );
+
+        return repository.save(notificacion);
+    }
+
+    public Notificacion crearNotificacionPedidoListo(String cuentaId) {
+        Cuenta cuenta = cuentaRepository.findById(cuentaId)
+                .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
+
+        Notificacion notificacion = new Notificacion(
+                null,
+                cuenta,
+                TipoNotificacion.Recoger,
+                false,
+                Instant.now()
+        );
+
+        return repository.save(notificacion);
+    }
+
+    public List<Notificacion> obtenerNotificacionesPendientes() {
+        return repository.findAll().stream()
+                .filter(notificacion -> !notificacion.leida())
+                .toList();
+    }
+
+    public List<Notificacion> obtenerNotificacionesDeCuenta(String cuentaId) {
+        return repository.findAll().stream()
+                .filter(notificacion -> notificacion.cuenta() != null)
+                .filter(notificacion -> notificacion.cuenta().id() != null)
+                .filter(notificacion -> notificacion.cuenta().id().equals(cuentaId))
+                .toList();
+    }
+
+    public List<Notificacion> obtenerNotificacionesPorTipo(TipoNotificacion tipo) {
+        return repository.findAll().stream()
+                .filter(notificacion -> notificacion.tipo() == tipo)
+                .toList();
+    }
+
+    public Notificacion marcarNotificacionLeida(String notificacionId) {
+        Notificacion notificacion = repository.findById(notificacionId)
+                .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
+
+        if (notificacion.leida()) {
+            return notificacion;
+        }
+
+        Notificacion actualizada = new Notificacion(
+                notificacion.id(),
+                notificacion.cuenta(),
+                notificacion.tipo(),
+                true,
+                notificacion.fecha()
+        );
+
+        return repository.update(notificacion.id(), actualizada);
+    }
+
     private void validate(NotificacionRequest request) {
         if (request == null) {
             throw new IllegalArgumentException("El cuerpo de la petición no puede ser nulo");

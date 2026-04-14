@@ -12,8 +12,9 @@ import repository.interfaces.CuentaRepository;
 import repository.interfaces.MesaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
-import service.MesaApplicationService;
-import service.PedidoApplicationService;
+import repository.interfaces.PlatoRepository;
+import service.MesaService;
+import service.PedidoService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -24,15 +25,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class PedidoApplicationServiceTest {
+class PedidoServiceTest {
 
     private MesaRepository mesaRepository;
     private CuentaRepository cuentaRepository;
     private PedidoRepository pedidoRepository;
     private OrdenRepository ordenRepository;
+    private PlatoRepository platoRepository;
 
-    private MesaApplicationService mesaApplicationService;
-    private PedidoApplicationService pedidoApplicationService;
+    private MesaService mesaService;
+    private PedidoService pedidoService;
 
     private Mesa mesa;
     private Cuenta cuentaActiva;
@@ -48,19 +50,21 @@ class PedidoApplicationServiceTest {
         cuentaRepository = mock(CuentaRepository.class);
         pedidoRepository = mock(PedidoRepository.class);
         ordenRepository = mock(OrdenRepository.class);
+        platoRepository = mock(PlatoRepository.class);
 
-        mesaApplicationService = new MesaApplicationService(
+        mesaService = new MesaService(
                 mesaRepository,
                 cuentaRepository,
                 pedidoRepository,
                 ordenRepository
         );
 
-        pedidoApplicationService = new PedidoApplicationService(
+        pedidoService = new PedidoService(
                 pedidoRepository,
                 cuentaRepository,
                 ordenRepository,
-                mesaApplicationService
+                platoRepository,
+                mesaService
         );
 
         mesa = new Mesa("mesa1", 4);
@@ -71,7 +75,8 @@ class PedidoApplicationServiceTest {
                 false,
                 Optional.empty(),
                 Instant.now(),
-                Optional.empty()
+                Optional.empty(),
+                ""
         );
 
         cuentaPagada = new Cuenta(
@@ -80,7 +85,8 @@ class PedidoApplicationServiceTest {
                 true,
                 Optional.empty(),
                 Instant.now(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         pedido = new Pedido(
@@ -96,7 +102,8 @@ class PedidoApplicationServiceTest {
                 Categoria.Principal,
                 "Desc",
                 new BigDecimal("12.00"),
-                true
+                true,
+                ""
         );
 
         ordenPendiente = new Orden(
@@ -130,7 +137,7 @@ class PedidoApplicationServiceTest {
             return new Pedido("pedidoNuevo", p.cuenta(), p.pedidoEstado(), p.fechaPedido());
         });
 
-        Pedido resultado = pedidoApplicationService.crearPedidoDesdeMesa("mesa1");
+        Pedido resultado = pedidoService.crearPedidoDesdeMesa("mesa1");
 
         assertNotNull(resultado);
         assertEquals("pedidoNuevo", resultado.id());
@@ -145,7 +152,7 @@ class PedidoApplicationServiceTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> pedidoApplicationService.crearPedidoDesdeMesa("mesa1")
+                () -> pedidoService.crearPedidoDesdeMesa("mesa1")
         );
     }
 
@@ -155,7 +162,7 @@ class PedidoApplicationServiceTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> pedidoApplicationService.crearPedidoEnCuenta("cuenta2")
+                () -> pedidoService.crearPedidoEnCuenta("cuenta2")
         );
     }
 
@@ -171,7 +178,7 @@ class PedidoApplicationServiceTest {
         when(cuentaRepository.findById("cuenta1")).thenReturn(Optional.of(cuentaActiva));
         when(pedidoRepository.findAll()).thenReturn(List.of(pedido, pedido2));
 
-        List<Pedido> resultado = pedidoApplicationService.obtenerPedidosDeCuenta("cuenta1");
+        List<Pedido> resultado = pedidoService.obtenerPedidosDeCuenta("cuenta1");
 
         assertEquals(1, resultado.size());
         assertEquals("pedido1", resultado.get(0).id());
@@ -184,7 +191,7 @@ class PedidoApplicationServiceTest {
         when(cuentaRepository.findById("cuenta1")).thenReturn(Optional.of(cuentaActiva));
         when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
 
-        List<Pedido> resultado = pedidoApplicationService.obtenerPedidosActivosDeMesa("mesa1");
+        List<Pedido> resultado = pedidoService.obtenerPedidosActivosDeMesa("mesa1");
 
         assertEquals(1, resultado.size());
         assertEquals("pedido1", resultado.get(0).id());
@@ -213,7 +220,7 @@ class PedidoApplicationServiceTest {
         when(ordenRepository.findAll()).thenReturn(List.of(ordenLista, ordenLista2));
         when(pedidoRepository.update(eq("pedido1"), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
-        Pedido resultado = pedidoApplicationService.recalcularEstadoPedido("pedido1");
+        Pedido resultado = pedidoService.recalcularEstadoPedido("pedido1");
 
         assertEquals(PedidoEstado.Listo, resultado.pedidoEstado());
     }
@@ -224,7 +231,7 @@ class PedidoApplicationServiceTest {
         when(ordenRepository.findAll()).thenReturn(List.of(ordenLista, ordenPendiente));
         when(pedidoRepository.update(eq("pedido1"), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
-        Pedido resultado = pedidoApplicationService.recalcularEstadoPedido("pedido1");
+        Pedido resultado = pedidoService.recalcularEstadoPedido("pedido1");
 
         assertEquals(PedidoEstado.Pendiente, resultado.pedidoEstado());
     }
@@ -240,6 +247,6 @@ class PedidoApplicationServiceTest {
 
         when(pedidoRepository.findById("pedido1")).thenReturn(Optional.of(listo));
 
-        assertTrue(pedidoApplicationService.pedidoEstaListo("pedido1"));
+        assertTrue(pedidoService.pedidoEstaListo("pedido1"));
     }
 }

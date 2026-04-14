@@ -12,6 +12,7 @@ import repository.interfaces.CuentaRepository;
 import repository.interfaces.MesaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
+import service.MesaService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -22,14 +23,14 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class MesaApplicationServiceTest {
+class MesaServiceTest {
 
     private MesaRepository mesaRepository;
     private CuentaRepository cuentaRepository;
     private PedidoRepository pedidoRepository;
     private OrdenRepository ordenRepository;
 
-    private service.MesaApplicationService mesaApplicationService;
+    private MesaService mesaService;
 
     private Mesa mesa;
     private Cuenta cuentaActiva;
@@ -44,7 +45,7 @@ class MesaApplicationServiceTest {
         pedidoRepository = mock(PedidoRepository.class);
         ordenRepository = mock(OrdenRepository.class);
 
-        mesaApplicationService = new service.MesaApplicationService(
+        mesaService = new MesaService(
                 mesaRepository,
                 cuentaRepository,
                 pedidoRepository,
@@ -59,7 +60,8 @@ class MesaApplicationServiceTest {
                 false,
                 Optional.empty(),
                 Instant.now(),
-                Optional.empty()
+                Optional.empty(),
+                "1234"
         );
 
         cuentaPagada = new Cuenta(
@@ -68,7 +70,8 @@ class MesaApplicationServiceTest {
                 true,
                 Optional.empty(),
                 Instant.now(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         pedido = new Pedido(
@@ -84,7 +87,8 @@ class MesaApplicationServiceTest {
                 Categoria.Principal,
                 "Desc",
                 new BigDecimal("12.00"),
-                true
+                true,
+                ""
         );
 
         orden = new Orden(
@@ -101,47 +105,47 @@ class MesaApplicationServiceTest {
     @Test
     void estaOcupada_devuelveTrue_siHayCuentaActiva() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaActiva));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.of(cuentaActiva));
 
-        assertTrue(mesaApplicationService.estaOcupada("mesa1"));
+        assertTrue(mesaService.estaOcupada("mesa1"));
     }
 
     @Test
     void estaOcupada_devuelveFalse_siSoloHayCuentaPagada() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaPagada));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.empty());
 
-        assertFalse(mesaApplicationService.estaOcupada("mesa1"));
+        assertFalse(mesaService.estaOcupada("mesa1"));
     }
 
     @Test
     void ocuparMesa_creaCuenta_siLaMesaEstaLibre() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of());
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.empty());
         when(cuentaRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Cuenta resultado = mesaApplicationService.ocuparMesa("mesa1");
+        Cuenta resultado = mesaService.ocuparMesa("mesa1");
 
         assertNotNull(resultado);
-        assertFalse(resultado.estaPagada());
+        assertFalse(resultado.payed());
         assertEquals("mesa1", resultado.mesas().get(0).id());
     }
 
     @Test
     void ocuparMesa_falla_siYaEstaOcupada() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaActiva));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.of(cuentaActiva));
 
         assertThrows(IllegalArgumentException.class,
-                () -> mesaApplicationService.ocuparMesa("mesa1"));
+                () -> mesaService.ocuparMesa("mesa1"));
     }
 
     @Test
     void obtenerCuentaActivaDeMesa_devuelveLaNoPagada() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaPagada, cuentaActiva));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.of(cuentaActiva));
 
-        Optional<Cuenta> resultado = mesaApplicationService.obtenerCuentaActivaDeMesa("mesa1");
+        Optional<Cuenta> resultado = mesaService.obtenerCuentaActivaDeMesa("mesa1");
 
         assertTrue(resultado.isPresent());
         assertEquals("cuenta1", resultado.get().id());
@@ -150,10 +154,10 @@ class MesaApplicationServiceTest {
     @Test
     void obtenerPedidosActivosDeMesa_devuelvePedidosDeLaCuentaActiva() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaActiva));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.of(cuentaActiva));
         when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
 
-        List<Pedido> pedidos = mesaApplicationService.obtenerPedidosActivosDeMesa("mesa1");
+        List<Pedido> pedidos = mesaService.obtenerPedidosActivosDeMesa("mesa1");
 
         assertEquals(1, pedidos.size());
         assertEquals("pedido1", pedidos.get(0).id());
@@ -162,30 +166,31 @@ class MesaApplicationServiceTest {
     @Test
     void obtenerOrdenesActivasDeMesa_devuelveOrdenesDeLosPedidosDeLaMesa() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaActiva));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.of(cuentaActiva));
         when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
         when(ordenRepository.findAll()).thenReturn(List.of(orden));
 
-        List<Orden> ordenes = mesaApplicationService.obtenerOrdenesActivasDeMesa("mesa1");
+        List<Orden> ordenes = mesaService.obtenerOrdenesActivasDeMesa("mesa1");
 
         assertEquals(1, ordenes.size());
         assertEquals("orden1", ordenes.get(0).id());
     }
 
     @Test
-    void liberarMesa_falla_siLaCuentaSigueActiva() {
+    void liberarMesa_falla_siNoHayCuentaActiva() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaActiva));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.empty());
 
         assertThrows(IllegalArgumentException.class,
-                () -> mesaApplicationService.liberarMesa("mesa1"));
+                () -> mesaService.liberarMesa("mesa1"));
     }
 
     @Test
-    void liberarMesa_noFalla_siNoHayCuentaActiva() {
+    void liberarMesa_noFalla_siHayCuentaActiva() {
         when(mesaRepository.findById("mesa1")).thenReturn(Optional.of(mesa));
-        when(cuentaRepository.findAll()).thenReturn(List.of(cuentaPagada));
+        when(cuentaRepository.findByMesa(mesa)).thenReturn(Optional.of(cuentaActiva));
+        when(cuentaRepository.update(eq("cuenta1"), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
-        assertDoesNotThrow(() -> mesaApplicationService.liberarMesa("mesa1"));
+        assertDoesNotThrow(() -> mesaService.liberarMesa("mesa1"));
     }
 }

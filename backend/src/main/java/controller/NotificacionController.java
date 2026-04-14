@@ -4,7 +4,6 @@ import dto.NotificacionRequest;
 import io.javalin.apibuilder.EndpointGroup;
 import model.Notificacion;
 import model.TipoNotificacion;
-import service.NotificacionApplicationService;
 import service.NotificacionService;
 import util.ApiError;
 
@@ -16,14 +15,11 @@ import static io.javalin.apibuilder.ApiBuilder.*;
 public class NotificacionController {
 
     private final NotificacionService service;
-    private final NotificacionApplicationService applicationService;
 
     public NotificacionController(
-            NotificacionService service,
-            NotificacionApplicationService applicationService
+            NotificacionService service
     ) {
         this.service = service;
-        this.applicationService = applicationService;
     }
 
     public EndpointGroup routes() {
@@ -40,7 +36,7 @@ public class NotificacionController {
 
                 path("pendientes", () -> {
                     get(ctx -> {
-                        List<Notificacion> pendientes = applicationService.obtenerNotificacionesPendientes();
+                        List<Notificacion> pendientes = service.obtenerNotificacionesPendientes();
                         ctx.json(pendientes);
                     });
                 });
@@ -49,7 +45,7 @@ public class NotificacionController {
                     get(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");
                         List<Notificacion> notificaciones =
-                                applicationService.obtenerNotificacionesDeCuenta(cuentaId);
+                                service.obtenerNotificacionesDeCuenta(cuentaId);
                         ctx.json(notificaciones);
                     });
                 });
@@ -67,7 +63,7 @@ public class NotificacionController {
                         }
 
                         List<Notificacion> notificaciones =
-                                applicationService.obtenerNotificacionesPorTipo(tipoNotificacion);
+                                service.obtenerNotificacionesPorTipo(tipoNotificacion);
                         ctx.json(notificaciones);
                     });
                 });
@@ -76,7 +72,7 @@ public class NotificacionController {
                     post(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");
                         Notificacion notificacion =
-                                applicationService.crearNotificacionAtencion(cuentaId);
+                                service.crearNotificacionAtencion(cuentaId);
                         ctx.status(201).json(notificacion);
                     });
                 });
@@ -85,7 +81,7 @@ public class NotificacionController {
                     post(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");
                         Notificacion notificacion =
-                                applicationService.crearNotificacionPedidoListo(cuentaId);
+                                service.crearNotificacionPedidoListo(cuentaId);
                         ctx.status(201).json(notificacion);
                     });
                 });
@@ -118,7 +114,7 @@ public class NotificacionController {
                     path("leida", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Notificacion notificacion = applicationService.marcarNotificacionLeida(id);
+                            Notificacion notificacion = service.marcarNotificacionLeida(id);
                             ctx.json(notificacion);
                         });
                     });

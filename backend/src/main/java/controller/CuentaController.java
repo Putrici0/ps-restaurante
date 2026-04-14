@@ -6,7 +6,7 @@ import model.Cuenta;
 import model.Orden;
 import model.Pedido;
 import service.CuentaService;
-import service.PagoApplicationService;
+import service.PagoService;
 import util.ApiError;
 
 import java.math.BigDecimal;
@@ -18,11 +18,11 @@ import static io.javalin.apibuilder.ApiBuilder.*;
 public class CuentaController {
 
     private final CuentaService service;
-    private final PagoApplicationService pagoApplicationService;
+    private final PagoService pagoService;
 
-    public CuentaController(CuentaService service, PagoApplicationService pagoApplicationService) {
+    public CuentaController(CuentaService service, PagoService pagoService) {
         this.service = service;
-        this.pagoApplicationService = pagoApplicationService;
+        this.pagoService = pagoService;
     }
 
     public EndpointGroup routes() {
@@ -65,7 +65,7 @@ public class CuentaController {
                     path("pedidos", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            List<Pedido> pedidos = pagoApplicationService.obtenerPedidosDeCuenta(id);
+                            List<Pedido> pedidos = pagoService.obtenerPedidosDeCuenta(id);
                             ctx.json(pedidos);
                         });
                     });
@@ -73,7 +73,7 @@ public class CuentaController {
                     path("ordenes", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            List<Orden> ordenes = pagoApplicationService.obtenerOrdenesDeCuenta(id);
+                            List<Orden> ordenes = pagoService.obtenerOrdenesDeCuenta(id);
                             ctx.json(ordenes);
                         });
                     });
@@ -81,7 +81,7 @@ public class CuentaController {
                     path("total", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            BigDecimal total = pagoApplicationService.calcularTotalCuenta(id);
+                            BigDecimal total = pagoService.calcularTotalCuenta(id);
                             ctx.json(new ImporteResponse(id, total));
                         });
                     });
@@ -89,7 +89,7 @@ public class CuentaController {
                     path("pendiente", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            BigDecimal pendiente = pagoApplicationService.calcularPendienteCuenta(id);
+                            BigDecimal pendiente = pagoService.calcularPendienteCuenta(id);
                             ctx.json(new ImporteResponse(id, pendiente));
                         });
                     });
@@ -97,7 +97,7 @@ public class CuentaController {
                     path("saldada", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            boolean saldada = pagoApplicationService.cuentaEstaSaldada(id);
+                            boolean saldada = pagoService.cuentaEstaSaldada(id);
                             ctx.json(new EstadoCuentaResponse(id, saldada));
                         });
                     });
@@ -105,7 +105,7 @@ public class CuentaController {
                     path("pagar-total", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Cuenta cuenta = pagoApplicationService.pagarCuentaCompleta(id);
+                            Cuenta cuenta = pagoService.pagarCuentaCompleta(id);
                             ctx.json(cuenta);
                         });
                     });
@@ -113,7 +113,7 @@ public class CuentaController {
                     path("cerrar-si-procede", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Cuenta cuenta = pagoApplicationService.cerrarCuentaSiProcede(id);
+                            Cuenta cuenta = pagoService.cerrarCuentaSiProcede(id);
                             ctx.json(cuenta);
                         });
                     });

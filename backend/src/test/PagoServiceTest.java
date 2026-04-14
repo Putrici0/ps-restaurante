@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import repository.interfaces.CuentaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
-import service.PagoApplicationService;
+import service.PagoService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -22,13 +22,13 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class PagoApplicationServiceTest {
+class PagoServiceTest {
 
     private CuentaRepository cuentaRepository;
     private PedidoRepository pedidoRepository;
     private OrdenRepository ordenRepository;
 
-    private PagoApplicationService pagoApplicationService;
+    private PagoService pagoService;
 
     private Mesa mesa;
     private Cuenta cuenta;
@@ -42,7 +42,7 @@ class PagoApplicationServiceTest {
         pedidoRepository = mock(PedidoRepository.class);
         ordenRepository = mock(OrdenRepository.class);
 
-        pagoApplicationService = new PagoApplicationService(
+        pagoService = new PagoService(
                 cuentaRepository,
                 pedidoRepository,
                 ordenRepository
@@ -56,7 +56,8 @@ class PagoApplicationServiceTest {
                 false,
                 Optional.empty(),
                 Instant.now(),
-                Optional.empty()
+                Optional.empty(),
+                ""
         );
 
         pedido = new Pedido(
@@ -72,7 +73,8 @@ class PagoApplicationServiceTest {
                 Categoria.Principal,
                 "Desc",
                 new BigDecimal("10.00"),
-                true
+                true,
+                ""
         );
 
         orden1 = new Orden(
@@ -102,7 +104,7 @@ class PagoApplicationServiceTest {
         when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
         when(ordenRepository.findAll()).thenReturn(List.of(orden1, orden2));
 
-        BigDecimal total = pagoApplicationService.calcularTotalCuenta("cuenta1");
+        BigDecimal total = pagoService.calcularTotalCuenta("cuenta1");
 
         assertEquals(new BigDecimal("15.00"), total);
     }
@@ -115,12 +117,13 @@ class PagoApplicationServiceTest {
                 true,
                 Optional.empty(),
                 Instant.now(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         when(cuentaRepository.findById("cuenta1")).thenReturn(Optional.of(pagada));
 
-        BigDecimal pendiente = pagoApplicationService.calcularPendienteCuenta("cuenta1");
+        BigDecimal pendiente = pagoService.calcularPendienteCuenta("cuenta1");
 
         assertEquals(BigDecimal.ZERO, pendiente);
     }
@@ -131,7 +134,7 @@ class PagoApplicationServiceTest {
         when(pedidoRepository.findAll()).thenReturn(List.of(pedido));
         when(ordenRepository.findAll()).thenReturn(List.of(orden1, orden2));
 
-        BigDecimal pendiente = pagoApplicationService.calcularPendienteCuenta("cuenta1");
+        BigDecimal pendiente = pagoService.calcularPendienteCuenta("cuenta1");
 
         assertEquals(new BigDecimal("15.00"), pendiente);
     }
@@ -143,9 +146,9 @@ class PagoApplicationServiceTest {
         when(ordenRepository.findAll()).thenReturn(List.of(orden1, orden2));
         when(cuentaRepository.update(eq("cuenta1"), any())).thenAnswer(invocation -> invocation.getArgument(1));
 
-        Cuenta resultado = pagoApplicationService.pagarCuentaCompleta("cuenta1");
+        Cuenta resultado = pagoService.pagarCuentaCompleta("cuenta1");
 
-        assertTrue(resultado.estaPagada());
+        assertTrue(resultado.payed());
         assertTrue(resultado.fechaPago().isPresent());
         verify(cuentaRepository).update(eq("cuenta1"), any(Cuenta.class));
     }
@@ -158,14 +161,15 @@ class PagoApplicationServiceTest {
                 true,
                 Optional.empty(),
                 Instant.now(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         when(cuentaRepository.findById("cuenta1")).thenReturn(Optional.of(pagada));
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> pagoApplicationService.pagarCuentaCompleta("cuenta1")
+                () -> pagoService.pagarCuentaCompleta("cuenta1")
         );
     }
 
@@ -177,12 +181,13 @@ class PagoApplicationServiceTest {
                 true,
                 Optional.empty(),
                 Instant.now(),
-                Optional.of(Instant.now())
+                Optional.of(Instant.now()),
+                ""
         );
 
         when(cuentaRepository.findById("cuenta1")).thenReturn(Optional.of(pagada));
 
-        assertTrue(pagoApplicationService.cuentaEstaSaldada("cuenta1"));
+        assertTrue(pagoService.cuentaEstaSaldada("cuenta1"));
     }
 
     @Test
@@ -193,7 +198,7 @@ class PagoApplicationServiceTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> pagoApplicationService.cerrarCuentaSiProcede("cuenta1")
+                () -> pagoService.cerrarCuentaSiProcede("cuenta1")
         );
     }
 }

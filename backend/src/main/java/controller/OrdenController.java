@@ -4,8 +4,7 @@ import dto.OrdenRequest;
 import io.javalin.apibuilder.EndpointGroup;
 import model.Orden;
 import service.OrdenService;
-import service.NotificacionApplicationService;
-import service.OrdenApplicationService;
+import service.NotificacionService;
 import util.ApiError;
 
 import java.util.List;
@@ -16,17 +15,14 @@ import static io.javalin.apibuilder.ApiBuilder.*;
 public class OrdenController {
 
     private final OrdenService service;
-    private final OrdenApplicationService applicationService;
-    private final NotificacionApplicationService notificacionApplicationService;
+    private final NotificacionService notificacionService;
 
     public OrdenController(
             OrdenService service,
-            OrdenApplicationService applicationService,
-            NotificacionApplicationService notificacionApplicationService
+            NotificacionService notificacionService
     ) {
         this.service = service;
-        this.applicationService = applicationService;
-        this.notificacionApplicationService = notificacionApplicationService;
+        this.notificacionService = notificacionService;
     }
 
     public EndpointGroup routes() {
@@ -40,37 +36,37 @@ public class OrdenController {
 
                 get(ctx -> ctx.json(service.findAll()));
 
-                path("pendientes", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesPendientes())));
-                path("en-preparacion", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesEnPreparacion())));
-                path("listas", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesListas())));
+                path("pendientes", () -> get(ctx -> ctx.json(service.obtenerOrdenesPendientes())));
+                path("en-preparacion", () -> get(ctx -> ctx.json(service.obtenerOrdenesEnPreparacion())));
+                path("listas", () -> get(ctx -> ctx.json(service.obtenerOrdenesListas())));
 
                 path("cocina", () -> {
-                    path("pendientes", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaPendientes())));
-                    path("en-preparacion", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaEnPreparacion())));
-                    path("listas", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaListas())));
+                    path("pendientes", () -> get(ctx -> ctx.json(service.obtenerOrdenesCocinaPendientes())));
+                    path("en-preparacion", () -> get(ctx -> ctx.json(service.obtenerOrdenesCocinaEnPreparacion())));
+                    path("listas", () -> get(ctx -> ctx.json(service.obtenerOrdenesCocinaListas())));
                 });
 
                 path("barra", () -> {
-                    path("pendientes", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraPendientes())));
-                    path("en-preparacion", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraEnPreparacion())));
-                    path("listas", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraListas())));
+                    path("pendientes", () -> get(ctx -> ctx.json(service.obtenerOrdenesBarraPendientes())));
+                    path("en-preparacion", () -> get(ctx -> ctx.json(service.obtenerOrdenesBarraEnPreparacion())));
+                    path("listas", () -> get(ctx -> ctx.json(service.obtenerOrdenesBarraListas())));
                 });
 
                 path("sala", () -> {
-                    path("platos", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesSalaPlatos())));
+                    path("platos", () -> get(ctx -> ctx.json(service.obtenerOrdenesSalaPlatos())));
                 });
 
                 path("pedido/{pedidoId}", () -> {
                     get(ctx -> {
                         String pedidoId = ctx.pathParam("pedidoId");
-                        List<Orden> ordenes = applicationService.obtenerOrdenesDePedido(pedidoId);
+                        List<Orden> ordenes = service.obtenerOrdenesDePedido(pedidoId);
                         ctx.json(ordenes);
                     });
 
                     post(ctx -> {
                         String pedidoId = ctx.pathParam("pedidoId");
                         CrearOrdenesBody body = ctx.bodyAsClass(CrearOrdenesBody.class);
-                        List<Orden> creadas = applicationService.crearOrdenesDesdePedido(
+                        List<Orden> creadas = service.crearOrdenesDesdePedido(
                                 pedidoId,
                                 body.platosIds,
                                 body.detalles
@@ -106,7 +102,7 @@ public class OrdenController {
                     path("pendiente", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Orden orden = applicationService.marcarOrdenPendiente(id);
+                            Orden orden = service.marcarOrdenPendiente(id);
                             ctx.json(orden);
                         });
                     });
@@ -114,7 +110,7 @@ public class OrdenController {
                     path("en-preparacion", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Orden orden = applicationService.marcarOrdenEnPreparacion(id);
+                            Orden orden = service.marcarOrdenEnPreparacion(id);
                             ctx.json(orden);
                         });
                     });
@@ -122,12 +118,12 @@ public class OrdenController {
                     path("lista", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Orden orden = applicationService.marcarOrdenLista(id);
+                            Orden orden = service.marcarOrdenLista(id);
 
                             if (orden.pedido() != null
                                     && orden.pedido().cuenta() != null
                                     && orden.pedido().cuenta().id() != null) {
-                                notificacionApplicationService.crearNotificacionPedidoListo(
+                                notificacionService.crearNotificacionPedidoListo(
                                         orden.pedido().cuenta().id()
                                 );
                             }
@@ -139,7 +135,7 @@ public class OrdenController {
                     path("entregada", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Orden orden = applicationService.marcarOrdenEntregada(id);
+                            Orden orden = service.marcarOrdenEntregada(id);
                             ctx.json(orden);
                         });
                     });

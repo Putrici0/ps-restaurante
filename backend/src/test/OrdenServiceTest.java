@@ -13,9 +13,9 @@ import repository.interfaces.MesaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 import repository.interfaces.PlatoRepository;
-import service.MesaApplicationService;
-import service.OrdenApplicationService;
-import service.PedidoApplicationService;
+import service.MesaService;
+import service.OrdenService;
+import service.PedidoService;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -26,17 +26,17 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-class OrdenApplicationServiceTest {
+class OrdenServiceTest {
 
-    private MesaRepository mesaRepository;
-    private CuentaRepository cuentaRepository;
-    private PedidoRepository pedidoRepository;
     private OrdenRepository ordenRepository;
+    private PedidoRepository pedidoRepository;
     private PlatoRepository platoRepository;
+    private CuentaRepository cuentaRepository;
+    private MesaRepository mesaRepository;
 
-    private MesaApplicationService mesaApplicationService;
-    private PedidoApplicationService pedidoApplicationService;
-    private OrdenApplicationService ordenApplicationService;
+    private MesaService mesaService;
+    private PedidoService pedidoService;
+    private OrdenService ordenService;
 
     private Mesa mesa;
     private Cuenta cuenta;
@@ -48,31 +48,33 @@ class OrdenApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        mesaRepository = mock(MesaRepository.class);
-        cuentaRepository = mock(CuentaRepository.class);
-        pedidoRepository = mock(PedidoRepository.class);
         ordenRepository = mock(OrdenRepository.class);
+        pedidoRepository = mock(PedidoRepository.class);
         platoRepository = mock(PlatoRepository.class);
+        cuentaRepository = mock(CuentaRepository.class);
+        mesaRepository = mock(MesaRepository.class);
 
-        mesaApplicationService = new MesaApplicationService(
+        mesaService = new MesaService(
                 mesaRepository,
                 cuentaRepository,
                 pedidoRepository,
                 ordenRepository
         );
 
-        pedidoApplicationService = spy(new PedidoApplicationService(
+        pedidoService = spy(new PedidoService(
                 pedidoRepository,
                 cuentaRepository,
                 ordenRepository,
-                mesaApplicationService
+                platoRepository,
+                mesaService
         ));
 
-        ordenApplicationService = new OrdenApplicationService(
+        ordenService = new OrdenService(
                 ordenRepository,
                 pedidoRepository,
                 platoRepository,
-                pedidoApplicationService
+                pedidoService,
+                cuentaRepository
         );
 
         mesa = new Mesa("mesa1", 4);
@@ -83,7 +85,8 @@ class OrdenApplicationServiceTest {
                 false,
                 Optional.empty(),
                 Instant.now(),
-                Optional.empty()
+                Optional.empty(),
+                ""
         );
 
         pedido = new Pedido(
@@ -99,7 +102,8 @@ class OrdenApplicationServiceTest {
                 Categoria.Principal,
                 "Desc",
                 new BigDecimal("12.00"),
-                true
+                true,
+                ""
         );
 
         plato2 = new Plato(
@@ -108,7 +112,8 @@ class OrdenApplicationServiceTest {
                 Categoria.Bebida,
                 "Desc",
                 new BigDecimal("2.50"),
-                true
+                true,
+                ""
         );
 
         ordenPendiente = new Orden(
@@ -141,7 +146,7 @@ class OrdenApplicationServiceTest {
             return new Orden("ordenNueva", o.pedido(), o.plato(), o.precio(), o.ordenEstado(), o.fecha(), o.detalles());
         });
 
-        Orden resultado = ordenApplicationService.crearOrdenDesdePedidoYPlato("pedido1", "plato1", "sin cebolla");
+        Orden resultado = ordenService.crearOrdenDesdePedidoYPlato("pedido1", "plato1", "sin cebolla");
 
         assertNotNull(resultado);
         assertEquals("ordenNueva", resultado.id());
@@ -158,9 +163,9 @@ class OrdenApplicationServiceTest {
         when(platoRepository.findById("plato1")).thenReturn(Optional.of(plato1));
         when(platoRepository.findById("plato2")).thenReturn(Optional.of(plato2));
         when(ordenRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        doReturn(pedido).when(pedidoApplicationService).recalcularEstadoPedido("pedido1");
+        doReturn(pedido).when(pedidoService).recalcularEstadoPedido("pedido1");
 
-        List<Orden> resultado = ordenApplicationService.crearOrdenesDesdePedido(
+        List<Orden> resultado = ordenService.crearOrdenesDesdePedido(
                 "pedido1",
                 List.of("plato1", "plato2"),
                 List.of("sin cebolla", "muy fría")
@@ -171,7 +176,7 @@ class OrdenApplicationServiceTest {
         assertEquals("plato2", resultado.get(1).plato().id());
 
         verify(ordenRepository, times(2)).save(any(Orden.class));
-        verify(pedidoApplicationService).recalcularEstadoPedido("pedido1");
+        verify(pedidoService).recalcularEstadoPedido("pedido1");
     }
 
     @Test
@@ -196,7 +201,7 @@ class OrdenApplicationServiceTest {
         when(pedidoRepository.findById("pedido1")).thenReturn(Optional.of(pedido));
         when(ordenRepository.findAll()).thenReturn(List.of(ordenPendiente, ordenLista, otraOrden));
 
-        List<Orden> resultado = ordenApplicationService.obtenerOrdenesDePedido("pedido1");
+        List<Orden> resultado = ordenService.obtenerOrdenesDePedido("pedido1");
 
         assertEquals(2, resultado.size());
         assertTrue(resultado.stream().allMatch(o -> o.pedido().id().equals("pedido1")));
@@ -206,7 +211,7 @@ class OrdenApplicationServiceTest {
     void obtenerOrdenesPendientes_devuelveSoloPendientes() {
         when(ordenRepository.findAll()).thenReturn(List.of(ordenPendiente, ordenLista));
 
-        List<Orden> resultado = ordenApplicationService.obtenerOrdenesPendientes();
+        List<Orden> resultado = ordenService.obtenerOrdenesPendientes();
 
         assertEquals(1, resultado.size());
         assertEquals("orden1", resultado.get(0).id());
@@ -216,12 +221,12 @@ class OrdenApplicationServiceTest {
     void marcarOrdenEnPreparacion_actualizaEstado() {
         when(ordenRepository.findById("orden1")).thenReturn(Optional.of(ordenPendiente));
         when(ordenRepository.update(eq("orden1"), any())).thenAnswer(invocation -> invocation.getArgument(1));
-        doReturn(pedido).when(pedidoApplicationService).recalcularEstadoPedido("pedido1");
+        doReturn(pedido).when(pedidoService).recalcularEstadoPedido("pedido1");
 
-        Orden resultado = ordenApplicationService.marcarOrdenEnPreparacion("orden1");
+        Orden resultado = ordenService.marcarOrdenEnPreparacion("orden1");
 
         assertEquals(OrdenEstado.Preparación, resultado.ordenEstado());
-        verify(pedidoApplicationService).recalcularEstadoPedido("pedido1");
+        verify(pedidoService).recalcularEstadoPedido("pedido1");
     }
 
     @Test
@@ -229,12 +234,12 @@ class OrdenApplicationServiceTest {
         when(ordenRepository.findById("orden1")).thenReturn(Optional.of(ordenPendiente));
         when(ordenRepository.update(eq("orden1"), any())).thenAnswer(invocation -> invocation.getArgument(1));
         doReturn(new Pedido("pedido1", cuenta, PedidoEstado.Listo, pedido.fechaPedido()))
-                .when(pedidoApplicationService).recalcularEstadoPedido("pedido1");
+                .when(pedidoService).recalcularEstadoPedido("pedido1");
 
-        Orden resultado = ordenApplicationService.marcarOrdenLista("orden1");
+        Orden resultado = ordenService.marcarOrdenLista("orden1");
 
         assertEquals(OrdenEstado.Listo, resultado.ordenEstado());
-        verify(pedidoApplicationService).recalcularEstadoPedido("pedido1");
+        verify(pedidoService).recalcularEstadoPedido("pedido1");
     }
 
     @Test
@@ -252,7 +257,7 @@ class OrdenApplicationServiceTest {
         when(pedidoRepository.findById("pedido1")).thenReturn(Optional.of(pedido));
         when(ordenRepository.findAll()).thenReturn(List.of(ordenLista, ordenLista2));
 
-        boolean resultado = ordenApplicationService.estanTodasListasLasOrdenes("pedido1");
+        boolean resultado = ordenService.estanTodasListasLasOrdenes("pedido1");
 
         assertTrue(resultado);
     }
@@ -262,7 +267,7 @@ class OrdenApplicationServiceTest {
         when(pedidoRepository.findById("pedido1")).thenReturn(Optional.of(pedido));
         when(ordenRepository.findAll()).thenReturn(List.of(ordenLista, ordenPendiente));
 
-        boolean resultado = ordenApplicationService.estanTodasListasLasOrdenes("pedido1");
+        boolean resultado = ordenService.estanTodasListasLasOrdenes("pedido1");
 
         assertFalse(resultado);
     }
