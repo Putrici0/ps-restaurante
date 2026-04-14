@@ -4,8 +4,8 @@ import dto.PedidoRequest;
 import model.Cuenta;
 import model.Pedido;
 import model.PedidoEstado;
-import repository.firestore.FirestoreCuentaRepository;
-import repository.firestore.FirestorePedidoRepository;
+import repository.interfaces.CuentaRepository;
+import repository.interfaces.PedidoRepository;
 
 import java.time.Instant;
 import java.util.List;
@@ -13,11 +13,11 @@ import java.util.Optional;
 
 public class PedidoService {
 
-    private final FirestorePedidoRepository repository;
-    private final FirestoreCuentaRepository cuentaRepository;
+    private final PedidoRepository repository;
+    private final CuentaRepository cuentaRepository;
 
-    public PedidoService(FirestorePedidoRepository repository,
-                         FirestoreCuentaRepository cuentaRepository) {
+    public PedidoService(PedidoRepository repository,
+                         CuentaRepository cuentaRepository) {
         this.repository = repository;
         this.cuentaRepository = cuentaRepository;
     }

@@ -4,8 +4,8 @@ import dto.NotificacionRequest;
 import model.Cuenta;
 import model.Notificacion;
 import model.TipoNotificacion;
-import repository.firestore.FirestoreCuentaRepository;
-import repository.firestore.FirestoreNotificacionRepository;
+import repository.interfaces.CuentaRepository;
+import repository.interfaces.NotificacionRepository;
 
 import java.time.Instant;
 import java.util.List;
@@ -13,11 +13,11 @@ import java.util.Optional;
 
 public class NotificacionService {
 
-    private final FirestoreNotificacionRepository repository;
-    private final FirestoreCuentaRepository cuentaRepository;
+    private final NotificacionRepository repository;
+    private final CuentaRepository cuentaRepository;
 
-    public NotificacionService(FirestoreNotificacionRepository repository,
-                               FirestoreCuentaRepository cuentaRepository) {
+    public NotificacionService(NotificacionRepository repository,
+                               CuentaRepository cuentaRepository) {
         this.repository = repository;
         this.cuentaRepository = cuentaRepository;
     }

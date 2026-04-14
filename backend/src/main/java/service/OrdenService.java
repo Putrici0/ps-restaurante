@@ -5,9 +5,9 @@ import model.Orden;
 import model.OrdenEstado;
 import model.Pedido;
 import model.Plato;
-import repository.firestore.FirestoreOrdenRepository;
-import repository.firestore.FirestorePedidoRepository;
-import repository.firestore.FirestorePlatoRepository;
+import repository.interfaces.OrdenRepository;
+import repository.interfaces.PedidoRepository;
+import repository.interfaces.PlatoRepository;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -16,13 +16,13 @@ import java.util.Optional;
 
 public class OrdenService {
 
-    private final FirestoreOrdenRepository repository;
-    private final FirestorePedidoRepository pedidoRepository;
-    private final FirestorePlatoRepository platoRepository;
+    private final OrdenRepository repository;
+    private final PedidoRepository pedidoRepository;
+    private final PlatoRepository platoRepository;
 
-    public OrdenService(FirestoreOrdenRepository repository,
-                        FirestorePedidoRepository pedidoRepository,
-                        FirestorePlatoRepository platoRepository) {
+    public OrdenService(OrdenRepository repository,
+                        PedidoRepository pedidoRepository,
+                        PlatoRepository platoRepository) {
         this.repository = repository;
         this.pedidoRepository = pedidoRepository;
         this.platoRepository = platoRepository;

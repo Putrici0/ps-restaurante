@@ -2,7 +2,7 @@ package service;
 
 import dto.ReservaRequest;
 import model.Reserva;
-import repository.firestore.FirestoreReservaRepository;
+import repository.interfaces.ReservaRepository;
 
 import java.time.Instant;
 import java.util.List;
@@ -10,9 +10,9 @@ import java.util.Optional;
 
 public class ReservaService {
 
-    private final FirestoreReservaRepository repository;
+    private final ReservaRepository repository;
 
-    public ReservaService(FirestoreReservaRepository repository) {
+    public ReservaService(ReservaRepository repository) {
         this.repository = repository;
     }
 
