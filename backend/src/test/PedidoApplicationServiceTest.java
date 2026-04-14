@@ -13,7 +13,7 @@ import repository.interfaces.MesaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 import service.MesaApplicationService;
-import service.application.PedidoApplicationService;
+import service.PedidoApplicationService;
 
 import java.math.BigDecimal;
 import java.time.Instant;

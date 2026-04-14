@@ -6,7 +6,7 @@ import io.javalin.apibuilder.EndpointGroup;
 import model.Orden;
 import model.Pedido;
 import service.PedidoService;
-import service.application.PedidoApplicationService;
+import service.PedidoApplicationService;
 import util.ApiError;
 
 import java.util.List;

@@ -1,4 +1,4 @@
-package service.application;
+package service;
 
 import dto.CrearPedidoClienteRequest;
 import model.Cuenta;
@@ -11,7 +11,6 @@ import repository.interfaces.CuentaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 import repository.interfaces.PlatoRepository;
-import service.MesaApplicationService;
 
 import java.time.Instant;
 import java.util.ArrayList;

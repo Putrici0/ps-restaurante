@@ -4,7 +4,7 @@ import dto.NotificacionRequest;
 import io.javalin.apibuilder.EndpointGroup;
 import model.Notificacion;
 import model.TipoNotificacion;
-import service.application.NotificacionApplicationService;
+import service.NotificacionApplicationService;
 import service.NotificacionService;
 import util.ApiError;
 

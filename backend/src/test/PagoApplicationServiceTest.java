@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import repository.interfaces.CuentaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
-import service.application.PagoApplicationService;
+import service.PagoApplicationService;
 
 import java.math.BigDecimal;
 import java.time.Instant;

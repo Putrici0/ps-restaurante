@@ -15,7 +15,7 @@ import repository.interfaces.PedidoRepository;
 import repository.interfaces.PlatoRepository;
 import service.MesaApplicationService;
 import service.OrdenApplicationService;
-import service.application.PedidoApplicationService;
+import service.PedidoApplicationService;
 
 import java.math.BigDecimal;
 import java.time.Instant;

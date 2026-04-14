@@ -4,8 +4,8 @@ import dto.OrdenRequest;
 import io.javalin.apibuilder.EndpointGroup;
 import model.Orden;
 import service.OrdenService;
-import service.application.NotificacionApplicationService;
-import service.application.OrdenApplicationService;
+import service.NotificacionApplicationService;
+import service.OrdenApplicationService;
 import util.ApiError;
 
 import java.util.List;

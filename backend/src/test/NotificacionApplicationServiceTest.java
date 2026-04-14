@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import repository.interfaces.CuentaRepository;
 import repository.interfaces.NotificacionRepository;
-import service.application.NotificacionApplicationService;
+import service.NotificacionApplicationService;
 
 import java.time.Instant;
 import java.util.List;
