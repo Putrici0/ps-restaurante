@@ -94,13 +94,11 @@ http://localhost
 
 # Autores
 
-Alejandro Hernández Delgado 
-Carlos Alonso Rodríguez 
-Pablo Llopis Parrilla 
-Joan Martínez Perdomo 
-Esther Viera Rivero 
-Juan López Ramírez 
-
----
+- Alejandro Hernández Delgado
+- Carlos Alonso Rodríguez
+- Pablo Llopis Parrilla
+- Joan Martínez Perdomo
+- Esther Viera Rivero
+- Juan López Ramírez
 
 
