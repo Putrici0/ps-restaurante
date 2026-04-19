@@ -86,7 +86,15 @@ serve -s . -l 80
 Esto dejará el frontend accesible en:
 
 ```bash
-http://localhost
+http://localhost/mesas
+http://localhost/bebidas
+http://localhost/platos
+http://localhost/historial
+http://localhost/acceso/:id
+http://localhost/admin/generar-qr
+http://localhost/menu/:id
+http://localhost/cuenta/:id
+http://localhost/cocina
 ```
 ---
 
