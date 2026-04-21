@@ -23,8 +23,10 @@ export class MesasApiService {
     return this.http.get<ImporteCuentaApi>(`${this.apiUrl}/cuentas/${cuentaId}/total`);
   }
 
-  pagarCuentaCompleta(cuentaId: string): Observable<CuentaApi> {
-    return this.http.post<CuentaApi>(`${this.apiUrl}/cuentas/${cuentaId}/pagar-total`, {});
+  pagarCuentaCompleta(cuentaId: string, metodoPago: 'EFECTIVO' | 'TARJETA') {
+    return this.http.post(`${this.apiUrl}/cuentas/${cuentaId}/pagar-total`, {
+      metodoPago
+    });
   }
 
   ocuparMesa(id: string): Observable<CuentaApi> {

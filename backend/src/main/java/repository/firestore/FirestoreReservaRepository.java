@@ -18,11 +18,11 @@ public class FirestoreReservaRepository extends AbstractFirestoreRepository<Rese
     @Override
     protected Reserva mapToEntity(String id, Map<String, Object> data) {
         return new Reserva(
-            id,
-            get(data, "nombre", ""),
-            toInstant(data.get("fecha")),
-            ((Long) data.getOrDefault("capacidad", 0L)).intValue(),
-            toInstant(data.get("fechaCreacion"))
+                id,
+                get(data, "nombre", ""),
+                toInstant(data.get("fecha")),
+                ((Long) data.getOrDefault("capacidad", 0L)).intValue(),
+                toInstant(data.get("fechaCreacion"))
         );
     }
 

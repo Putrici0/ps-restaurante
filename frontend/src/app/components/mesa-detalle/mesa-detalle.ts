@@ -9,7 +9,7 @@ import { Mesa } from '../../models/mesa.model';
   templateUrl: './mesa-detalle.html',
   styleUrl: './mesa-detalle.css',
 })
-export class MesaDetalleComponent implements OnChanges {
+export class MesaDetalle implements OnChanges {
   @Input({ required: true }) mesa!: Mesa;
   @Input() accionEnCurso = false;
 

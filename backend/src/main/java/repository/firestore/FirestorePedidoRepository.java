@@ -78,7 +78,8 @@ public class FirestorePedidoRepository extends AbstractFirestoreRepository<Pedid
                 Optional.empty(),
                 toInstant(cData.get("fechaCreacion")),
                 Optional.ofNullable(toInstant(cData.get("fechaPago"))),
-                getString(cData, "password")
+                getString(cData, "password"),
+                Optional.empty()
         );
     }
 

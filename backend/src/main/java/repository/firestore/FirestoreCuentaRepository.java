@@ -8,6 +8,7 @@ import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
 import model.Cuenta;
 import model.Mesa;
+import model.MetodoPago;
 import model.Reserva;
 import repository.interfaces.CuentaRepository;
 
@@ -41,7 +42,8 @@ public class FirestoreCuentaRepository implements CuentaRepository {
                     cuenta.reserva(),
                     cuenta.fechaCreacion(),
                     cuenta.fechaPago(),
-                    cuenta.password()
+                    cuenta.password(),
+                    cuenta.metodoPago()
             );
 
             db.collection(COLLECTION)
@@ -125,7 +127,8 @@ public class FirestoreCuentaRepository implements CuentaRepository {
                     cuenta.reserva(),
                     cuenta.fechaCreacion(),
                     cuenta.fechaPago(),
-                    cuenta.password()
+                    cuenta.password(),
+                    cuenta.metodoPago()
             );
 
             db.collection(COLLECTION)
@@ -189,6 +192,13 @@ public class FirestoreCuentaRepository implements CuentaRepository {
             password = "";
         }
 
+        String metodoPagoRaw = document.getString("metodoPago");
+
+        Optional<MetodoPago> metodoPago = Optional.empty();
+        if (metodoPagoRaw != null && !metodoPagoRaw.isBlank()) {
+            metodoPago = Optional.of(MetodoPago.valueOf(metodoPagoRaw));
+        }
+
         return new Cuenta(
                 id,
                 mesas,
@@ -196,7 +206,8 @@ public class FirestoreCuentaRepository implements CuentaRepository {
                 reserva,
                 fechaCreacion,
                 fechaPago,
-                password
+                password,
+                metodoPago
         );
     }
 
@@ -209,6 +220,7 @@ public class FirestoreCuentaRepository implements CuentaRepository {
         data.put("fechaCreacion", cuenta.fechaCreacion());
         data.put("fechaPago", cuenta.fechaPago().orElse(null));
         data.put("password", cuenta.password());
+        data.put("metodoPago", cuenta.metodoPago().map(Enum::name).orElse(null));
         return data;
     }
 

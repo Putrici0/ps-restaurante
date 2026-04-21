@@ -25,7 +25,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
   private intervaloRefresco?: number;
   private intervaloReloj?: number;
 
-  private readonly pollingMs = 3000;
+  private readonly pollingMs = 8000;
   private readonly refreshAfterWriteMs = 1500;
 
   readonly cargando = signal<boolean>(true);

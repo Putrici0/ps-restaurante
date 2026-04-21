@@ -17,8 +17,8 @@ public class FirestoreMesaRepository extends AbstractFirestoreRepository<Mesa> i
     @Override
     protected Mesa mapToEntity(String id, Map<String, Object> data) {
         return new Mesa(
-            id,
-            ((Long) data.getOrDefault("capacidad", 0L)).intValue()
+                id,
+                ((Long) data.getOrDefault("capacidad", 0L)).intValue()
         );
     }
 

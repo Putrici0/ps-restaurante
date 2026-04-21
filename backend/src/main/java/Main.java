@@ -22,13 +22,18 @@ import repository.firestore.FirestorePedidoRepository;
 import repository.firestore.FirestorePlatoRepository;
 import repository.firestore.FirestoreReservaRepository;
 import service.CuentaService;
+import service.MesaApplicationService;
 import service.MesaService;
 import service.NotificacionService;
 import service.OrdenService;
 import service.PedidoService;
 import service.PlatoService;
 import service.ReservaService;
-import service.PagoService;
+import service.application.HistorialCuentasApplicationService;
+import service.application.NotificacionApplicationService;
+import service.application.OrdenApplicationService;
+import service.application.PagoApplicationService;
+import service.application.PedidoApplicationService;
 import util.ApiError;
 import util.MesaSeeder;
 import util.PlatoSeeder;
@@ -52,43 +57,71 @@ public class Main {
         FirestoreOrdenRepository ordenRepository = new FirestoreOrdenRepository(db);
         FirestoreNotificacionRepository notificacionRepository = new FirestoreNotificacionRepository(db);
 
+        MesaSeeder.seed(mesaRepository);
+        PlatoSeeder.seed(platoRepository);
+
         PlatoService platoService = new PlatoService(platoRepository);
-        MesaService mesaService = new MesaService(mesaRepository, cuentaRepository, pedidoRepository, ordenRepository);
+        MesaService mesaService = new MesaService(mesaRepository);
         ReservaService reservaService = new ReservaService(reservaRepository);
         CuentaService cuentaService = new CuentaService(cuentaRepository, mesaRepository, reservaRepository);
-        PedidoService pedidoService = new PedidoService(
-                pedidoRepository,
-                cuentaRepository,
-                ordenRepository,
-                platoRepository,
-                mesaService
-        );
-        OrdenService ordenService = new OrdenService(
-                ordenRepository,
-                pedidoRepository,
-                platoRepository,
-                pedidoService,
-                cuentaRepository
-        );
+        PedidoService pedidoService = new PedidoService(pedidoRepository, cuentaRepository);
+        OrdenService ordenService = new OrdenService(ordenRepository, pedidoRepository, platoRepository);
         NotificacionService notificacionService = new NotificacionService(notificacionRepository, cuentaRepository);
 
-        PagoService pagoService = new PagoService(
+        MesaApplicationService mesaApplicationService = new MesaApplicationService(
+                mesaRepository,
                 cuentaRepository,
                 pedidoRepository,
                 ordenRepository
         );
 
+        PedidoApplicationService pedidoApplicationService = new PedidoApplicationService(
+                pedidoRepository,
+                cuentaRepository,
+                ordenRepository,
+                platoRepository,
+                mesaApplicationService
+        );
+
+        OrdenApplicationService ordenApplicationService = new OrdenApplicationService(
+                ordenRepository,
+                pedidoRepository,
+                platoRepository,
+                pedidoApplicationService,
+                cuentaRepository
+        );
+
+        PagoApplicationService pagoApplicationService = new PagoApplicationService(
+                cuentaRepository,
+                pedidoRepository,
+                ordenRepository
+        );
+
+        NotificacionApplicationService notificacionApplicationService = new NotificacionApplicationService(
+                notificacionRepository,
+                cuentaRepository
+        );
+
+        HistorialCuentasApplicationService historialCuentasApplicationService =
+                new HistorialCuentasApplicationService(cuentaRepository, pedidoRepository, ordenRepository);
+
         PlatoController platoController = new PlatoController(platoService);
-        MesaController mesaController = new MesaController(mesaService);
+        MesaController mesaController = new MesaController(mesaService, mesaApplicationService);
         ReservaController reservaController = new ReservaController(reservaService);
-        CuentaController cuentaController = new CuentaController(cuentaService, pagoService);
-        PedidoController pedidoController = new PedidoController(pedidoService);
+        CuentaController cuentaController = new CuentaController(
+                cuentaService,
+                pagoApplicationService,
+                historialCuentasApplicationService
+        );
+        PedidoController pedidoController = new PedidoController(pedidoService, pedidoApplicationService);
         OrdenController ordenController = new OrdenController(
                 ordenService,
-                notificacionService
+                ordenApplicationService,
+                notificacionApplicationService
         );
         NotificacionController notificacionController = new NotificacionController(
-                notificacionService
+                notificacionService,
+                notificacionApplicationService
         );
 
         Javalin app = Javalin.create(config -> {

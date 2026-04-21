@@ -4,9 +4,9 @@ import dto.CuentaRequest;
 import model.Cuenta;
 import model.Mesa;
 import model.Reserva;
-import repository.interfaces.CuentaRepository;
-import repository.interfaces.MesaRepository;
-import repository.interfaces.ReservaRepository;
+import repository.firestore.FirestoreCuentaRepository;
+import repository.firestore.FirestoreMesaRepository;
+import repository.firestore.FirestoreReservaRepository;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -15,13 +15,13 @@ import java.util.Optional;
 
 public class CuentaService {
 
-    private final CuentaRepository repository;
-    private final MesaRepository mesaRepository;
-    private final ReservaRepository reservaRepository;
+    private final FirestoreCuentaRepository repository;
+    private final FirestoreMesaRepository mesaRepository;
+    private final FirestoreReservaRepository reservaRepository;
 
-    public CuentaService(CuentaRepository repository,
-                         MesaRepository mesaRepository,
-                         ReservaRepository reservaRepository) {
+    public CuentaService(FirestoreCuentaRepository repository,
+                         FirestoreMesaRepository mesaRepository,
+                         FirestoreReservaRepository reservaRepository) {
         this.repository = repository;
         this.mesaRepository = mesaRepository;
         this.reservaRepository = reservaRepository;
@@ -52,7 +52,8 @@ public class CuentaService {
                 reserva,
                 Instant.now(),
                 Optional.empty(),
-                ""
+                "",
+                Optional.empty()
         );
 
         return repository.save(cuenta);

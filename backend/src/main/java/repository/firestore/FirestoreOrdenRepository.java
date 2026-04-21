@@ -201,7 +201,8 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
                 Optional.empty(),
                 toInstant(cData.get("fechaCreacion")),
                 Optional.ofNullable(toInstant(cData.get("fechaPago"))),
-                getString(cData, "password")
+                getString(cData, "password"),
+                Optional.empty()
         );
     }
 

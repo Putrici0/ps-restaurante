@@ -4,5 +4,6 @@ public enum OrdenEstado {
     Pendiente,
     Preparación,
     Listo,
-    Entregado
+    Entregado,
+    Cancelado
 }

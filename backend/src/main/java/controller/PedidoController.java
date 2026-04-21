@@ -6,6 +6,7 @@ import io.javalin.apibuilder.EndpointGroup;
 import model.Orden;
 import model.Pedido;
 import service.PedidoService;
+import service.application.PedidoApplicationService;
 import util.ApiError;
 
 import java.util.List;
@@ -16,9 +17,11 @@ import static io.javalin.apibuilder.ApiBuilder.*;
 public class PedidoController {
 
     private final PedidoService service;
+    private final PedidoApplicationService applicationService;
 
-    public PedidoController(PedidoService service) {
+    public PedidoController(PedidoService service, PedidoApplicationService applicationService) {
         this.service = service;
+        this.applicationService = applicationService;
     }
 
     public EndpointGroup routes() {
@@ -26,8 +29,8 @@ public class PedidoController {
             path("pedidos", () -> {
                 post(ctx -> {
                     PedidoRequest request = ctx.bodyAsClass(PedidoRequest.class);
-                    Pedido creada = service.create(request);
-                    ctx.status(201).json(creada);
+                    Pedido creado = service.create(request);
+                    ctx.status(201).json(creado);
                 });
 
                 get(ctx -> ctx.json(service.findAll()));
@@ -35,7 +38,7 @@ public class PedidoController {
                 path("desde-mesa/{mesaId}", () -> {
                     post(ctx -> {
                         String mesaId = ctx.pathParam("mesaId");
-                        Pedido pedido = service.crearPedidoDesdeMesa(mesaId);
+                        Pedido pedido = applicationService.crearPedidoDesdeMesa(mesaId);
                         ctx.status(201).json(pedido);
                     });
 
@@ -44,8 +47,8 @@ public class PedidoController {
                             String mesaId = ctx.pathParam("mesaId");
                             CrearPedidoClienteRequest request = ctx.bodyAsClass(CrearPedidoClienteRequest.class);
 
-                            PedidoService.CrearPedidoResultado resultado =
-                                    service.crearPedidoConOrdenesDesdeMesa(mesaId, request);
+                            PedidoApplicationService.CrearPedidoResultado resultado =
+                                    applicationService.crearPedidoConOrdenesDesdeMesa(mesaId, request);
 
                             CrearPedidoClienteResponse response = new CrearPedidoClienteResponse(
                                     resultado.pedido(),
@@ -60,7 +63,7 @@ public class PedidoController {
                 path("mesa/{mesaId}/activos", () -> {
                     get(ctx -> {
                         String mesaId = ctx.pathParam("mesaId");
-                        List<Pedido> pedidos = service.obtenerPedidosActivosDeMesa(mesaId);
+                        List<Pedido> pedidos = applicationService.obtenerPedidosActivosDeMesa(mesaId);
                         ctx.json(pedidos);
                     });
                 });
@@ -68,7 +71,7 @@ public class PedidoController {
                 path("cuenta/{cuentaId}", () -> {
                     get(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");
-                        List<Pedido> pedidos = service.obtenerPedidosDeCuenta(cuentaId);
+                        List<Pedido> pedidos = applicationService.obtenerPedidosDeCuenta(cuentaId);
                         ctx.json(pedidos);
                     });
                 });
@@ -100,7 +103,7 @@ public class PedidoController {
                     path("recalcular-estado", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
-                            Pedido pedido = service.recalcularEstadoPedido(id);
+                            Pedido pedido = applicationService.recalcularEstadoPedido(id);
                             ctx.json(pedido);
                         });
                     });
@@ -108,7 +111,7 @@ public class PedidoController {
                     path("listo", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
-                            boolean listo = service.pedidoEstaListo(id);
+                            boolean listo = applicationService.pedidoEstaListo(id);
                             ctx.json(new EstadoPedidoResponse(id, listo));
                         });
                     });

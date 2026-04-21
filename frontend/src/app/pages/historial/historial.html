@@ -1,0 +1,116 @@
+<app-navbar></app-navbar>
+
+<div class="historial-page">
+  <div class="historial-page__header">
+    <div>
+      <h1>Historial de Cuentas</h1>
+      <p>Explora todas las transacciones y filtra por periodo.</p>
+    </div>
+
+    <div class="historial-filtros">
+      <label for="fechaFiltro">FECHA</label>
+      <div class="historial-filtros__fila">
+        <input
+          id="fechaFiltro"
+          type="date"
+          [value]="fechaFiltro()"
+          (input)="actualizarFecha($any($event.target).value)"
+        />
+        <button type="button" (click)="aplicarFiltro()">Filtrar</button>
+      </div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="historial-error">{{ error() }}</p>
+  }
+
+  @if (cargando()) {
+    <p>Cargando historial...</p>
+  } @else {
+    <section class="historial-tabla">
+      <div class="historial-tabla__head">
+        <span>FECHA/HORA</span>
+        <span>MESA</span>
+        <span>IMPORTE TOTAL</span>
+        <span>VER</span>
+      </div>
+
+      <div class="historial-tabla__body">
+        @for (cuenta of cuentasPaginadas(); track cuenta.cuentaId) {
+          <div class="historial-tabla__row">
+            <span>{{ formatearFecha(cuenta.fechaHora) }}</span>
+            <span>{{ cuenta.mesa }}</span>
+            <span>{{ cuenta.importeTotal | currency:'EUR':'symbol':'1.2-2' }}</span>
+            <button type="button" class="historial-ojo" (click)="abrirDetalle(cuenta.cuentaId)">
+              👁
+            </button>
+          </div>
+        }
+
+        @if (cuentasPaginadas().length === 0) {
+          <div class="historial-tabla__empty">No hay cuentas pagadas para ese filtro.</div>
+        }
+      </div>
+
+      <div class="historial-tabla__footer">
+        <span>{{ textoResumen() }}</span>
+
+        <div class="historial-paginacion">
+          <button type="button" (click)="irAPagina(paginaActual() - 1)" [disabled]="paginaActual() === 1">
+            ‹
+          </button>
+
+          <span class="historial-paginacion__actual">{{ paginaActual() }}</span>
+
+          <button
+            type="button"
+            (click)="irAPagina(paginaActual() + 1)"
+            [disabled]="paginaActual() === totalPaginas()"
+          >
+            ›
+          </button>
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (mostrarDetalle()) {
+    <div class="historial-modal-overlay" (click)="cerrarDetalle()">
+      <div class="historial-modal" (click)="$event.stopPropagation()">
+        @if (cargandoDetalle()) {
+          <p>Cargando detalle...</p>
+        } @else {
+          <div class="historial-modal__header">
+            <h3>Detalle de la cuenta</h3>
+            <button type="button" (click)="cerrarDetalle()">✕</button>
+          </div>
+
+          <div class="historial-modal__meta">
+            <p><strong>Mesa:</strong> {{ obtenerMesaDetalle() }}</p>
+            <p><strong>Método de pago:</strong> {{ obtenerMetodoPagoDetalle() }}</p>
+            <p><strong>Fecha de pago:</strong> {{ cuentaDetalle()?.fechaPago ? formatearFecha(cuentaDetalle()!.fechaPago!) : '-' }}</p>
+          </div>
+
+          <div class="historial-detalle-lista">
+            @for (item of detalleAgrupado(); track item.platoId) {
+              <div class="historial-detalle-item">
+                <div>
+                  <strong>{{ item.nombre }}</strong>
+                  <div>{{ item.cantidad }} x {{ item.precioUnitario | currency:'EUR':'symbol':'1.2-2' }}</div>
+                  <small>Estado: {{ obtenerResumenEstado(item.estados) }}</small>
+                </div>
+                <div>{{ item.subtotal | currency:'EUR':'symbol':'1.2-2' }}</div>
+              </div>
+            }
+          </div>
+
+          <div class="historial-modal__total">
+            <span>Total</span>
+            <strong>{{ totalDetalle() | currency:'EUR':'symbol':'1.2-2' }}</strong>
+          </div>
+        }
+      </div>
+    </div>
+  }
+</div>

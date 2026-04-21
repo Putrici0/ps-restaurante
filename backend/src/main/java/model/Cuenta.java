@@ -11,10 +11,12 @@ public record Cuenta(
         Optional<Reserva> reserva,
         Instant fechaCreacion,
         Optional<Instant> fechaPago,
-        String password
+        String password,
+        Optional<MetodoPago> metodoPago
 ) {
     public Cuenta {
         mesas = (mesas == null) ? List.of() : List.copyOf(mesas);
         password = (password == null) ? "" : password;
+        metodoPago = (metodoPago == null) ? Optional.empty() : metodoPago;
     }
 }

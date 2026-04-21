@@ -48,7 +48,7 @@ export interface OrdenCocinaResponse {
 })
 export class OrdenesApiService {
   private readonly http = inject(HttpClient);
-  private readonly apiUrl = 'http://localhost:7070';
+  private readonly apiUrl = `http://${window.location.hostname}:7070`;
   private readonly requestTimeoutMs = 8000;
 
   private get<T>(url: string): Observable<T> {

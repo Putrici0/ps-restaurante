@@ -4,8 +4,8 @@ import dto.NotificacionRequest;
 import model.Cuenta;
 import model.Notificacion;
 import model.TipoNotificacion;
-import repository.interfaces.CuentaRepository;
-import repository.interfaces.NotificacionRepository;
+import repository.firestore.FirestoreCuentaRepository;
+import repository.firestore.FirestoreNotificacionRepository;
 
 import java.time.Instant;
 import java.util.List;
@@ -13,11 +13,11 @@ import java.util.Optional;
 
 public class NotificacionService {
 
-    private final NotificacionRepository repository;
-    private final CuentaRepository cuentaRepository;
+    private final FirestoreNotificacionRepository repository;
+    private final FirestoreCuentaRepository cuentaRepository;
 
-    public NotificacionService(NotificacionRepository repository,
-                               CuentaRepository cuentaRepository) {
+    public NotificacionService(FirestoreNotificacionRepository repository,
+                               FirestoreCuentaRepository cuentaRepository) {
         this.repository = repository;
         this.cuentaRepository = cuentaRepository;
     }
@@ -49,77 +49,6 @@ public class NotificacionService {
 
     public void delete(String id) {
         repository.deleteById(id);
-    }
-
-    // Business Methods from NotificacionApplicationService
-
-    public Notificacion crearNotificacionAtencion(String cuentaId) {
-        Cuenta cuenta = cuentaRepository.findById(cuentaId)
-                .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
-
-        Notificacion notificacion = new Notificacion(
-                null,
-                cuenta,
-                TipoNotificacion.Atencion,
-                false,
-                Instant.now()
-        );
-
-        return repository.save(notificacion);
-    }
-
-    public Notificacion crearNotificacionPedidoListo(String cuentaId) {
-        Cuenta cuenta = cuentaRepository.findById(cuentaId)
-                .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
-
-        Notificacion notificacion = new Notificacion(
-                null,
-                cuenta,
-                TipoNotificacion.Recoger,
-                false,
-                Instant.now()
-        );
-
-        return repository.save(notificacion);
-    }
-
-    public List<Notificacion> obtenerNotificacionesPendientes() {
-        return repository.findAll().stream()
-                .filter(notificacion -> !notificacion.leida())
-                .toList();
-    }
-
-    public List<Notificacion> obtenerNotificacionesDeCuenta(String cuentaId) {
-        return repository.findAll().stream()
-                .filter(notificacion -> notificacion.cuenta() != null)
-                .filter(notificacion -> notificacion.cuenta().id() != null)
-                .filter(notificacion -> notificacion.cuenta().id().equals(cuentaId))
-                .toList();
-    }
-
-    public List<Notificacion> obtenerNotificacionesPorTipo(TipoNotificacion tipo) {
-        return repository.findAll().stream()
-                .filter(notificacion -> notificacion.tipo() == tipo)
-                .toList();
-    }
-
-    public Notificacion marcarNotificacionLeida(String notificacionId) {
-        Notificacion notificacion = repository.findById(notificacionId)
-                .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
-
-        if (notificacion.leida()) {
-            return notificacion;
-        }
-
-        Notificacion actualizada = new Notificacion(
-                notificacion.id(),
-                notificacion.cuenta(),
-                notificacion.tipo(),
-                true,
-                notificacion.fecha()
-        );
-
-        return repository.update(notificacion.id(), actualizada);
     }
 
     private void validate(NotificacionRequest request) {

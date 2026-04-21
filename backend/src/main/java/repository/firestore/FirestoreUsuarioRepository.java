@@ -19,11 +19,11 @@ public class FirestoreUsuarioRepository extends AbstractFirestoreRepository<Usua
     @Override
     protected Usuario mapToEntity(String id, Map<String, Object> data) {
         return new Usuario(
-            id,
-            get(data, "username", ""),
-            get(data, "passwordHash", ""),
-            toEnum(Rol.class, data.get("rol"), Rol.Camarero),
-            toInstant(data.get("fechaCreacion"))
+                id,
+                get(data, "username", ""),
+                get(data, "passwordHash", ""),
+                toEnum(Rol.class, data.get("rol"), Rol.Camarero),
+                toInstant(data.get("fechaCreacion"))
         );
     }
 

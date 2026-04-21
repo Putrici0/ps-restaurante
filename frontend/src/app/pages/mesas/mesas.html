@@ -1,4 +1,5 @@
 <app-navbar></app-navbar>
+
 <div class="mesas-page">
   <div class="mesas-topbar" [class.panel-abierto]="!!mesaSeleccionada()">
     <div class="tabs-zona">
@@ -66,7 +67,7 @@
         <aside class="detalle-columna">
           <app-mesa-detalle
             [mesa]="mesaSel"
-            [accionEnCurso]="accionMesaId() === mesaSel.id || procesandoCobro()"
+            [accionEnCurso]="accionMesaId() === mesaSel.id || procesandoCobro() || eliminandoOrdenId() !== null"
             (ocupar)="ocuparMesa($event)"
             (cobrar)="abrirCobro($event)">
           </app-mesa-detalle>
@@ -81,42 +82,193 @@
         <h3>Confirmar cobro</h3>
 
         @if (cargandoCobro()) {
-          <p>Cargando total de la cuenta...</p>
+          <p class="modal-texto">Cargando resumen de la cuenta...</p>
         } @else {
           <p class="modal-texto">
             Se va a cobrar el total de la cuenta asociada a la mesa
             <strong>{{ mesaCobroId() }}</strong>.
           </p>
 
-          <div class="modal-total">
-            <span>Total</span>
-            <strong>{{ totalCobro() == null ? '0,00 €' : (totalCobro() | currency:'EUR':'symbol':'1.2-2') }}</strong>
-          </div>
+          <div class="modal-cobro-layout">
+            <div class="modal-cobro-columna modal-cobro-columna--izquierda">
+              <div class="modal-resumen">
+                <h4>Resumen de lo pedido</h4>
 
-          <p class="modal-aviso">
-            Al confirmar el pago, la cuenta quedará pagada y la mesa pasará automáticamente a libre.
-          </p>
+                @if (resumenCobro().length === 0) {
+                  <p class="modal-resumen-vacio">No hay productos en esta cuenta.</p>
+                } @else {
+                  <div class="modal-resumen-lista">
+                    @for (item of resumenCobro(); track item.platoId) {
+                      <div class="modal-resumen-item">
+                        <div class="modal-resumen-item__info">
+                          <strong>{{ item.nombre || 'Producto' }}</strong>
 
-          <div class="modal-acciones">
-            <button
-              type="button"
-              class="modal-btn modal-btn--secundario"
-              (click)="cerrarModalCobro()"
-              [disabled]="procesandoCobro()">
-              Cancelar
-            </button>
+                          <div class="modal-resumen-item__meta">
+                            {{ item.cantidad }} x
+                            {{ item.precioUnitario | currency:'EUR':'symbol':'1.2-2' }}
+                          </div>
 
-            <button
-              type="button"
-              class="modal-btn modal-btn--principal"
-              (click)="confirmarCobro()"
-              [disabled]="procesandoCobro()">
-  <span class="modal-btn__label">
-    {{ procesandoCobro() ? 'Cobrando...' : 'Confirmar pago' }}
-  </span>
-            </button>
+                          <small class="modal-resumen-item__estado">
+                            Estado:
+                            {{ item.estados.length ? obtenerResumenEstado(item.estados) : 'Sin estado' }}
+                          </small>
+
+                          <div class="modal-resumen-item__acciones">
+                            <button
+                              type="button"
+                              class="btn-eliminar-x"
+                              (click)="eliminarUnaUnidad(item)"
+                              [disabled]="!puedeEliminarItem(item)"
+                              [attr.aria-label]="'Eliminar una unidad de ' + item.nombre"
+                              title="Eliminar una unidad">
+                              {{ eliminandoOrdenId() === item.ordenesIds[0] ? '...' : '×' }}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div class="modal-resumen-item__subtotal">
+                          {{ item.subtotal | currency:'EUR':'symbol':'1.2-2' }}
+                        </div>
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            </div>
+
+            <div class="modal-cobro-columna modal-cobro-columna--derecha">
+              <div class="modal-metodo-pago">
+                <h4>Método de pago</h4>
+
+                <div class="modal-metodo-pago__opciones">
+                  <button
+                    type="button"
+                    class="modal-metodo-pago__btn"
+                    [class.active]="metodoPago() === 'EFECTIVO'"
+                    (click)="cambiarMetodoPago('EFECTIVO')"
+                    [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                    Efectivo
+                  </button>
+
+                  <button
+                    type="button"
+                    class="modal-metodo-pago__btn"
+                    [class.active]="metodoPago() === 'TARJETA'"
+                    (click)="cambiarMetodoPago('TARJETA')"
+                    [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                    Tarjeta
+                  </button>
+                </div>
+              </div>
+
+              @if (metodoPago() === 'EFECTIVO') {
+                <div class="modal-efectivo">
+                  <h4>Pago en efectivo</h4>
+
+                  <label for="importeRecibido">Importe recibido</label>
+                  <input
+                    id="importeRecibido"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [value]="importeRecibido() ?? ''"
+                    (input)="actualizarImporteRecibido($any($event.target).value)"
+                    [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()"
+                    placeholder="Introduce el importe recibido" />
+
+                  @if (importeRecibido() != null && faltaCobro() != null && faltaCobro()! > 0) {
+                    <p class="modal-efectivo__error">
+                      Faltan {{ faltaCobro() | currency:'EUR':'symbol':'1.2-2' }}
+                    </p>
+                  }
+
+                  @if (importeRecibido() != null && cambioCobro() != null && cambioCobro()! >= 0) {
+                    <p class="modal-efectivo__cambio">
+                      Cambio:
+                      <strong>{{ cambioCobro() | currency:'EUR':'symbol':'1.2-2' }}</strong>
+                    </p>
+                  }
+                </div>
+              }
+
+              @if (metodoPago() === 'TARJETA') {
+                <div class="modal-tarjeta">
+                  <h4>Pago con tarjeta</h4>
+                  <p>
+                    Pago simulado por datáfono. Al confirmar, la operación se marcará como autorizada.
+                  </p>
+                </div>
+              }
+
+              <div class="modal-total">
+                <span>Total</span>
+                <strong>
+                  {{ totalCobro() == null ? '0,00 €' : (totalCobro() | currency:'EUR':'symbol':'1.2-2') }}
+                </strong>
+              </div>
+
+              <p class="modal-aviso">
+                Al confirmar el pago, la cuenta quedará pagada y la mesa pasará automáticamente a libre.
+              </p>
+
+              <div class="modal-acciones">
+                <button
+                  type="button"
+                  class="modal-btn modal-btn--secundario"
+                  (click)="cerrarModalCobro()"
+                  [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  class="modal-btn modal-btn--principal"
+                  (click)="confirmarCobro()"
+                  [disabled]="!puedeConfirmarCobro()">
+                  <span class="modal-btn__label">
+                    {{ procesandoCobro() ? 'Cobrando...' : 'Confirmar pago' }}
+                  </span>
+                </button>
+              </div>
+            </div>
           </div>
         }
+      </div>
+    </div>
+  }
+
+  @if (mostrarConfirmacionEliminar()) {
+    <div class="modal-overlay modal-overlay--confirmacion" (click)="cancelarConfirmacionEliminar()">
+      <div class="modal-confirmacion" (click)="$event.stopPropagation()">
+        <h4>Eliminar producto</h4>
+
+        <p>
+          Vas a eliminar 1 unidad de
+          <strong>"{{ itemPendienteEliminar()?.nombre }}"</strong>
+          del recibo.
+        </p>
+
+        <p class="modal-confirmacion__texto-secundario">
+          Esta acción es manual y reducirá la cuenta.
+        </p>
+
+        <div class="modal-confirmacion__acciones">
+          <button
+            type="button"
+            class="modal-btn modal-btn--secundario"
+            (click)="cancelarConfirmacionEliminar()"
+            [disabled]="eliminandoOrdenId() !== null">
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            class="modal-btn modal-btn--danger"
+            (click)="confirmarEliminarUnidad()"
+            [disabled]="eliminandoOrdenId() !== null">
+            {{ eliminandoOrdenId() !== null ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
       </div>
     </div>
   }

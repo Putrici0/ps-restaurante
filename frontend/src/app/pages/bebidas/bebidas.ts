@@ -5,7 +5,7 @@ import {
   OrdenCocinaResponse,
   OrdenesApiService,
 } from '../../services/ordenes-api.service';
-import { NavbarComponent } from '../../components/navbar/navbar';
+import { Navbar } from '../../components/navbar/navbar';
 
 type ResultadoCarga = {
   ok: boolean;
@@ -22,17 +22,17 @@ type TransicionOrden = {
 @Component({
   selector: 'app-bebidas',
   standalone: true,
-  imports: [CommonModule, NavbarComponent],
+  imports: [CommonModule, Navbar],
   templateUrl: './bebidas.html',
   styleUrl: './bebidas.css',
 })
-export class BebidasComponent implements OnInit, OnDestroy {
+export class Bebidas implements OnInit, OnDestroy {
   private readonly ordenesApi = inject(OrdenesApiService);
 
   private intervaloRefresco?: number;
   private intervaloReloj?: number;
 
-  private readonly pollingMs = 3000;
+  private readonly pollingMs = 8000;
   private readonly refreshAfterWriteMs = 1500;
   private readonly transicionVisualMs = 2500;
 

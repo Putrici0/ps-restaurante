@@ -6,7 +6,7 @@ import {
   OrdenCocinaResponse,
   OrdenesApiService,
 } from '../../services/ordenes-api.service';
-import { NavbarComponent } from '../../components/navbar/navbar';
+import { Navbar } from '../../components/navbar/navbar';
 
 type EstadoVisualOrden = OrdenCocinaResponse['ordenEstado'];
 
@@ -18,7 +18,7 @@ type TransicionOrden = {
 @Component({
   selector: 'app-platos',
   standalone: true,
-  imports: [CommonModule, NavbarComponent],
+  imports: [CommonModule, Navbar],
   templateUrl: './platos.html',
   styleUrl: './platos.css',
 })

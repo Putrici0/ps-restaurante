@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 /**
  * Base abstract class for all Firestore-based repositories.
  * Implements common CRUD logic and provides conversion utilities to reduce boilerplate.
- * 
+ *
  * @param <T> The entity type (e.g., Plato, Usuario, etc.)
  */
 public abstract class AbstractFirestoreRepository<T> implements Repository<T, String> {
