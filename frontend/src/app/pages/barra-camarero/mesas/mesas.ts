@@ -2,12 +2,12 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 
-import { MesaCardComponent } from '../../components/mesa-card/mesa-card';
-import { MesaDetalle } from '../../components/mesa-detalle/mesa-detalle';
-import { Navbar } from '../../components/navbar/navbar';
-import { Mesa, ZonaMesa } from '../../models/mesa.model';
-import { CuentaApiService, OrdenCuentaResponse } from '../../services/cuenta-api.service';
-import { MesasApiService } from '../../services/mesas-api.service';
+import { MesaCardComponent } from '../../../shared/mesa-card/mesa-card';
+import { MesaDetalle } from '../../../shared/mesa-detalle/mesa-detalle';
+import { Navbar } from '../../../shared/navbar/navbar';
+import { Mesa, ZonaMesa } from '../../../models/mesa.model';
+import { CuentaApiService, OrdenCuentaResponse } from '../../../services/cuenta-api.service';
+import { MesasApiService } from '../../../services/mesas-api.service';
 
 interface ItemCobroAgrupado {
   platoId: string;

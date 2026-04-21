@@ -1,13 +1,13 @@
 import { Routes } from '@angular/router';
-import { Mesas } from './pages/mesas/mesas';
-import { Bebidas } from './pages/bebidas/bebidas';
-import { PlatosComponent } from './pages/platos/platos';
-import { HistorialComponent } from './pages/historial/historial';
+import { Mesas } from './pages/barra-camarero/mesas/mesas';
+import { Bebidas } from './pages/barra-camarero/bebidas/bebidas';
+import { PlatosComponent } from './pages/barra-camarero/platos/platos';
+import { HistorialComponent } from './pages/barra-camarero/historial/historial';
 import { tableAccessGuard } from './guards/table-access.guard';
-import { TableLogin } from './feature/access/table-login/table-login';
-import { QrGenerator } from './feature/admin/qr-generator/qr-generator';
-import { MenuPage } from './feature/menu/menu-page/menu-page';
-import { BillPage } from './feature/bill/bill-page/bill-page';
+import { TableLogin } from './pages/cliente/table-login/table-login';
+import { QrGenerator } from './pages/cliente/qr-generator/qr-generator';
+import { MenuPage } from './pages/cliente/menu-page/menu-page';
+import { BillPage } from './pages/cliente/bill-page/bill-page';
 import { TableroPedidos } from './pages/cocina/tablero-pedidos';
 
 export const routes: Routes = [

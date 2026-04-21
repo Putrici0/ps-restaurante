@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { take } from 'rxjs';
-import { Header } from '../../../shared/components/header/header';
+import { Header } from '../../../shared/header/header';
 import {
   PedidosApiService,
   CrearPedidoClienteRequest,

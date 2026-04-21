@@ -2,13 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 
-import { Navbar } from '../../components/navbar/navbar';
+import { Navbar } from '../../../shared/navbar/navbar';
 import {
   CuentaApiService,
   CuentaDetalleResponse,
   CuentaPagadaResumenResponse,
   OrdenCuentaResponse,
-} from '../../services/cuenta-api.service';
+} from '../../../services/cuenta-api.service';
 
 interface ItemDetalleAgrupado {
   platoId: string;

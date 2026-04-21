@@ -4,8 +4,8 @@ import { catchError, forkJoin, map, of, take } from 'rxjs';
 import {
   OrdenCocinaResponse,
   OrdenesApiService,
-} from '../../services/ordenes-api.service';
-import { Navbar } from '../../components/navbar/navbar';
+} from '../../../services/ordenes-api.service';
+import { Navbar } from '../../../shared/navbar/navbar';
 
 type ResultadoCarga = {
   ok: boolean;
