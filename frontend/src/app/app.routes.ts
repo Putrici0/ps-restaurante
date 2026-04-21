@@ -1,8 +1,8 @@
 import { Routes } from '@angular/router';
-import { Mesas } from './pages/barra-camarero/mesas/mesas';
-import { Bebidas } from './pages/barra-camarero/bebidas/bebidas';
-import { PlatosComponent } from './pages/barra-camarero/platos/platos';
-import { HistorialComponent } from './pages/barra-camarero/historial/historial';
+import { Mesas } from './pages/barra/mesas/mesas';
+import { Bebidas } from './pages/barra/bebidas/bebidas';
+import { PlatosComponent } from './pages/barra/platos/platos';
+import { HistorialComponent } from './pages/barra/historial/historial';
 import { tableAccessGuard } from './guards/table-access.guard';
 import { TableLogin } from './pages/cliente/table-login/table-login';
 import { QrGenerator } from './pages/cliente/qr-generator/qr-generator';
