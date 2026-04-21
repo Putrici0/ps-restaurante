@@ -1,8 +1,10 @@
 .mesas-page {
   padding: 20px 26px 26px;
-  min-height: calc(100vh - 120px);
+  height: calc(100vh - 120px); /* Forzar altura para no hacer scroll */
   box-sizing: border-box;
-  overflow-x: hidden;
+  overflow: hidden; /* Cortar scroll global */
+  display: flex;
+  flex-direction: column;
 }
 
 .mesas-topbar {
@@ -11,11 +13,11 @@
   align-items: start;
   margin-bottom: 26px;
   gap: 24px;
-  transition: transform 0.24s ease;
+  transition: margin-right 0.4s cubic-bezier(0.4, 0, 0.2, 1); /* Tu animación */
 }
 
 .mesas-topbar.panel-abierto {
-  transform: translateX(-34px);
+  margin-right: 460px; /* Rueda todo a la izquierda */
 }
 
 .tabs-zona {
@@ -111,30 +113,43 @@
 }
 
 .mesas-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 28px;
-  align-items: start;
+  display: block; /* Quitamos el grid para el panel lateral */
+  position: relative;
+  flex: 1;
+  overflow-y: auto; /* Scroll interno solo para las mesas si hiciera falta */
+  transition: margin-right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mesas-layout.panel-abierto {
-  grid-template-columns: minmax(0, 1fr) 320px;
+  margin-right: 135px; /* Empuja las mesas hacia la izquierda */
 }
 
 .grid-mesas {
   width: 100%;
-  max-width: 870px;
+  max-width: 1020px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: repeat(3, 260px);
+  grid-template-columns: repeat(3, 300px);
   justify-content: center;
-  gap: 28px 30px;
+  gap: 50px 80px;
+  padding: 8px;
 }
 
 .detalle-columna {
-  position: sticky;
-  top: 18px;
-  width: 320px;
+  position: fixed;
+  right: 0;
+  top: 120px; /* Anclado debajo del navbar actual */
+  bottom: 0;
+  width: 320px; /* Usamos el ancho de tu compañero para no romper su interior */
+  z-index: 1000;
+  padding-right: 26px;
+  padding-top: 10px;
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 .modal-overlay {
@@ -516,17 +531,20 @@
   .mesas-layout,
   .mesas-layout.panel-abierto {
     grid-template-columns: 1fr;
+    margin-right: 0; /* Añadir esto */
   }
 
   .mesas-topbar,
   .mesas-topbar.panel-abierto {
     grid-template-columns: 1fr;
     transform: none;
+    margin-right: 0; /* Añadir esto */
   }
 
   .detalle-columna {
     position: static;
     width: 100%;
+    animation: none; /* Añadir esto */
   }
 
   .mesas-topbar-right {
