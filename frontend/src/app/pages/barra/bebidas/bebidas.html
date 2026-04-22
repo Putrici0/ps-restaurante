@@ -2,120 +2,44 @@
 <section class="bebidas-page">
   <div class="page-shell">
     <header class="page-header">
-      <div class="page-header__content">
-        <p class="page-eyebrow">BARRA</p>
-        <h1>Cola de bebidas</h1>
-        <p class="page-description">
-          Aquí aparecen solo las bebidas activas. Las bebidas de cuentas ya pagadas
-          desaparecen automáticamente.
-        </p>
-      </div>
-
-      <div class="page-summary">
-        <div class="summary-card">
-          <span class="summary-card__label">Pendientes</span>
-          <span class="summary-card__value">{{ pendientesCount() }}</span>
-        </div>
-
-        <div class="summary-card">
-          <span class="summary-card__label">Listas</span>
-          <span class="summary-card__value">{{ listasCount() }}</span>
-        </div>
+      <h1>Cola de Bebidas</h1>
+      <div class="summary-badge">
+        <span class="dot"></span>
+        <span class="count">{{ pendientesCount() }}</span>
+        <span class="text">Pendientes</span>
       </div>
     </header>
 
-    @if (cargando() && !hayDatos()) {
-      <section class="empty-state">
-        <div class="empty-state__card">
-          <h2>Cargando bebidas...</h2>
-          <p>Estamos obteniendo las bebidas de barra.</p>
-        </div>
-      </section>
-    } @else if (error() && !hayDatos()) {
-      <section class="empty-state">
-        <div class="empty-state__card empty-state__card--error">
-          <h2>No se pudieron cargar las bebidas</h2>
-          <p>{{ error() }}</p>
-        </div>
-      </section>
-    } @else if (!hayDatos()) {
-      <section class="empty-state">
-        <div class="empty-state__card">
-          <h2>No hay bebidas visibles</h2>
-          <p>No hay bebidas pendientes, en preparación o listas para servir.</p>
-        </div>
-      </section>
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+
+    @if (cargando() && ordenes().length === 0 && !error()) {
+      <p>Cargando bebidas...</p>
     } @else {
-      <section class="bebidas-grid">
-        @for (orden of ordenesOrdenadas(); track orden.id) {
-          <article class="bebida-card">
-            <div class="bebida-card__top">
-              <div class="mesa-badge">
-                <span class="mesa-badge__label">Mesa</span>
-                <span class="mesa-badge__value">{{ numeroMesaPlano(orden) }}</span>
-              </div>
+      <div class="bebidas-grid" style="display: grid; gap: 16px;">
+        @for (item of ordenesVisuales(); track item.id) {
+          <app-pedido-card
+            [numeroMesa]="item.mesa"
+            [estadoVisual]="item.estado"
+            [etiquetaEstado]="item.etiqueta"
+            [esOpaco]="item.esListo"
+            [tiempo]="item.tiempo"
+            [textoBotonPrincipal]="item.esListo ? 'LISTO' : (item.esPendiente ? 'PREPARAR' : 'TERMINAR')"
+            [claseBotonPrincipal]="item.esListo ? 'gris' : 'verde'"
+            [disablePrincipal]="item.esListo || item.procesando"
+            (principal)="avanzarEstado(item.original)"
 
-              <div
-                class="estado-badge"
-                [class.estado-badge--pendiente]="orden.ordenEstado === 'Pendiente'"
-                [class.estado-badge--preparacion]="orden.ordenEstado === 'Preparación'"
-                [class.estado-badge--listo]="orden.ordenEstado === 'Listo'"
-              >
-                {{ etiquetaEstado(orden) }}
-              </div>
-            </div>
+            [mostrarBotonSecundario]="!item.esPendiente"
+            [textoBotonSecundario]="'VOLVER'"
+            [claseBotonSecundario]="'rojo'"
+            [disableSecundario]="item.procesando"
+            (secundario)="retrocederEstado(item.original)">
 
-            <div class="bebida-card__body">
-              <h2 class="bebida-card__title">{{ orden.plato.nombre }}</h2>
-
-              <div class="bebida-card__info">
-                <div class="info-row">
-                  <span class="info-row__label">Mesa</span>
-                  <span class="info-row__value">{{ mesaDeOrden(orden) }}</span>
-                </div>
-
-                <div class="info-row">
-                  <span class="info-row__label">Detalles</span>
-                  <span class="info-row__value">{{ detallesVisibles(orden) }}</span>
-                </div>
-
-                <div class="info-row">
-                  <span class="info-row__label">Tiempo</span>
-                  <span class="info-row__value">{{ tiempoTexto(orden) }}</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="bebida-card__footer">
-              <div class="footer-actions">
-                @if (orden.ordenEstado !== 'Pendiente') {
-                  <button
-                    type="button"
-                    class="secondary-button"
-                    (click)="retrocederEstado(orden)"
-                    [disabled]="procesandoOrdenId() !== null"
-                  >
-                    VOLVER A PENDIENTE
-                  </button>
-                }
-
-                <button
-                  type="button"
-                  class="primary-button"
-                  (click)="avanzarEstado(orden)"
-                  [disabled]="procesandoOrdenId() !== null || orden.ordenEstado === 'Listo'"
-                >
-                  {{
-                    procesandoOrdenId() === orden.id
-                      ? 'ACTUALIZANDO...'
-                      : accionPrincipalTexto(orden)
-                  }}
-                </button>
-              </div>
-            </div>
-          </article>
+            <strong>{{ item.nombre }}</strong>
+          </app-pedido-card>
         }
-      </section>
+      </div>
     }
   </div>
 </section>

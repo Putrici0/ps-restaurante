@@ -47,6 +47,10 @@ public class CuentaController {
 
                 get(ctx -> ctx.json(service.findAll()));
 
+                path("activas", () -> {
+                    get(ctx -> ctx.json(service.findCuentasActivas()));
+                });
+
                 path("pagadas", () -> {
                     get(ctx -> {
                         String fechaRaw = ctx.queryParam("fecha");

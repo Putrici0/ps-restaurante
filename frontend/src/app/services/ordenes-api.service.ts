@@ -1,7 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, timeout } from 'rxjs';
-
+import { Observable } from 'rxjs';
 export type EstadoOrdenBackend =
   | 'Pendiente'
   | 'Preparación'
@@ -49,61 +48,48 @@ export interface OrdenCocinaResponse {
 export class OrdenesApiService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `http://${window.location.hostname}:7070`;
-  private readonly requestTimeoutMs = 8000;
 
-  private get<T>(url: string): Observable<T> {
-    return this.http.get<T>(url).pipe(timeout(this.requestTimeoutMs));
+  // 🚀 CARGA ÚNICA BARRA (Trae todo en una sola petición)
+  obtenerBebidasActivasBarra(): Observable<OrdenCocinaResponse[]> {
+    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/activas`);
   }
 
-  private post<T>(url: string): Observable<T> {
-    return this.http.post<T>(url, {}).pipe(timeout(this.requestTimeoutMs));
-  }
-
-  obtenerTodas(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes`);
-  }
-
-  obtenerPendientesCocina(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/pendientes`);
-  }
-
-  obtenerEnPreparacionCocina(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/en-preparacion`);
-  }
-
-  obtenerListasCocina(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/listas`);
-  }
-
+  // 🚀 CARGA ÚNICA SALA
   obtenerPlatosSala(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/sala/platos`);
+    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/sala/platos`);
   }
 
-  obtenerPendientesBarra(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/pendientes`);
-  }
-
-  obtenerEnPreparacionBarra(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/en-preparacion`);
-  }
-
-  obtenerListasBarra(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/listas`);
-  }
-
-  marcarPendiente(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/pendiente`);
+  // 🚀 DESHACER ENTREGA (Vuelve el estado a 'Listo')
+  deshacerEntregaPlato(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/listo`, {});
   }
 
   marcarEnPreparacion(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/en-preparacion`);
+    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/en-preparacion`, {});
   }
 
   marcarLista(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/lista`);
+    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/lista`, {});
   }
 
   marcarEntregada(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/entregada`);
+    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/entregada`, {});
+  }
+
+  marcarPendiente(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/pendiente`, {});
+  }
+
+  // 🚀 RESTAURADOS: Endpoints para la Cocina
+  obtenerPendientesCocina(): Observable<OrdenCocinaResponse[]> {
+    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/pendientes`);
+  }
+
+  obtenerEnPreparacionCocina(): Observable<OrdenCocinaResponse[]> {
+    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/en-preparacion`);
+  }
+
+  obtenerListasCocina(): Observable<OrdenCocinaResponse[]> {
+    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/listas`);
   }
 }

@@ -14,7 +14,6 @@ import java.util.List;
 import java.util.Optional;
 
 public class CuentaService {
-
     private final FirestoreCuentaRepository repository;
     private final FirestoreMesaRepository mesaRepository;
     private final FirestoreReservaRepository reservaRepository;
@@ -27,59 +26,21 @@ public class CuentaService {
         this.reservaRepository = reservaRepository;
     }
 
-    public Cuenta create(CuentaRequest request) {
-        validate(request);
+    public List<Cuenta> findCuentasActivas() {
+        return repository.findByEstaPagada(false);
+    }
 
+    public List<Cuenta> findAll() { return repository.findAll(); }
+    public Optional<Cuenta> findById(String id) { return repository.findById(id); }
+    public void delete(String id) { repository.deleteById(id); }
+
+    public Cuenta create(CuentaRequest request) {
         List<Mesa> mesas = new ArrayList<>();
         for (String mesaId : request.mesasIds) {
-            Mesa mesa = mesaRepository.findById(mesaId)
-                    .orElseThrow(() -> new IllegalArgumentException("La mesa con id " + mesaId + " no existe"));
+            Mesa mesa = mesaRepository.findById(mesaId).orElseThrow();
             mesas.add(mesa);
         }
-
-        Optional<Reserva> reserva = Optional.empty();
-        if (request.reservaId != null && !request.reservaId.isBlank()) {
-            reserva = Optional.of(
-                    reservaRepository.findById(request.reservaId)
-                            .orElseThrow(() -> new IllegalArgumentException("La reserva no existe"))
-            );
-        }
-
-        Cuenta cuenta = new Cuenta(
-                null,
-                mesas,
-                request.estaPagada,
-                reserva,
-                Instant.now(),
-                Optional.empty(),
-                "",
-                Optional.empty()
-        );
-
+        Cuenta cuenta = new Cuenta(null, mesas, false, Optional.empty(), Instant.now(), Optional.empty(), "", Optional.empty());
         return repository.save(cuenta);
-    }
-
-    public List<Cuenta> findAll() {
-        return repository.findAll();
-    }
-
-    public Optional<Cuenta> findById(String id) {
-        return repository.findById(id);
-    }
-
-    public void delete(String id) {
-        repository.deleteById(id);
-    }
-
-    private void validate(CuentaRequest request) {
-        if (request == null) {
-            throw new IllegalArgumentException("El cuerpo de la petición no puede ser nulo");
-        }
-        if (request.mesasIds == null || request.mesasIds.length == 0) {
-            throw new IllegalArgumentException("Debe indicarse al menos una mesa");
-        }
-        if (request.estaPagada == null) {
-            throw new IllegalArgumentException("El estado de pago es obligatorio");
-        }
     }
 }

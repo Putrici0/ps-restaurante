@@ -16,7 +16,7 @@ export class MesasApiService {
   }
 
   obtenerCuentas(): Observable<CuentaApi[]> {
-    return this.http.get<CuentaApi[]>(`${this.apiUrl}/cuentas`);
+    return this.http.get<CuentaApi[]>(`${this.apiUrl}/cuentas/activas`);
   }
 
   obtenerTotalCuenta(cuentaId: string): Observable<ImporteCuentaApi> {
