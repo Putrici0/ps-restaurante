@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 public class PagoApplicationService {
+
     private final CuentaRepository cuentaRepository;
     private final PedidoRepository pedidoRepository;
     private final OrdenRepository ordenRepository;
@@ -57,7 +58,10 @@ public class PagoApplicationService {
             return BigDecimal.ZERO;
         }
 
-        return calcularTotalCuenta(cuentaId);
+        return obtenerOrdenesDeCuenta(cuentaId).stream()
+                .filter(orden -> !orden.pagada())
+                .map(Orden::precio)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     public boolean cuentaEstaSaldada(String cuentaId) {
@@ -75,18 +79,106 @@ public class PagoApplicationService {
             throw new IllegalArgumentException("El método de pago es obligatorio");
         }
 
+        List<Orden> ordenesPendientes = obtenerOrdenesDeCuenta(cuentaId).stream()
+                .filter(orden -> !orden.pagada())
+                .toList();
+
+        Instant ahora = Instant.now();
+
+        for (Orden orden : ordenesPendientes) {
+            Orden ordenPagada = new Orden(
+                    orden.id(),
+                    orden.pedido(),
+                    orden.plato(),
+                    orden.precio(),
+                    orden.ordenEstado(),
+                    orden.fecha(),
+                    orden.detalles(),
+                    true,
+                    Optional.of(ahora),
+                    Optional.of(metodoPago)
+            );
+
+            ordenRepository.update(orden.id(), ordenPagada);
+        }
+
         Cuenta actualizada = new Cuenta(
                 cuenta.id(),
                 cuenta.mesas(),
                 true,
                 cuenta.reserva(),
                 cuenta.fechaCreacion(),
-                Optional.of(Instant.now()),
+                Optional.of(ahora),
                 "",
                 Optional.of(metodoPago)
         );
 
         return cuentaRepository.update(cuenta.id(), actualizada);
+    }
+
+    public Cuenta pagarParcialCuenta(String cuentaId, List<String> ordenIds, MetodoPago metodoPago) {
+        Cuenta cuenta = obtenerCuentaPorId(cuentaId);
+
+        if (cuenta.payed()) {
+            throw new IllegalArgumentException("La cuenta ya está pagada");
+        }
+
+        if (metodoPago == null) {
+            throw new IllegalArgumentException("El método de pago es obligatorio");
+        }
+
+        if (ordenIds == null || ordenIds.isEmpty()) {
+            throw new IllegalArgumentException("Debes seleccionar al menos un producto");
+        }
+
+        List<Orden> ordenesCuenta = obtenerOrdenesDeCuenta(cuentaId);
+        Instant ahora = Instant.now();
+
+        for (String ordenId : ordenIds) {
+            Orden orden = ordenesCuenta.stream()
+                    .filter(o -> o.id().equals(ordenId))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("La orden " + ordenId + " no pertenece a la cuenta"));
+
+            if (orden.pagada()) {
+                continue;
+            }
+
+            Orden ordenPagada = new Orden(
+                    orden.id(),
+                    orden.pedido(),
+                    orden.plato(),
+                    orden.precio(),
+                    orden.ordenEstado(),
+                    orden.fecha(),
+                    orden.detalles(),
+                    true,
+                    Optional.of(ahora),
+                    Optional.of(metodoPago)
+            );
+
+            ordenRepository.update(orden.id(), ordenPagada);
+        }
+
+        boolean quedaPendiente = obtenerOrdenesDeCuenta(cuentaId).stream()
+                .anyMatch(orden -> !orden.pagada());
+
+        if (!quedaPendiente) {
+            Cuenta cuentaPagada = new Cuenta(
+                    cuenta.id(),
+                    cuenta.mesas(),
+                    true,
+                    cuenta.reserva(),
+                    cuenta.fechaCreacion(),
+                    Optional.of(ahora),
+                    "",
+                    Optional.of(metodoPago)
+            );
+
+            return cuentaRepository.update(cuenta.id(), cuentaPagada);
+        }
+
+        return obtenerCuentaPorId(cuentaId);
     }
 
     public Cuenta cerrarCuentaSiProcede(String cuentaId) {
@@ -142,7 +234,10 @@ public class PagoApplicationService {
                 orden.precio(),
                 OrdenEstado.Cancelado,
                 orden.fecha(),
-                orden.detalles()
+                orden.detalles(),
+                orden.pagada(),
+                orden.fechaPago(),
+                orden.metodoPago()
         );
 
         ordenRepository.update(orden.id(), ordenCancelada);

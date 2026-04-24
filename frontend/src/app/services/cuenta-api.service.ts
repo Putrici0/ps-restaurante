@@ -41,6 +41,7 @@ export interface OrdenCuentaResponse {
     | 'Cancelado';
   fecha: string;
   detalles: string;
+  pagada?: boolean;
   pedido: {
     id: string;
   };

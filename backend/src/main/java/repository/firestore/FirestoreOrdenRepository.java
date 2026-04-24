@@ -4,6 +4,7 @@ import com.google.cloud.firestore.Firestore;
 import model.Categoria;
 import model.Cuenta;
 import model.Mesa;
+import model.MetodoPago;
 import model.Orden;
 import model.OrdenEstado;
 import model.Pedido;
@@ -47,6 +48,11 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
         Map<String, Object> plData = getMap(data, "plato");
         Plato plato = mapPlato(plData);
 
+        String metodoPagoRaw = getNullableString(data, "metodoPago");
+        MetodoPago metodoPago = metodoPagoRaw != null && !metodoPagoRaw.isBlank()
+                ? MetodoPago.valueOf(metodoPagoRaw)
+                : null;
+
         return new Orden(
                 id,
                 pedido,
@@ -54,7 +60,10 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
                 toBigDecimal(data.get("precio")),
                 toEnum(OrdenEstado.class, data.get("ordenEstado"), OrdenEstado.Pendiente),
                 toInstant(data.get("fecha")),
-                getString(data, "detalles")
+                getString(data, "detalles"),
+                getBoolean(data, "pagada", false),
+                Optional.ofNullable(toInstant(data.get("fechaPago"))),
+                Optional.ofNullable(metodoPago)
         );
     }
 
@@ -66,6 +75,9 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
         map.put("ordenEstado", orden.ordenEstado().name());
         map.put("fecha", toTimestamp(orden.fecha()));
         map.put("detalles", orden.detalles());
+        map.put("pagada", orden.pagada());
+        map.put("fechaPago", orden.fechaPago().map(this::toTimestamp).orElse(null));
+        map.put("metodoPago", orden.metodoPago().map(Enum::name).orElse(null));
 
         if (orden.pedido() != null) {
             map.put("pedido", pedidoToMap(orden.pedido()));
@@ -92,7 +104,10 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
                 orden.precio(),
                 orden.ordenEstado(),
                 orden.fecha(),
-                orden.detalles()
+                orden.detalles(),
+                orden.pagada(),
+                orden.fechaPago(),
+                orden.metodoPago()
         );
     }
 
@@ -128,7 +143,6 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
         }
 
         Cuenta cuenta = pedidoBase.cuenta();
-
         boolean faltaCuenta = cuenta == null;
         boolean faltanMesas = cuenta != null && (cuenta.mesas() == null || cuenta.mesas().isEmpty());
 
@@ -194,6 +208,11 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
             return null;
         }
 
+        String metodoPagoRaw = getNullableString(cData, "metodoPago");
+        MetodoPago metodoPago = metodoPagoRaw != null && !metodoPagoRaw.isBlank()
+                ? MetodoPago.valueOf(metodoPagoRaw)
+                : null;
+
         return new Cuenta(
                 (String) cData.get("id"),
                 mapMesas(cData.get("mesas")),
@@ -202,7 +221,7 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
                 toInstant(cData.get("fechaCreacion")),
                 Optional.ofNullable(toInstant(cData.get("fechaPago"))),
                 getString(cData, "password"),
-                Optional.empty()
+                Optional.ofNullable(metodoPago)
         );
     }
 
@@ -240,6 +259,7 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
         cMap.put("fechaCreacion", toTimestamp(cuenta.fechaCreacion()));
         cMap.put("fechaPago", cuenta.fechaPago().map(this::toTimestamp).orElse(null));
         cMap.put("password", cuenta.password());
+        cMap.put("metodoPago", cuenta.metodoPago().map(Enum::name).orElse(null));
         return cMap;
     }
 
@@ -307,5 +327,10 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
     private String getString(Map<String, Object> data, String key) {
         Object value = data.get(key);
         return value != null ? value.toString() : "";
+    }
+
+    private String getNullableString(Map<String, Object> data, String key) {
+        Object value = data.get(key);
+        return value != null ? value.toString() : null;
     }
 }

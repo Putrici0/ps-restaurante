@@ -26,7 +26,9 @@ public class CuentaService {
         this.mesaRepository = mesaRepository;
         this.reservaRepository = reservaRepository;
     }
-
+    public List<Cuenta> findCuentasActivas() {
+        return repository.findByEstaPagada(false);
+    }
     public Cuenta create(CuentaRequest request) {
         validate(request);
 

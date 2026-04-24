@@ -51,13 +51,14 @@ public class OrdenController {
                 });
 
                 path("barra", () -> {
+                    path("activas", () -> get(ctx -> ctx.json(applicationService.obtenerBebidasActivasBarra())));
                     path("pendientes", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraPendientes())));
                     path("en-preparacion", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraEnPreparacion())));
                     path("listas", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraListas())));
                 });
 
                 path("sala", () -> {
-                    path("platos", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesSalaPlatos())));
+                    path("platos", () -> get(ctx -> ctx.json(applicationService.obtenerPlatosActivosSala())));
                 });
 
                 path("pedido/{pedidoId}", () -> {
@@ -102,6 +103,8 @@ public class OrdenController {
                         service.delete(id);
                         ctx.status(204);
                     });
+
+                    path("listo", () -> post(ctx -> ctx.json(applicationService.marcarOrdenComoListoNuevamente(ctx.pathParam("id")))));
 
                     path("pendiente", () -> {
                         post(ctx -> {
