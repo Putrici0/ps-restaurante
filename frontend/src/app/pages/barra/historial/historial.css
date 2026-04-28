@@ -250,3 +250,53 @@
     justify-self: start;
   }
 }
+
+.pago-acordeon {
+  border: 1px solid #e5e0d8;
+  border-radius: 14px;
+  margin: 16px 0;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pago-titulo {
+  cursor: pointer;
+  padding: 16px 18px;
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  list-style: none;
+}
+
+.pago-titulo::-webkit-details-marker {
+  display: none;
+}
+
+.pago-titulo::after {
+  content: '⌄';
+  font-size: 20px;
+  transition: transform 0.2s ease;
+}
+
+.pago-acordeon[open] .pago-titulo::after {
+  transform: rotate(180deg);
+}
+
+.pago-contenido {
+  padding: 0 18px 16px;
+}
+
+.detalle-item,
+.total-pago {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.total-pago {
+  border-top: 1px solid #eee;
+  padding-top: 12px;
+  margin-top: 14px;
+}

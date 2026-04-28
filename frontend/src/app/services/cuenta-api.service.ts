@@ -39,9 +39,10 @@ export interface OrdenCuentaResponse {
     | 'Listo para servir'
     | 'Entregado'
     | 'Cancelado';
-  fecha: string;
-  detalles: string;
   pagada?: boolean;
+  fechaPago?: string | null;
+  metodoPago?: 'EFECTIVO' | 'TARJETA' | null;
+  detalles: string;
   pedido: {
     id: string;
   };
