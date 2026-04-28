@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, take } from 'rxjs';
 import { Header } from '../../../shared/header/header';
@@ -20,12 +21,13 @@ interface ItemCuentaAgrupado {
   cantidad: number;
   estados: string[];
   subtotal: number;
+  ordenesIds: string[];
 }
 
 @Component({
   selector: 'app-bill-page',
   standalone: true,
-  imports: [CommonModule, Header],
+  imports: [CommonModule, FormsModule, Header],
   templateUrl: './bill-page.html',
   styleUrls: ['./bill-page.css'],
 })
@@ -43,6 +45,17 @@ export class BillPage implements OnInit, OnDestroy {
   readonly importePendiente = signal(0);
   readonly estadoSaldada = signal<EstadoCuentaResponse | null>(null);
 
+  readonly procesandoPago = signal(false);
+  readonly pagoRealizado = signal(false);
+
+  readonly vistaPago = signal<'ninguna' | 'seleccion' | 'tarjeta'>('ninguna');
+  readonly ordenesSeleccionadas = signal<string[]>([]);
+
+  numeroTarjeta = '';
+  nombreCompleto = '';
+  fechaCaducidad = '';
+  cvc = '';
+
   readonly cuentaCerrada = computed(() => {
     return !!this.cuentaActiva()?.payed || !!this.estadoSaldada()?.saldada;
   });
@@ -51,10 +64,14 @@ export class BillPage implements OnInit, OnDestroy {
     return !this.cargando() && this.cuentaActiva() === null;
   });
 
-  readonly itemsAgrupados = computed<ItemCuentaAgrupado[]>(() => {
+  readonly itemsAgrupados = computed(() => {
     const mapa = new Map<string, ItemCuentaAgrupado>();
 
     for (const orden of this.ordenes()) {
+      if (orden.pagada || orden.ordenEstado === 'Cancelado') {
+        continue;
+      }
+
       const plato = orden.plato;
       const key = plato.id;
 
@@ -69,6 +86,7 @@ export class BillPage implements OnInit, OnDestroy {
           cantidad: 0,
           estados: [],
           subtotal: 0,
+          ordenesIds: [],
         });
       }
 
@@ -76,6 +94,10 @@ export class BillPage implements OnInit, OnDestroy {
       item.cantidad += 1;
       item.estados.push(orden.ordenEstado);
       item.subtotal += Number(orden.precio);
+
+      if (orden.id) {
+        item.ordenesIds.push(orden.id);
+      }
     }
 
     return Array.from(mapa.values()).sort((a, b) =>
@@ -87,11 +109,37 @@ export class BillPage implements OnInit, OnDestroy {
     this.itemsAgrupados().reduce((acc, item) => acc + item.cantidad, 0),
   );
 
+  readonly totalSeleccionado = computed(() => {
+    const seleccionadas = new Set(this.ordenesSeleccionadas());
+
+    const total = this.itemsAgrupados().reduce((acc, item) => {
+      const cantidadSeleccionada = item.ordenesIds.filter((id) =>
+        seleccionadas.has(id),
+      ).length;
+
+      return acc + cantidadSeleccionada * item.precioUnitario;
+    }, 0);
+
+    return Number(total.toFixed(2));
+  });
+
+  readonly puedePagar = computed(() => {
+    return (
+      !this.cargando() &&
+      !this.procesandoPago() &&
+      !!this.cuentaActiva() &&
+      !this.cuentaCerrada() &&
+      this.itemsAgrupados().length > 0
+    );
+  });
+
   ngOnInit(): void {
     this.cargarCuentaCompleta(true);
 
     this.intervaloRefresco = window.setInterval(() => {
-      this.cargarCuentaCompleta(false);
+      if (!this.procesandoPago()) {
+        this.cargarCuentaCompleta(false);
+      }
     }, 4000);
   }
 
@@ -105,6 +153,127 @@ export class BillPage implements OnInit, OnDestroy {
     this.cargarCuentaCompleta(true);
   }
 
+  abrirPagoParcial(): void {
+    const ids = this.itemsAgrupados().flatMap((item) => item.ordenesIds);
+    this.ordenesSeleccionadas.set(ids);
+    this.vistaPago.set('seleccion');
+  }
+
+  cerrarPago(): void {
+    this.vistaPago.set('ninguna');
+  }
+
+  volverASeleccion(): void {
+    this.vistaPago.set('seleccion');
+  }
+
+  itemSeleccionado(item: ItemCuentaAgrupado): boolean {
+    if (!item.ordenesIds.length) {
+      return false;
+    }
+
+    const seleccionadas = new Set(this.ordenesSeleccionadas());
+    return item.ordenesIds.every((id) => seleccionadas.has(id));
+  }
+
+  toggleSeleccionItem(item: ItemCuentaAgrupado): void {
+    const seleccionadas = new Set(this.ordenesSeleccionadas());
+
+    const todasSeleccionadas = item.ordenesIds.every((id) =>
+      seleccionadas.has(id),
+    );
+
+    if (todasSeleccionadas) {
+      item.ordenesIds.forEach((id) => seleccionadas.delete(id));
+    } else {
+      item.ordenesIds.forEach((id) => seleccionadas.add(id));
+    }
+
+    this.ordenesSeleccionadas.set(Array.from(seleccionadas));
+  }
+
+  irATarjeta(): void {
+    if (this.totalSeleccionado() <= 0) {
+      return;
+    }
+
+    this.vistaPago.set('tarjeta');
+  }
+
+  datosTarjetaValidos(): boolean {
+    const tarjetaValida = /^[0-9]{16}$/.test(this.numeroTarjeta.trim());
+    const nombreValido = this.nombreCompleto.trim().length > 3;
+    const cvcValido = /^[0-9]{3}$/.test(this.cvc.trim());
+
+    if (!/^(0[1-9]|1[0-2])\/[0-9]{2}$/.test(this.fechaCaducidad.trim())) {
+      return false;
+    }
+
+    const [mes, anio] = this.fechaCaducidad.split('/').map(Number);
+    const ahora = new Date();
+    const anioCompleto = 2000 + anio;
+    const fechaTarjeta = new Date(anioCompleto, mes);
+
+    return tarjetaValida && nombreValido && cvcValido && fechaTarjeta > ahora;
+  }
+
+  pagarCuenta(): void {
+    const cuenta = this.cuentaActiva();
+    const ordenesSeleccionadas = this.ordenesSeleccionadas();
+
+    const totalOrdenesPendientes = this.itemsAgrupados().reduce(
+      (acc, item) => acc + item.ordenesIds.length,
+      0,
+    );
+
+    if (
+      !cuenta ||
+      this.procesandoPago() ||
+      this.cuentaCerrada() ||
+      ordenesSeleccionadas.length === 0
+    ) {
+      return;
+    }
+
+    if (!this.datosTarjetaValidos()) {
+      return;
+    }
+
+    this.error.set(null);
+    this.procesandoPago.set(true);
+    this.pagoRealizado.set(false);
+
+    const request$ =
+      ordenesSeleccionadas.length === totalOrdenesPendientes
+        ? this.cuentaApiService.pagarCuentaCompleta(cuenta.id, 'TARJETA')
+        : this.cuentaApiService.pagarCuentaParcial(
+          cuenta.id,
+          ordenesSeleccionadas,
+          'TARJETA',
+        );
+
+    request$.pipe(take(1)).subscribe({
+      next: () => {
+        this.procesandoPago.set(false);
+        this.pagoRealizado.set(true);
+
+        this.numeroTarjeta = '';
+        this.nombreCompleto = '';
+        this.fechaCaducidad = '';
+        this.cvc = '';
+
+        this.ordenesSeleccionadas.set([]);
+        this.vistaPago.set('seleccion');
+
+        this.cargarCuentaCompleta(true);
+      },
+      error: () => {
+        this.procesandoPago.set(false);
+        this.error.set('No se ha podido procesar el pago en este momento.');
+      },
+    });
+  }
+
   onImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
     img.src =
@@ -113,12 +282,10 @@ export class BillPage implements OnInit, OnDestroy {
 
   obtenerResumenEstado(item: ItemCuentaAgrupado): string {
     const estadosNormalizados = item.estados.map((estado) => {
-      if (estado === 'Preparación') {
+      if (estado === 'Preparación' || estado === 'Preparacion') {
         return 'En preparación';
       }
-      if (estado === 'Preparacion') {
-        return 'En preparación';
-      }
+
       return estado;
     });
 
@@ -149,6 +316,7 @@ export class BillPage implements OnInit, OnDestroy {
             this.ordenes.set([]);
             this.importePendiente.set(0);
             this.estadoSaldada.set(null);
+            this.ordenesSeleccionadas.set([]);
             this.cargando.set(false);
             return;
           }
@@ -177,5 +345,19 @@ export class BillPage implements OnInit, OnDestroy {
           this.cargando.set(false);
         },
       });
+  }
+
+  onFechaInput(valor: string): void {
+    let limpio = valor.replace(/\D/g, '');
+
+    if (limpio.length > 4) {
+      limpio = limpio.slice(0, 4);
+    }
+
+    if (limpio.length >= 3) {
+      limpio = limpio.slice(0, 2) + '/' + limpio.slice(2);
+    }
+
+    this.fechaCaducidad = limpio;
   }
 }

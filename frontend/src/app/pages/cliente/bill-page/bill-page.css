@@ -12,6 +12,7 @@
     radial-gradient(circle at top left, rgba(212, 181, 150, 0.24), transparent 35%),
     linear-gradient(180deg, #fffaf5 0%, #f6efe7 100%);
   color: #2b2018;
+  padding-bottom: 110px;
 }
 
 .bill-main {
@@ -102,7 +103,6 @@
   color: #2f2118;
 }
 
-.central-note-card,
 .bill-state-card {
   background: rgba(255, 255, 255, 0.96);
   border-radius: 22px;
@@ -110,28 +110,18 @@
   border: 1px solid rgba(212, 181, 150, 0.35);
   box-shadow: 0 16px 36px rgba(76, 52, 36, 0.08);
   margin-bottom: 1rem;
+  text-align: center;
 }
 
-.central-note-card {
-  background: linear-gradient(135deg, #fff9f2 0%, #fff3e6 100%);
-  border-color: rgba(229, 192, 140, 0.5);
-}
-
-.central-note-card h2,
 .bill-state-card h2 {
   margin: 0 0 0.35rem;
   font-size: 1.05rem;
 }
 
-.central-note-card p,
 .bill-state-card p {
   margin: 0;
   line-height: 1.5;
   color: #6f5a4d;
-}
-
-.bill-state-card {
-  text-align: center;
 }
 
 .bill-state-card__error {
@@ -243,6 +233,55 @@
   font-weight: 600;
 }
 
+.bill-footer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: #d4b596;
+  border-top: 1px solid rgba(58, 42, 26, 0.22);
+  box-shadow: 0 -8px 20px rgba(47, 33, 24, 0.12);
+}
+
+.bill-footer__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.bill-footer__label {
+  font-size: 0.82rem;
+  color: #4b3424;
+}
+
+.bill-footer__amount {
+  font-size: 1.15rem;
+  color: #2f2118;
+  font-weight: 800;
+}
+
+.bill-footer__pay-btn {
+  border: 1px solid #3f3024;
+  border-radius: 999px;
+  padding: 0.6rem 1rem;
+  background: #f6f0e8;
+  color: #2f2118;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  min-width: 145px;
+}
+
+.bill-footer__pay-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .spinner {
   width: 42px;
   height: 42px;
@@ -257,6 +296,133 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* PAGO PARCIAL Y TARJETA */
+
+.payment-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 245px;
+  background: rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(3px);
+}
+
+.payment-panel {
+  width: calc(100% - 32px);
+  max-width: 360px;
+  background: #dfd1b8;
+  border: 1px solid #3f3024;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px rgba(47, 33, 24, 0.24);
+  color: #111;
+  overflow: hidden;
+}
+
+.payment-back-btn {
+  margin: 10px 12px 0;
+  border: none;
+  background: transparent;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.payment-table {
+  padding: 14px 14px 6px;
+}
+
+.payment-table__head,
+.payment-row {
+  display: grid;
+  grid-template-columns: 1fr 72px 48px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.payment-table__head {
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.payment-row {
+  padding: 7px 0;
+}
+
+.payment-row__name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.payment-row input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #ff6b6b;
+  cursor: pointer;
+}
+
+.payment-panel__footer {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: #d1a98d;
+  border-top: 1px solid #3f3024;
+  font-size: 12px;
+}
+
+.payment-small-btn,
+.payment-submit-btn {
+  border: 1px solid #3f3024;
+  border-radius: 999px;
+  background: #f6f0e8;
+  cursor: pointer;
+}
+
+.payment-small-btn {
+  padding: 4px 12px;
+  font-size: 11px;
+}
+
+.payment-panel--card {
+  padding: 10px 28px 16px;
+}
+
+.card-input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid #3f3024;
+  border-radius: 999px;
+  background: #f6f0e8;
+  text-align: center;
+  margin-bottom: 18px;
+  font-size: 13px;
+}
+
+.card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.payment-submit-btn {
+  display: block;
+  margin-left: auto;
+  min-width: 92px;
+  padding: 5px 18px;
+  font-size: 12px;
+}
+
+.payment-small-btn:disabled,
+.payment-submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 @media (max-width: 700px) {
@@ -274,5 +440,17 @@
 
   .bill-item-card__subtotal {
     white-space: normal;
+  }
+
+  .bill-footer {
+    padding: 0.85rem 1rem;
+  }
+
+  .bill-footer__pay-btn {
+    min-width: auto;
+  }
+
+  .payment-overlay {
+    padding-top: 235px;
   }
 }

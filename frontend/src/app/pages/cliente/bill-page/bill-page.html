@@ -1,6 +1,6 @@
-<div class="bill-page">
-  <app-header></app-header>
+<app-header />
 
+<section class="bill-page">
   <main class="bill-main">
     <section class="bill-hero">
       <div>
@@ -26,16 +26,14 @@
     } @else if (error()) {
       <section class="bill-state-card">
         <p class="bill-state-card__error">{{ error() }}</p>
-        <button type="button" class="bill-retry-btn" (click)="recargar()">
+        <button class="bill-retry-btn" type="button" (click)="recargar()">
           Reintentar
         </button>
       </section>
     } @else if (sinCuentaActiva()) {
       <section class="bill-state-card">
         <h2>No hay una cuenta activa para esta mesa</h2>
-        <p>
-          Cuando central o sala abra una cuenta, esta pantalla se actualizará sola.
-        </p>
+        <p>Cuando central o sala abra una cuenta, esta pantalla se actualizará sola.</p>
       </section>
     } @else {
       <section class="bill-summary-grid">
@@ -46,16 +44,18 @@
 
         <article class="summary-card">
           <span class="summary-card__label">Importe pendiente</span>
-          <strong class="summary-card__value">{{ importePendiente() | number:'1.2-2' }} €</strong>
+          <strong class="summary-card__value">
+            {{ importePendiente() | number:'1.2-2' }} €
+          </strong>
         </article>
       </section>
 
-      <section class="central-note-card">
-        <h2>Pago deshabilitado en cliente</h2>
-        <p>
-          En este momento el cobro lo gestiona central. Esta pantalla es solo de consulta y se actualiza automáticamente.
-        </p>
-      </section>
+      @if (pagoRealizado()) {
+        <section class="bill-state-card">
+          <h2>Pago realizado</h2>
+          <p>La cuenta se ha marcado como pagada correctamente.</p>
+        </section>
+      }
 
       @if (itemsAgrupados().length === 0) {
         <section class="bill-state-card">
@@ -71,7 +71,6 @@
                   class="bill-item-card__image"
                   [src]="item.imagen"
                   [alt]="item.nombre"
-                  loading="lazy"
                   (error)="onImageError($event)"
                 />
               </div>
@@ -88,13 +87,12 @@
                   </strong>
                 </div>
 
-                <p class="bill-item-card__description">
-                  {{ item.descripcion }}
-                </p>
+                <p class="bill-item-card__description">{{ item.descripcion }}</p>
 
                 <div class="bill-item-card__meta">
                   <span class="bill-badge">
-                    {{ item.cantidad }} {{ item.cantidad === 1 ? 'unidad' : 'unidades' }}
+                    {{ item.cantidad }}
+                    {{ item.cantidad === 1 ? 'unidad' : 'unidades' }}
                   </span>
 
                   <span class="bill-badge bill-badge--light">
@@ -112,4 +110,133 @@
       }
     }
   </main>
-</div>
+
+  @if (!sinCuentaActiva() && !cuentaCerrada() && cuentaActiva()) {
+    <footer class="bill-footer">
+      <div class="bill-footer__info">
+        <span class="bill-footer__label">Total a pagar</span>
+        <strong class="bill-footer__amount">
+          {{ importePendiente() | number:'1.2-2' }} €
+        </strong>
+      </div>
+
+      <button
+        class="bill-footer__pay-btn"
+        type="button"
+        [disabled]="!puedePagar()"
+        (click)="abrirPagoParcial()"
+      >
+        Pagar con tarjeta
+      </button>
+    </footer>
+  }
+
+  @if (vistaPago() === 'seleccion') {
+    <div class="payment-overlay">
+      <section class="payment-panel payment-panel--list">
+        <button class="payment-back-btn" type="button" (click)="cerrarPago()">
+          ← Volver
+        </button>
+
+        <div class="payment-table">
+          <div class="payment-table__head">
+            <span>DESCRIPCIÓN</span>
+            <span>CANTIDAD</span>
+            <span>PRECIO</span>
+          </div>
+
+          @for (item of itemsAgrupados(); track item.platoId) {
+            <label class="payment-row">
+              <span class="payment-row__name">
+                <input
+                  type="checkbox"
+                  [checked]="itemSeleccionado(item)"
+                  (change)="toggleSeleccionItem(item)"
+                />
+                {{ item.nombre }}
+              </span>
+
+              <span>x{{ item.cantidad }}</span>
+              <span>{{ item.subtotal | number:'1.0-2' }}</span>
+            </label>
+          }
+        </div>
+
+        <footer class="payment-panel__footer">
+          <span>TOTAL A PAGAR:</span>
+
+          <strong>{{ totalSeleccionado() | number:'1.2-2' }} €</strong>
+
+          <button
+            type="button"
+            class="payment-small-btn"
+            [disabled]="totalSeleccionado() <= 0"
+            (click)="irATarjeta()"
+          >
+            Pagar con tarjeta
+          </button>
+        </footer>
+      </section>
+    </div>
+  }
+
+  @if (vistaPago() === 'tarjeta') {
+    <div class="payment-overlay">
+      <section class="payment-panel payment-panel--card">
+        <button class="payment-back-btn" type="button" (click)="volverASeleccion()">
+          ← Volver
+        </button>
+
+        <input
+          class="card-input"
+          type="text"
+          placeholder="CARD NUMBER"
+          maxlength="16"
+          inputmode="numeric"
+          [(ngModel)]="numeroTarjeta"
+        />
+
+        <input
+          class="card-input"
+          type="text"
+          placeholder="FULL NAME"
+          [(ngModel)]="nombreCompleto"
+        />
+
+        <div class="card-row">
+          <input
+            class="card-input"
+            type="text"
+            placeholder="MM/YY"
+            maxlength="5"
+            inputmode="numeric"
+            [ngModel]="fechaCaducidad"
+            (ngModelChange)="onFechaInput($event)"
+          />
+
+          <input
+            class="card-input"
+            type="text"
+            placeholder="CVC"
+            maxlength="3"
+            inputmode="numeric"
+            [(ngModel)]="cvc"
+          />
+        </div>
+
+        <button
+          type="button"
+          class="payment-submit-btn"
+          [disabled]="!datosTarjetaValidos() || procesandoPago()"
+          (click)="pagarCuenta()"
+        >
+          @if (procesandoPago()) {
+            Pagando...
+          } @else {
+            Pagar
+          }
+        </button>
+      </section>
+    </div>
+  }
+</section>
