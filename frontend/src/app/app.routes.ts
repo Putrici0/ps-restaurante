@@ -9,8 +9,8 @@ import { QrGenerator } from './pages/cliente/qr-generator/qr-generator';
 import { MenuPage } from './pages/cliente/menu-page/menu-page';
 import { BillPage } from './pages/cliente/bill-page/bill-page';
 import { TableroPedidos } from './pages/cocina/tablero-pedidos';
-import { Menu as MenuCamarero } from './pages/camarero/menu/menu';
-import { Pedido as PedidoCamarero } from './pages/camarero/pedido/pedido';
+import { MenuCamarero } from './pages/camarero/menu/menu';
+import { PedidoCamarero } from './pages/camarero/pedido/pedido';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'mesas', pathMatch: 'full' },
