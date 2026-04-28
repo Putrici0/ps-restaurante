@@ -88,6 +88,7 @@ export class CuentaApiService {
           if (error?.status === 404) {
             return of(null);
           }
+
           return throwError(() => error);
         }),
       );
@@ -99,26 +100,67 @@ export class CuentaApiService {
 
   obtenerCuentasPagadas(fecha?: string): Observable<CuentaPagadaResumenResponse[]> {
     const query = fecha ? `?fecha=${encodeURIComponent(fecha)}` : '';
-    return this.http.get<CuentaPagadaResumenResponse[]>(`${this.apiUrl}/cuentas/pagadas${query}`);
+
+    return this.http.get<CuentaPagadaResumenResponse[]>(
+      `${this.apiUrl}/cuentas/pagadas${query}`,
+    );
   }
 
   obtenerOrdenesDeCuenta(cuentaId: string): Observable<OrdenCuentaResponse[]> {
-    return this.http.get<OrdenCuentaResponse[]>(`${this.apiUrl}/cuentas/${cuentaId}/ordenes`);
+    return this.http.get<OrdenCuentaResponse[]>(
+      `${this.apiUrl}/cuentas/${cuentaId}/ordenes`,
+    );
   }
 
   obtenerPendienteCuenta(cuentaId: string): Observable<ImporteCuentaResponse> {
-    return this.http.get<ImporteCuentaResponse>(`${this.apiUrl}/cuentas/${cuentaId}/pendiente`);
+    return this.http.get<ImporteCuentaResponse>(
+      `${this.apiUrl}/cuentas/${cuentaId}/pendiente`,
+    );
   }
 
   obtenerTotalCuenta(cuentaId: string): Observable<ImporteCuentaResponse> {
-    return this.http.get<ImporteCuentaResponse>(`${this.apiUrl}/cuentas/${cuentaId}/total`);
+    return this.http.get<ImporteCuentaResponse>(
+      `${this.apiUrl}/cuentas/${cuentaId}/total`,
+    );
   }
 
   obtenerEstadoSaldada(cuentaId: string): Observable<EstadoCuentaResponse> {
-    return this.http.get<EstadoCuentaResponse>(`${this.apiUrl}/cuentas/${cuentaId}/saldada`);
+    return this.http.get<EstadoCuentaResponse>(
+      `${this.apiUrl}/cuentas/${cuentaId}/saldada`,
+    );
+  }
+
+  pagarCuentaCompleta(
+    cuentaId: string,
+    metodoPago: 'EFECTIVO' | 'TARJETA' = 'TARJETA',
+  ): Observable<CuentaDetalleResponse> {
+    return this.http.post<CuentaDetalleResponse>(
+      `${this.apiUrl}/cuentas/${cuentaId}/pagar-total`,
+      { metodoPago },
+    );
+  }
+
+  pagarCuentaParcial(
+    cuentaId: string,
+    ordenIds: string[],
+    metodoPago: 'EFECTIVO' | 'TARJETA' = 'TARJETA',
+  ): Observable<CuentaDetalleResponse> {
+    return this.http.post<CuentaDetalleResponse>(
+      `${this.apiUrl}/cuentas/${cuentaId}/pagar-parcial`,
+      { ordenIds, metodoPago },
+    );
+  }
+
+  cerrarCuentaSiProcede(cuentaId: string): Observable<CuentaDetalleResponse> {
+    return this.http.post<CuentaDetalleResponse>(
+      `${this.apiUrl}/cuentas/${cuentaId}/cerrar-si-procede`,
+      {},
+    );
   }
 
   eliminarOrdenDeCuenta(cuentaId: string, ordenId: string): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/cuentas/${cuentaId}/ordenes/${ordenId}`);
+    return this.http.delete<void>(
+      `${this.apiUrl}/cuentas/${cuentaId}/ordenes/${ordenId}`,
+    );
   }
 }
