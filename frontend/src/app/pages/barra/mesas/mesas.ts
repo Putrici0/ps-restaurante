@@ -41,7 +41,7 @@ export class Mesas {
   readonly mostrarModalCobro = signal(false);
   readonly cuentaCobroId = signal<string | null>(null);
   readonly mesaCobroId = signal<string | null>(null);
-  readonly totalCobro = signal<number | null>(null);
+  readonly totalCuentaCobro = signal<number | null>(null);
   readonly cargandoCobro = signal(false);
   readonly procesandoCobro = signal(false);
   readonly resumenCobro = signal<ItemCobroAgrupado[]>([]);
@@ -52,17 +52,30 @@ export class Mesas {
   readonly mostrarConfirmacionEliminar = signal(false);
   readonly itemPendienteEliminar = signal<ItemCobroAgrupado | null>(null);
 
+  readonly ordenesSeleccionadas = signal<string[]>([]);
+
   readonly mesasActuales = computed(() =>
     this.mesas()
       .filter((mesa) => mesa.zona === this.zona())
       .sort((a, b) => Number(a.id) - Number(b.id)),
   );
 
+  readonly totalCobro = computed(() => {
+    const seleccionadas = new Set(this.ordenesSeleccionadas());
+
+    const total = this.resumenCobro().reduce((acc, item) => {
+      const cantidadSeleccionada = item.ordenesIds.filter((id) => seleccionadas.has(id)).length;
+      return acc + cantidadSeleccionada * item.precioUnitario;
+    }, 0);
+
+    return Number(total.toFixed(2));
+  });
+
   readonly cambioCobro = computed(() => {
     const total = this.totalCobro();
     const recibido = this.importeRecibido();
 
-    if (this.metodoPago() !== 'EFECTIVO' || total == null || recibido == null) {
+    if (this.metodoPago() !== 'EFECTIVO' || recibido == null) {
       return null;
     }
 
@@ -73,7 +86,7 @@ export class Mesas {
     const total = this.totalCobro();
     const recibido = this.importeRecibido();
 
-    if (this.metodoPago() !== 'EFECTIVO' || total == null || recibido == null) {
+    if (this.metodoPago() !== 'EFECTIVO' || recibido == null) {
       return null;
     }
 
@@ -88,11 +101,15 @@ export class Mesas {
     const total = this.totalCobro();
 
     if (
-      total == null ||
+      total <= 0 ||
       this.procesandoCobro() ||
       this.eliminandoOrdenId() !== null ||
       this.mostrarConfirmacionEliminar()
     ) {
+      return false;
+    }
+
+    if (this.ordenesSeleccionadas().length === 0) {
       return false;
     }
 
@@ -141,8 +158,9 @@ export class Mesas {
     this.cargandoCobro.set(true);
     this.mesaCobroId.set(payload.mesaId);
     this.cuentaCobroId.set(payload.cuentaId);
-    this.totalCobro.set(null);
+    this.totalCuentaCobro.set(null);
     this.resumenCobro.set([]);
+    this.ordenesSeleccionadas.set([]);
     this.metodoPago.set('EFECTIVO');
     this.importeRecibido.set(null);
     this.eliminandoOrdenId.set(null);
@@ -157,8 +175,18 @@ export class Mesas {
     const cuentaId = this.cuentaCobroId();
     const mesaId = this.mesaCobroId();
     const metodoPago = this.metodoPago();
+    const ordenesSeleccionadas = this.ordenesSeleccionadas();
+    const totalOrdenesPendientes = this.resumenCobro().reduce(
+      (acc, item) => acc + item.ordenesIds.length,
+      0,
+    );
 
-    if (!cuentaId || !mesaId || !this.puedeConfirmarCobro()) {
+    if (
+      !cuentaId ||
+      !mesaId ||
+      ordenesSeleccionadas.length === 0 ||
+      !this.puedeConfirmarCobro()
+    ) {
       return;
     }
 
@@ -166,7 +194,12 @@ export class Mesas {
     this.procesandoCobro.set(true);
     this.accionMesaId.set(mesaId);
 
-    this.mesasApi.pagarCuentaCompleta(cuentaId, metodoPago).subscribe({
+    const request$ =
+      ordenesSeleccionadas.length === totalOrdenesPendientes
+        ? this.mesasApi.pagarCuentaCompleta(cuentaId, metodoPago)
+        : this.mesasApi.pagarCuentaParcial(cuentaId, ordenesSeleccionadas, metodoPago);
+
+    request$.subscribe({
       next: () => {
         this.procesandoCobro.set(false);
         this.cerrarModalCobro();
@@ -238,8 +271,9 @@ export class Mesas {
     this.procesandoCobro.set(false);
     this.cuentaCobroId.set(null);
     this.mesaCobroId.set(null);
-    this.totalCobro.set(null);
+    this.totalCuentaCobro.set(null);
     this.resumenCobro.set([]);
+    this.ordenesSeleccionadas.set([]);
     this.metodoPago.set('EFECTIVO');
     this.importeRecibido.set(null);
     this.eliminandoOrdenId.set(null);
@@ -277,6 +311,47 @@ export class Mesas {
     return unicos.join(' · ');
   }
 
+  itemSeleccionado(item: ItemCobroAgrupado): boolean {
+    if (!item.ordenesIds.length) {
+      return false;
+    }
+
+    const seleccionadas = new Set(this.ordenesSeleccionadas());
+    return item.ordenesIds.every((id) => seleccionadas.has(id));
+  }
+
+  toggleSeleccionItem(item: ItemCobroAgrupado): void {
+    const seleccionadas = new Set(this.ordenesSeleccionadas());
+    const todasSeleccionadas = item.ordenesIds.every((id) => seleccionadas.has(id));
+
+    if (todasSeleccionadas) {
+      item.ordenesIds.forEach((id) => seleccionadas.delete(id));
+    } else {
+      item.ordenesIds.forEach((id) => seleccionadas.add(id));
+    }
+
+    this.ordenesSeleccionadas.set(Array.from(seleccionadas));
+
+    if (this.metodoPago() === 'EFECTIVO') {
+      const recibido = this.importeRecibido();
+      if (recibido != null && recibido < this.totalCobro()) {
+        this.importeRecibido.set(null);
+      }
+    }
+  }
+
+  seleccionarTodoCobro(): void {
+    const ids = this.resumenCobro().flatMap((item) => item.ordenesIds);
+    this.ordenesSeleccionadas.set(ids);
+  }
+
+  limpiarSeleccionCobro(): void {
+    this.ordenesSeleccionadas.set([]);
+    if (this.metodoPago() === 'EFECTIVO') {
+      this.importeRecibido.set(null);
+    }
+  }
+
   private recargarResumenCobro(): void {
     const cuentaId = this.cuentaCobroId();
 
@@ -291,8 +366,17 @@ export class Mesas {
       ordenes: this.cuentaApi.obtenerOrdenesDeCuenta(cuentaId),
     }).subscribe({
       next: ({ total, ordenes }) => {
-        this.totalCobro.set(Number(total.importe));
-        this.resumenCobro.set(this.agruparOrdenes(ordenes));
+        const ordenesPendientes = ordenes.filter(
+          (orden) => orden.ordenEstado !== 'Cancelado' && !orden.pagada,
+        );
+
+        this.totalCuentaCobro.set(Number(total.importe));
+        this.resumenCobro.set(this.agruparOrdenes(ordenesPendientes));
+        this.ordenesSeleccionadas.set(
+          ordenesPendientes
+            .map((orden) => orden.id)
+            .filter((id): id is string => !!id),
+        );
         this.cargandoCobro.set(false);
       },
       error: (err) => {

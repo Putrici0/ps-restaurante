@@ -85,21 +85,47 @@
           <p class="modal-texto">Cargando resumen de la cuenta...</p>
         } @else {
           <p class="modal-texto">
-            Se va a cobrar el total de la cuenta asociada a la mesa
+            Selecciona los productos que quieres cobrar de la mesa
             <strong>{{ mesaCobroId() }}</strong>.
           </p>
 
           <div class="modal-cobro-layout">
             <div class="modal-cobro-columna modal-cobro-columna--izquierda">
               <div class="modal-resumen">
-                <h4>Resumen de lo pedido</h4>
+                <h4>Selecciona productos a cobrar</h4>
 
                 @if (resumenCobro().length === 0) {
                   <p class="modal-resumen-vacio">No hay productos en esta cuenta.</p>
                 } @else {
+                  <div class="modal-resumen-acciones">
+                    <button
+                      type="button"
+                      class="btn-seleccion"
+                      (click)="seleccionarTodoCobro()"
+                      [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                      Seleccionar todo
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-seleccion"
+                      (click)="limpiarSeleccionCobro()"
+                      [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                      Limpiar
+                    </button>
+                  </div>
+
                   <div class="modal-resumen-lista">
                     @for (item of resumenCobro(); track item.platoId) {
-                      <div class="modal-resumen-item">
+                      <div class="modal-resumen-item modal-resumen-item--seleccionable">
+                        <div class="modal-resumen-item__check">
+                          <input
+                            type="checkbox"
+                            [checked]="itemSeleccionado(item)"
+                            (change)="toggleSeleccionItem(item)"
+                            [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()" />
+                        </div>
+
                         <div class="modal-resumen-item__info">
                           <strong>{{ item.nombre || 'Producto' }}</strong>
 
@@ -201,14 +227,15 @@
               }
 
               <div class="modal-total">
-                <span>Total</span>
+                <span>Total seleccionado</span>
                 <strong>
                   {{ totalCobro() == null ? '0,00 €' : (totalCobro() | currency:'EUR':'symbol':'1.2-2') }}
                 </strong>
               </div>
 
               <p class="modal-aviso">
-                Al confirmar el pago, la cuenta quedará pagada y la mesa pasará automáticamente a libre.
+                Si seleccionas todos los productos, la cuenta quedará pagada completa.
+                Si seleccionas solo algunos, se registrará un pago parcial.
               </p>
 
               <div class="modal-acciones">

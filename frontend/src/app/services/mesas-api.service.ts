@@ -1,7 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { forkJoin, map, Observable } from 'rxjs';
-import { CuentaApi, ImporteCuentaApi, Mesa, MesaApi } from '../models/mesa.model';
+import {
+  CuentaApi,
+  ImporteCuentaApi,
+  Mesa,
+  MesaApi,
+  OrdenCuentaApi,
+} from '../models/mesa.model';
 import { MESAS_LAYOUT } from '../data/mesas-layout';
 
 @Injectable({
@@ -23,9 +29,24 @@ export class MesasApiService {
     return this.http.get<ImporteCuentaApi>(`${this.apiUrl}/cuentas/${cuentaId}/total`);
   }
 
+  obtenerOrdenesCuenta(cuentaId: string): Observable<OrdenCuentaApi[]> {
+    return this.http.get<OrdenCuentaApi[]>(`${this.apiUrl}/cuentas/${cuentaId}/ordenes`);
+  }
+
   pagarCuentaCompleta(cuentaId: string, metodoPago: 'EFECTIVO' | 'TARJETA') {
     return this.http.post(`${this.apiUrl}/cuentas/${cuentaId}/pagar-total`, {
       metodoPago
+    });
+  }
+
+  pagarCuentaParcial(
+    cuentaId: string,
+    ordenIds: string[],
+    metodoPago: 'EFECTIVO' | 'TARJETA'
+  ) {
+    return this.http.post(`${this.apiUrl}/cuentas/${cuentaId}/pagar-parcial`, {
+      ordenIds,
+      metodoPago,
     });
   }
 
@@ -61,7 +82,8 @@ export class MesasApiService {
 
             const cuentaActiva =
               cuentas.find(
-                (cuenta) => !cuenta.payed && cuenta.mesas?.some((mesa) => mesa.id === mesaDb.id)
+                (cuenta) =>
+                  !cuenta.payed && cuenta.mesas?.some((mesa) => mesa.id === mesaDb.id)
               ) ?? null;
 
             return {

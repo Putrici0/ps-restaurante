@@ -23,6 +23,21 @@ export interface ImporteCuentaApi {
   importe: number;
 }
 
+export interface PlatoOrdenCuentaApi {
+  id: string;
+  nombre: string;
+  categoria?: string;
+}
+
+export interface OrdenCuentaApi {
+  id: string;
+  precio: number;
+  ordenEstado: string;
+  detalles: string;
+  pagada?: boolean;
+  plato?: PlatoOrdenCuentaApi | null;
+}
+
 export interface Mesa {
   id: string;
   capacidad: number;

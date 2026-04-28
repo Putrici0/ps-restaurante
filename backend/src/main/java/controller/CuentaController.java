@@ -3,6 +3,7 @@ package controller;
 import dto.CuentaPagadaResumenResponse;
 import dto.CuentaRequest;
 import dto.PagoCuentaRequest;
+import dto.PagoParcialCuentaRequest;
 import io.javalin.apibuilder.EndpointGroup;
 import model.Cuenta;
 import model.MetodoPago;
@@ -22,6 +23,7 @@ import java.util.Optional;
 import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class CuentaController {
+
     private final CuentaService service;
     private final PagoApplicationService pagoApplicationService;
     private final HistorialCuentasApplicationService historialService;
@@ -39,6 +41,7 @@ public class CuentaController {
     public EndpointGroup routes() {
         return () -> {
             path("cuentas", () -> {
+
                 post(ctx -> {
                     CuentaRequest request = ctx.bodyAsClass(CuentaRequest.class);
                     Cuenta creada = service.create(request);
@@ -71,6 +74,7 @@ public class CuentaController {
                 });
 
                 path("{id}", () -> {
+
                     get(ctx -> {
                         String id = ctx.pathParam("id");
                         Optional<Cuenta> cuenta = service.findById(id);
@@ -163,6 +167,34 @@ public class CuentaController {
                                 MetodoPago metodoPago = MetodoPago.valueOf(request.metodoPago.toUpperCase());
                                 Cuenta cuenta = pagoApplicationService.pagarCuentaCompleta(id, metodoPago);
                                 ctx.json(cuenta);
+
+                            } catch (IllegalArgumentException e) {
+                                ctx.status(400).json(new ApiError(e.getMessage()));
+                            }
+                        });
+                    });
+
+                    path("pagar-parcial", () -> {
+                        post(ctx -> {
+                            String id = ctx.pathParam("id");
+
+                            try {
+                                PagoParcialCuentaRequest request = ctx.bodyAsClass(PagoParcialCuentaRequest.class);
+
+                                if (request == null || request.ordenIds == null || request.ordenIds.isEmpty()) {
+                                    ctx.status(400).json(new ApiError("Debes seleccionar al menos un producto"));
+                                    return;
+                                }
+
+                                if (request.metodoPago == null || request.metodoPago.isBlank()) {
+                                    ctx.status(400).json(new ApiError("El método de pago es obligatorio"));
+                                    return;
+                                }
+
+                                MetodoPago metodoPago = MetodoPago.valueOf(request.metodoPago.toUpperCase());
+                                Cuenta cuenta = pagoApplicationService.pagarParcialCuenta(id, request.ordenIds, metodoPago);
+                                ctx.json(cuenta);
+
                             } catch (IllegalArgumentException e) {
                                 ctx.status(400).json(new ApiError(e.getMessage()));
                             }
