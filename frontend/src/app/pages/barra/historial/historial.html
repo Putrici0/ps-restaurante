@@ -91,42 +91,50 @@
           </div>
 
           <div class="historial-detalle-lista">
-            @for (pago of pagosDetalle(); track pago.clave) {
-              <details class="pago-acordeon">
-                <summary class="pago-titulo">
-                  <span>
-                    Pago {{ pago.numero }} - {{ pago.metodoPago }}
-                    @if (pago.fechaPago) {
-                    {{ formatearFecha(pago.fechaPago) }}
-                    }
-                  </span>
-                  <strong>{{ pago.total | number:'1.2-2' }} €</strong>
-                </summary>
-                <div class="pago-contenido">
-                  @for (item of pago.items; track item.platoId) {
-                    <div class="detalle-item">
-                      <span>
-                        {{ item.cantidad }}x {{ item.nombre }}
-                      </span>
+            <div class="cuenta-general-card">
+              <div class="cuenta-general-titulo">
+                <span>Cuenta general</span>
+                <strong>{{ totalDetalle() | number:'1.2-2' }} €</strong>
+              </div>
 
-                      <span>
-                        {{ item.subtotal | number:'1.2-2' }} €
-                      </span>
+              @for (item of detalleAgrupado(); track item.platoId) {
+                <div class="detalle-item">
+                  <span>{{ item.cantidad }}x {{ item.nombre }}</span>
+                  <span>{{ item.subtotal | number:'1.2-2' }} €</span>
+                </div>
+              }
+
+              <details class="pago-acordeon-interno">
+                <summary class="pago-titulo-interno">
+                  <span>Ver pagos</span>
+                </summary>
+
+                <div class="pago-contenido">
+                  @for (pago of pagosDetalle(); track pago.clave) {
+                    <div class="pago-bloque">
+                      <h4>
+                        Pago {{ pago.numero }} - {{ pago.metodoPago }}
+                        @if (pago.fechaPago) {
+                          {{ formatearFecha(pago.fechaPago) }}
+                        }
+                      </h4>
+
+                      @for (item of pago.items; track item.platoId) {
+                        <div class="detalle-item">
+                          <span>{{ item.cantidad }}x {{ item.nombre }}</span>
+                          <span>{{ item.subtotal | number:'1.2-2' }} €</span>
+                        </div>
+                      }
+
+                      <div class="total-pago">
+                        <strong>Total pago:</strong>
+                        <strong>{{ pago.total | number:'1.2-2' }} €</strong>
+                      </div>
                     </div>
                   }
-
-                  <div class="total-pago">
-                    <strong>Total pago:</strong>
-                    <strong>{{ pago.total | number:'1.2-2' }} €</strong>
-                  </div>
                 </div>
               </details>
-            }
-          </div>
-
-          <div class="historial-modal__total">
-            <span>Total</span>
-            <strong>{{ totalDetalle() | currency:'EUR':'symbol':'1.2-2' }}</strong>
+            </div>
           </div>
         }
       </div>
