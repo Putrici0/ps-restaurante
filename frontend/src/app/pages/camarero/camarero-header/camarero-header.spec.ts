@@ -1,17 +1,17 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { PlatosComponent } from './platos';
+import { CamareroHeader } from './camarero-header';
 
-describe('Platos', () => {
-  let component: PlatosComponent;
-  let fixture: ComponentFixture<PlatosComponent>;
+describe('CamareroHeader', () => {
+  let component: CamareroHeader;
+  let fixture: ComponentFixture<CamareroHeader>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [PlatosComponent],
+      imports: [CamareroHeader],
     }).compileComponents();
 
-    fixture = TestBed.createComponent(PlatosComponent);
+    fixture = TestBed.createComponent(CamareroHeader);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

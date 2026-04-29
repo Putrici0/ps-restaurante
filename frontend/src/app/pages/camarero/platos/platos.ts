@@ -3,13 +3,12 @@ import { CommonModule } from '@angular/common';
 import { Subscription, timer, of } from 'rxjs';
 import { take, switchMap, catchError, filter } from 'rxjs/operators';
 import { OrdenCocinaResponse, OrdenesApiService } from '../../../services/ordenes-api.service';
-import { Navbar } from '../../../shared/navbar/navbar';
 import { PedidoCard } from '../../../shared/pedido-card/pedido-card';
 
 @Component({
   selector: 'app-platos',
   standalone: true,
-  imports: [CommonModule, Navbar, PedidoCard],
+  imports: [CommonModule, PedidoCard],
   templateUrl: './platos.html',
   styleUrl: './platos.css',
 })

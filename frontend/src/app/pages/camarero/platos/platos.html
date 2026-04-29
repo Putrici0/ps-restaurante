@@ -1,46 +1,49 @@
-<app-navbar></app-navbar>
 <section class="platos-page">
   <div class="page-shell">
-    <header class="page-header">
-      <h1>Platos en Sala</h1>
+
+    <header class="mobile-sub-header">
+      <h1 class="page-title">Platos en Sala</h1>
+
       <div class="summary-badge">
         <span class="dot"></span>
-        <span class="count">{{ pendientesDeEntregaCount() }}</span>
-        <span class="text">Por entregar</span>
+        <span class="count-text">
+          <strong>{{ pendientesDeEntregaCount() }}</strong> Por entregar
+        </span>
       </div>
     </header>
 
     @if (error()) {
-    <p class="error">{{ error() }}</p>
+    <div class="error-banner">{{ error() }}</div>
     }
 
-    @if (cargando() && ordenes().length === 0 && !error()) {
-    <p>Cargando platos...</p>
-    } @else {
-    <div class="platos-grid" style="display: grid; gap: 16px;">
-      @for (item of ordenesVisuales(); track item.id) {
-      <app-pedido-card
-        [numeroMesa]="item.mesa"
-        [estadoVisual]="item.estado"
-        [etiquetaEstado]="item.etiqueta"
-        [esOpaco]="item.esEntregado"
-        [tiempo]="item.tiempo"
+    <div class="platos-content">
+      @if (cargando() && ordenes().length === 0 && !error()) {
+      <div class="loading-state">Cargando platos...</div>
+      } @else {
+      <div class="platos-list">
+        @for (item of ordenesVisuales(); track item.id) {
+        <app-pedido-card
+          [numeroMesa]="item.mesa"
+          [estadoVisual]="item.estado"
+          [etiquetaEstado]="item.etiqueta"
+          [esOpaco]="item.esEntregado"
+          [tiempo]="item.tiempo"
+          [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : 'ENTREGAR'"
+          [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
+          [disablePrincipal]="item.esEntregado || item.procesando"
+          (principal)="entregarPlato(item.original)"
+          [mostrarBotonSecundario]="item.esEntregado"
+          [textoBotonSecundario]="'DESHACER'"
+          [claseBotonSecundario]="'rojo'"
+          [disableSecundario]="item.procesando"
+          (secundario)="deshacerEntrega(item.original)">
 
-        [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : 'ENTREGAR'"
-        [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
-        [disablePrincipal]="item.esEntregado || item.procesando"
-        (principal)="entregarPlato(item.original)"
+          <span class="plato-nombre">{{ item.nombre }}</span>
 
-        [mostrarBotonSecundario]="item.esEntregado"
-        [textoBotonSecundario]="'DESHACER'"
-        [claseBotonSecundario]="'rojo'"
-        [disableSecundario]="item.procesando"
-        (secundario)="deshacerEntrega(item.original)">
-
-        {{ item.nombre }}
-      </app-pedido-card>
+        </app-pedido-card>
+        }
+      </div>
       }
     </div>
-    }
   </div>
 </section>
