@@ -1,0 +1,19 @@
+<div class="header">
+  <button class="hamburger" (click)="toggleMenu()">☰</button>
+
+  <div class="header-center">
+    <img src="logo.png" alt="Logo" class="header-logo">
+  </div>
+
+  <!-- The right side is empty to balance the hamburger menu -->
+  <div class="header-right-spacer"></div>
+</div>
+
+<div class="sidebar" [class.open]="menuAbierto">
+  <a routerLink="/camarero/mesas" (click)="toggleMenu()">Mesas</a>
+  <a routerLink="/camarero/platos" (click)="toggleMenu()">Platos</a>
+  <a routerLink="/camarero/bebidas" (click)="toggleMenu()">Bebidas</a>
+  <button class="logout">Cerrar sesión</button>
+</div>
+
+<div class="overlay" [class.show]="menuAbierto" (click)="toggleMenu()"></div>

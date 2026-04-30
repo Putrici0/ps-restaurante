@@ -15,6 +15,7 @@ import { BebidasCamarero } from './pages/camarero/bebidas/bebidas';
 import { PlatosCamarero } from './pages/camarero/platos/platos';
 import {LoginCamarero} from './pages/camarero/login/login';
 import {MesasCamarero} from './pages/camarero/mesas/mesas';
+import { CamareroHeader } from './pages/camarero/camarero-header/camarero-header';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'mesas', pathMatch: 'full' },
@@ -27,6 +28,14 @@ export const routes: Routes = [
   { path: 'menu/:id', component: MenuPage, canActivate: [tableAccessGuard] },
   { path: 'cuenta/:id', component: BillPage, canActivate: [tableAccessGuard] },
   { path: 'cocina', component: TableroPedidos },
+  {
+    path: 'camarero',
+    component: CamareroHeader,
+    children: [
+      { path: 'platos', component: PlatosCamarero },
+      { path: 'bebidas', component: BebidasCamarero },
+    ],
+  },
   { path: 'camarero/menu/:id', component: MenuCamarero },
   { path: 'camarero/cuenta/:id', component: PedidoCamarero },
   { path: 'camarero/bebidas', component: BebidasCamarero },

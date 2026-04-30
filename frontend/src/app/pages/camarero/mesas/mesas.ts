@@ -6,7 +6,7 @@ import { forkJoin } from 'rxjs';
 import { Mesa, ZonaMesa } from '../../../models/mesa.model';
 import { CuentaApiService, OrdenCuentaResponse } from '../../../services/cuenta-api.service';
 import { MesasApiService } from '../../../services/mesas-api.service';
-import { Header } from '../../../shared/header/header';
+import { CamareroHeader } from '../camarero-header/camarero-header';
 import { MesaCardComponent } from '../../../shared/mesa-card/mesa-card';
 
 interface ItemCobroAgrupado {
@@ -23,7 +23,7 @@ interface ItemCobroAgrupado {
 @Component({
   selector: 'app-mesas-camarero',
   standalone: true,
-  imports: [CommonModule, Header, MesaCardComponent],
+  imports: [CommonModule, CamareroHeader, MesaCardComponent],
   templateUrl: './mesas.html',
   styleUrl: './mesas.css',
 })

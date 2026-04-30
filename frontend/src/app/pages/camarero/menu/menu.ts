@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { take } from 'rxjs';
-import { Header } from '../../../shared/header/header';
+import { CamareroHeader } from '../camarero-header/camarero-header';
 import {
   PedidosApiService,
   CrearPedidoClienteRequest,
@@ -17,7 +17,7 @@ import { CategoriaPlato, PlatoApi, PlatoMenu } from '../../../models/plato.model
 @Component({
   selector: 'app-camarero-menu',
   standalone: true,
-  imports: [CommonModule, Header],
+  imports: [CommonModule, CamareroHeader],
   templateUrl: './menu.html',
   styleUrl: './menu.css',
 })

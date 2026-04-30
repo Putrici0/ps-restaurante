@@ -1,69 +1,136 @@
-:host {
-  display: block;
-  min-height: 100vh;
-  color: #2d2118;
-}
-
+/* --- ESTILO GENERAL DE LA PÁGINA --- */
 .platos-page {
+  background-color: #e5ddd0; /* Color de fondo unificado para toda la pantalla */
   min-height: 100vh;
-  background: #f6efe4;
-  padding: 16px;
 }
 
-.page-shell {
-  max-width: 100%;
-}
-
-.page-header {
+/* --- HEADER SUB-MENU --- */
+.mobile-sub-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  padding: 10px;
+  background-color: #e5ddd0; /* Mismo color que la página */
+  border-bottom: 1px solid rgba(0,0,0,0.05); /* Línea sutil para separar */
 }
 
-.page-header h1 {
-  margin: 0;
-  font-size: 1.8rem;
-  font-weight: 800;
+.page-title {
+  font-size: 1.3rem;
+  font-weight: 900;
   color: #000;
+  margin: 0;
+  font-family: 'Arial Black', sans-serif;
 }
 
+/* La etiqueta (Badge) modo cápsula */
 .summary-badge {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(0, 0, 0, 0.05);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  padding: 6px 12px;
-  border-radius: 8px;
+  background-color: #d1c5b4; /* Un tono ligeramente más oscuro para resaltar */
+  border: 1px solid #a89d8e;
+  border-radius: 20px;
+  padding: 6px 14px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.summary-badge .dot {
+.dot {
   width: 10px;
   height: 10px;
-  background: #b92b27;
+  background-color: #b91d1d;
   border-radius: 50%;
 }
 
-.summary-badge .count {
-  font-weight: 800;
-  font-size: 0.9rem;
-}
-
-.summary-badge .text {
-  font-weight: 700;
-  font-size: 0.85rem;
+.count-text {
+  font-size: 0.8rem;
   color: #333;
+  font-weight: 600;
 }
 
-.platos-grid {
+/* --- CONTENEDOR DE LA LISTA --- */
+.platos-list {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  padding: 15px;
+  background-color: #e5ddd0; /* Aseguramos que el fondo de la lista sea igual */
 }
 
-.error {
-  color: #cb1e10;
-  font-weight: 700;
-  margin-bottom: 12px;
+/* --- AJUSTES DEL COMPONENTE HIJO (pedido-card) --- */
+
+/* Forzar fila horizontal */
+.platos-list ::ng-deep .pedido-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  background-color: #cdc1b0 !important;
+  border-radius: 25px !important;
+  padding: 10px !important;
+  gap: 10px !important;
+}
+
+/* Caja de la mesa: Pequeña y con borde izquierdo */
+.platos-list ::ng-deep .mesa-box {
+  /* Dimensiones y Forma */
+  min-width: 60px !important;
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 12px !important;
+
+  /* Colores y Alineación */
+  background-color: #e5ddd0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  gap: 0 !important;
+
+}
+
+
+
+.platos-list ::ng-deep .mesa-label {
+  font-size: 0.55rem !important;
+  font-weight: 700 !important;
+  margin-bottom: -2px !important;
+}
+
+.platos-list ::ng-deep .mesa-numero {
+  font-size: 1.2rem !important;
+  font-weight: 900 !important;
+}
+
+/* Bloque central de texto */
+.platos-list ::ng-deep .pedido-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+/* Botones: Más pequeños y alineados a la derecha */
+.platos-list ::ng-deep .pedido-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  margin-left: auto !important;
+  width: 100px !important; /* Ajustado de 10px a 100px para que quepa el texto */
+}
+
+.platos-list ::ng-deep .btn-action {
+  padding: 6px 4px !important;
+  font-size: 0.65rem !important; /* Texto pequeño para móvil */
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  min-height: 30px !important;
+  width: 100% !important;
+  text-transform: uppercase !important;
+}
+
+/* Ajuste del nombre del plato */
+.platos-list ::ng-deep .pedido-items {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  color: #222 !important;
 }

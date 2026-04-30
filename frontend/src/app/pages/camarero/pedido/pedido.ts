@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { forkJoin, take } from 'rxjs';
-import { Header } from '../../../shared/header/header';
+import { CamareroHeader } from '../camarero-header/camarero-header';
 import {
   CuentaActivaResponse,
   CuentaApiService,
@@ -25,7 +25,7 @@ interface ItemCuentaAgrupado {
 @Component({
   selector: 'app-camarero-pedido',
   standalone: true,
-  imports: [CommonModule, Header],
+  imports: [CommonModule, CamareroHeader],
   templateUrl: './pedido.html',
   styleUrl: './pedido.css',
 })
@@ -113,10 +113,7 @@ export class PedidoCamarero implements OnInit, OnDestroy {
 
   obtenerResumenEstado(item: ItemCuentaAgrupado): string {
     const estadosNormalizados = item.estados.map((estado) => {
-      if (estado === 'Preparación') {
-        return 'En preparación';
-      }
-      if (estado === 'Preparacion') {
+      if (estado === 'Preparación' || estado === 'Preparacion') {
         return 'En preparación';
       }
       return estado;
