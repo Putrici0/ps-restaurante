@@ -1,0 +1,76 @@
+/* Bloqueamos el scroll desde la raíz del componente */
+:host {
+  display: block;
+  height: 100dvh; /* dvh se adapta dinámicamente si el navegador móvil muestra/oculta su interfaz */
+  width: 100vw;
+  background-color: #dfcdab;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden; /* Elimina cualquier posibilidad de scroll */
+}
+
+.login-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 0 20px;
+  gap: 5rem;
+  box-sizing: border-box;
+}
+
+.logo-container {
+  /* Reducimos el margen inferior porque el logo ya ocupará más espacio visual */
+  margin-bottom: 3vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.logo {
+  max-width: 850px;
+  width: 95vw; /* Permitimos que ocupe casi todo el ancho de la pantalla */
+  max-height: 55vh; /* AUMENTAMOS ESTO: Ahora el logo puede ocupar hasta un 55% de la altura total */
+  object-fit: contain;
+  transform: scale(1.5);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 3vh; /* El espacio entre inputs también se reduce en pantallas pequeñas */
+  width: 100%;
+  max-width: 320px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1vh;
+}
+
+.input-group label {
+  /* clamp(mínimo, ideal, máximo) asegura que la letra no sea ni minúscula ni gigante */
+  font-size: clamp(1.2rem, 2.5vh, 1.4rem);
+  color: #000000;
+  margin-left: 5px;
+}
+
+.input-group input {
+  padding: clamp(10px, 2vh, 12px) 20px;
+  border-radius: 25px;
+  border: none;
+  background-color: rgba(216, 216, 216, 0.6);
+  font-size: 1rem;
+  color: #333333;
+  outline: none;
+  transition: background-color 0.3s ease;
+}
+
+.input-group input:focus {
+  background-color: rgba(216, 216, 216, 0.9);
+}
+
+.input-group input::placeholder {
+  color: #666666;
+}
