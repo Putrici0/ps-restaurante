@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
+
 export type EstadoOrdenBackend =
   | 'Pendiente'
   | 'Preparación'
@@ -13,12 +14,28 @@ export type CategoriaPlatoBackend =
   | 'Principal'
   | 'Postre';
 
+export interface CocinaPrioridadResponse {
+  total: number;
+  categoria: number;
+  espera: number;
+  mesa: number;
+  flujo: number;
+  tiempoEstimado: number;
+  sincronizacion: number;
+  urgencia: number;
+  motivos: string[];
+}
+
 export interface OrdenCocinaResponse {
   id: string;
   precio: number;
   ordenEstado: EstadoOrdenBackend;
   fecha: string;
   detalles: string;
+  pagada?: boolean;
+
+  prioridad?: CocinaPrioridadResponse;
+
   pedido?: {
     id: string;
     pedidoEstado: string;
@@ -33,6 +50,7 @@ export interface OrdenCocinaResponse {
       }>;
     };
   };
+
   plato: {
     id: string;
     nombre: string;
@@ -42,54 +60,86 @@ export interface OrdenCocinaResponse {
   };
 }
 
+export interface CocinaTableroResponse {
+  pendientes: OrdenCocinaResponse[];
+  enPreparacion: OrdenCocinaResponse[];
+  listas: OrdenCocinaResponse[];
+  fechaActualizacion: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
 export class OrdenesApiService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `http://${window.location.hostname}:7070`;
+  private readonly requestTimeoutMs = 8000;
 
-  // 🚀 CARGA ÚNICA BARRA (Trae todo en una sola petición)
-  obtenerBebidasActivasBarra(): Observable<OrdenCocinaResponse[]> {
-    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/activas`);
+  private get<T>(url: string): Observable<T> {
+    return this.http.get<T>(url).pipe(timeout(this.requestTimeoutMs));
   }
 
-  // 🚀 CARGA ÚNICA SALA
-  obtenerPlatosSala(): Observable<OrdenCocinaResponse[]> {
-    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/sala/platos`);
+  private post<T>(url: string): Observable<T> {
+    return this.http.post<T>(url, {}).pipe(timeout(this.requestTimeoutMs));
   }
 
-  // 🚀 DESHACER ENTREGA (Vuelve el estado a 'Listo')
-  deshacerEntregaPlato(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/listo`, {});
+  obtenerTodas(): Observable<OrdenCocinaResponse[]> {
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes`);
   }
 
-  marcarEnPreparacion(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/en-preparacion`, {});
+  obtenerTableroCocina(): Observable<CocinaTableroResponse> {
+    return this.get<CocinaTableroResponse>(`${this.apiUrl}/ordenes/cocina/tablero`);
   }
 
-  marcarLista(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/lista`, {});
-  }
-
-  marcarEntregada(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/entregada`, {});
-  }
-
-  marcarPendiente(ordenId: string): Observable<OrdenCocinaResponse> {
-    return this.http.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/pendiente`, {});
-  }
-
-  // 🚀 RESTAURADOS: Endpoints para la Cocina
   obtenerPendientesCocina(): Observable<OrdenCocinaResponse[]> {
-    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/pendientes`);
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/pendientes`);
   }
 
   obtenerEnPreparacionCocina(): Observable<OrdenCocinaResponse[]> {
-    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/en-preparacion`);
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/en-preparacion`);
   }
 
   obtenerListasCocina(): Observable<OrdenCocinaResponse[]> {
-    return this.http.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/listas`);
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/cocina/listas`);
+  }
+
+  obtenerPlatosSala(): Observable<OrdenCocinaResponse[]> {
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/sala/platos`);
+  }
+
+  obtenerPendientesBarra(): Observable<OrdenCocinaResponse[]> {
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/pendientes`);
+  }
+
+  obtenerEnPreparacionBarra(): Observable<OrdenCocinaResponse[]> {
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/en-preparacion`);
+  }
+
+  obtenerListasBarra(): Observable<OrdenCocinaResponse[]> {
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/listas`);
+  }
+
+  obtenerBebidasActivasBarra(): Observable<OrdenCocinaResponse[]> {
+    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes/barra/activas`);
+  }
+
+  marcarPendiente(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/pendiente`);
+  }
+
+  marcarEnPreparacion(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/en-preparacion`);
+  }
+
+  marcarLista(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/lista`);
+  }
+
+  marcarEntregada(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/entregada`);
+  }
+
+  deshacerEntregaPlato(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/listo`);
   }
 }

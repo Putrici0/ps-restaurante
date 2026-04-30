@@ -1,9 +1,12 @@
-<div class="kitchen-page">
+<section class="kitchen-page">
   <main class="kitchen-main">
-    <section class="kitchen-hero">
+    <header class="kitchen-hero">
       <div class="kitchen-hero__content">
         <p class="kitchen-hero__eyebrow">Cocina</p>
         <h1 class="kitchen-hero__title">Tablero de órdenes</h1>
+        <p class="kitchen-hero__subtitle">
+          Las órdenes se organizan automáticamente según prioridad dinámica.
+        </p>
       </div>
 
       <div class="kitchen-hero__actions">
@@ -11,11 +14,11 @@
           {{ totalOrdenes() }} {{ totalOrdenes() === 1 ? 'orden activa' : 'órdenes activas' }}
         </span>
 
-        <button class="refresh-btn" type="button" (click)="recargar()">
+        <button class="refresh-btn" type="button" (click)="recargar()" [disabled]="actualizando()">
           Actualizar
         </button>
       </div>
-    </section>
+    </header>
 
     @if (cargando()) {
       <section class="state-card">
@@ -29,7 +32,6 @@
       </section>
     } @else {
       <section class="board">
-        <!-- Pendientes -->
         <article class="column">
           <header class="column__header column__header--pending">
             <p class="column__eyebrow">Cola de entrada</p>
@@ -44,7 +46,7 @@
               <div class="empty-card">No hay órdenes pendientes.</div>
             } @else {
               @for (orden of ordenesPendientes(); track orden.id) {
-                <article class="order-card order-card--compact">
+                <article class="order-card">
                   <div class="order-card__body">
                     <div class="order-card__top">
                       <div class="order-card__top-left">
@@ -58,9 +60,13 @@
                         <span class="order-card__category-badge">
                           {{ categoriaCorta(orden.plato.categoria) }}
                         </span>
+
+                        <span [class]="prioridadClase(orden)">
+                          {{ prioridadTexto(orden) }}
+                        </span>
                       </div>
 
-                      <span class="{{ etaClase(orden) }}">
+                      <span [class]="etaClase(orden)">
                         {{ etaTexto(orden) }}
                       </span>
                     </div>
@@ -69,26 +75,22 @@
                       <h3 class="order-card__title">{{ orden.plato.nombre }}</h3>
                       <p class="order-card__mesa-inline">{{ mesaDeOrden(orden) }}</p>
                       <p class="order-card__time">{{ tiempoTextoTarjeta(orden) }}</p>
-
-                      @if (orden.detalles) {
-                        <p class="order-card__note">{{ orden.detalles }}</p>
-                      }
                     </div>
 
+                    @if (orden.detalles) {
+                      <p class="order-card__note">{{ orden.detalles }}</p>
+                    }
+
                     <div class="order-card__footer order-card__footer--pending">
-                      <button
-                        class="action-btn action-btn--ghost"
-                        type="button"
-                        (click)="toggleDetalle(orden.id)"
-                      >
+                      <button class="action-btn action-btn--ghost" type="button" (click)="toggleDetalle(orden.id)">
                         {{ detalleAbierto(orden.id) ? 'Ocultar detalle' : 'Detalle' }}
                       </button>
 
                       <button
                         class="action-btn action-btn--primary"
                         type="button"
-                        [disabled]="actualizando()"
                         (click)="pasarAPreparacion(orden.id)"
+                        [disabled]="actualizando()"
                       >
                         Empezar
                       </button>
@@ -123,6 +125,11 @@
                           </div>
 
                           <div class="detail-item">
+                            <span class="detail-label">Prioridad total</span>
+                            <span class="detail-value">{{ orden.prioridad?.total ?? 'Sin prioridad' }}</span>
+                          </div>
+
+                          <div class="detail-item">
                             <span class="detail-label">Fecha orden</span>
                             <span class="detail-value">{{ fechaLarga(orden.fecha) }}</span>
                           </div>
@@ -130,6 +137,19 @@
                           <div class="detail-item">
                             <span class="detail-label">Fecha pedido</span>
                             <span class="detail-value">{{ fechaLarga(orden.pedido?.fechaPedido) }}</span>
+                          </div>
+
+                          <div class="detail-item detail-item--full">
+                            <span class="detail-label">Motivos de prioridad</span>
+                            <span class="detail-value">
+                              @if (motivosPrioridad(orden).length === 0) {
+                                Sin motivos calculados
+                              } @else {
+                                @for (motivo of motivosPrioridad(orden); track motivo) {
+                                  <span class="priority-reason">• {{ motivo }}</span>
+                                }
+                              }
+                            </span>
                           </div>
 
                           <div class="detail-item detail-item--full">
@@ -146,7 +166,6 @@
           </div>
         </article>
 
-        <!-- En preparación -->
         <article class="column">
           <header class="column__header column__header--progress">
             <p class="column__eyebrow">En cocina</p>
@@ -161,7 +180,7 @@
               <div class="empty-card">No hay órdenes en preparación.</div>
             } @else {
               @for (orden of ordenesPreparacion(); track orden.id) {
-                <article class="order-card order-card--compact">
+                <article class="order-card">
                   <div class="order-card__body">
                     <div class="order-card__top">
                       <div class="order-card__top-left">
@@ -175,9 +194,13 @@
                         <span class="order-card__category-badge">
                           {{ categoriaCorta(orden.plato.categoria) }}
                         </span>
+
+                        <span [class]="prioridadClase(orden)">
+                          {{ prioridadTexto(orden) }}
+                        </span>
                       </div>
 
-                      <span class="{{ etaClase(orden) }}">
+                      <span [class]="etaClase(orden)">
                         {{ etaTexto(orden) }}
                       </span>
                     </div>
@@ -186,18 +209,18 @@
                       <h3 class="order-card__title">{{ orden.plato.nombre }}</h3>
                       <p class="order-card__mesa-inline">{{ mesaDeOrden(orden) }}</p>
                       <p class="order-card__time">{{ tiempoTextoTarjeta(orden) }}</p>
-
-                      @if (orden.detalles) {
-                        <p class="order-card__note">{{ orden.detalles }}</p>
-                      }
                     </div>
+
+                    @if (orden.detalles) {
+                      <p class="order-card__note">{{ orden.detalles }}</p>
+                    }
 
                     <div class="order-card__footer order-card__footer--two">
                       <button
                         class="action-btn action-btn--secondary"
                         type="button"
-                        [disabled]="actualizando()"
                         (click)="pasarAPendiente(orden.id)"
+                        [disabled]="actualizando()"
                       >
                         Volver
                       </button>
@@ -205,19 +228,15 @@
                       <button
                         class="action-btn action-btn--success"
                         type="button"
-                        [disabled]="actualizando()"
                         (click)="pasarALista(orden.id)"
+                        [disabled]="actualizando()"
                       >
                         Marcar lista
                       </button>
                     </div>
 
                     <div class="order-card__footer order-card__footer--detail-only">
-                      <button
-                        class="action-btn action-btn--ghost"
-                        type="button"
-                        (click)="toggleDetalle(orden.id)"
-                      >
+                      <button class="action-btn action-btn--ghost" type="button" (click)="toggleDetalle(orden.id)">
                         {{ detalleAbierto(orden.id) ? 'Ocultar detalle' : 'Detalle' }}
                       </button>
                     </div>
@@ -231,33 +250,26 @@
                           </div>
 
                           <div class="detail-item">
-                            <span class="detail-label">Origen mesa</span>
-                            <span class="detail-value">{{ origenMesa(orden) }}</span>
-                          </div>
-
-                          <div class="detail-item">
                             <span class="detail-label">ID orden</span>
                             <span class="detail-value">{{ orden.id }}</span>
                           </div>
 
                           <div class="detail-item">
-                            <span class="detail-label">ID pedido</span>
-                            <span class="detail-value">{{ pedidoIdDeOrden(orden) }}</span>
+                            <span class="detail-label">Prioridad total</span>
+                            <span class="detail-value">{{ orden.prioridad?.total ?? 'Sin prioridad' }}</span>
                           </div>
 
-                          <div class="detail-item">
-                            <span class="detail-label">ID cuenta</span>
-                            <span class="detail-value">{{ cuentaIdDeOrden(orden) }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Fecha orden</span>
-                            <span class="detail-value">{{ fechaLarga(orden.fecha) }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Fecha pedido</span>
-                            <span class="detail-value">{{ fechaLarga(orden.pedido?.fechaPedido) }}</span>
+                          <div class="detail-item detail-item--full">
+                            <span class="detail-label">Motivos de prioridad</span>
+                            <span class="detail-value">
+                              @if (motivosPrioridad(orden).length === 0) {
+                                Sin motivos calculados
+                              } @else {
+                                @for (motivo of motivosPrioridad(orden); track motivo) {
+                                  <span class="priority-reason">• {{ motivo }}</span>
+                                }
+                              }
+                            </span>
                           </div>
 
                           <div class="detail-item detail-item--full">
@@ -274,7 +286,6 @@
           </div>
         </article>
 
-        <!-- Listas -->
         <article class="column">
           <header class="column__header column__header--ready">
             <p class="column__eyebrow">Salida</p>
@@ -289,7 +300,7 @@
               <div class="empty-card">No hay órdenes listas.</div>
             } @else {
               @for (orden of ordenesListas(); track orden.id) {
-                <article class="order-card order-card--compact order-card--ready">
+                <article class="order-card order-card--ready">
                   <div class="order-card__body">
                     <div class="order-card__top">
                       <div class="order-card__top-left">
@@ -305,7 +316,7 @@
                         </span>
                       </div>
 
-                      <span class="{{ etaClase(orden) }}">
+                      <span [class]="etaClase(orden)">
                         {{ etaTexto(orden) }}
                       </span>
                     </div>
@@ -314,27 +325,23 @@
                       <h3 class="order-card__title">{{ orden.plato.nombre }}</h3>
                       <p class="order-card__mesa-inline">{{ mesaDeOrden(orden) }}</p>
                       <p class="order-card__time">{{ tiempoTextoTarjeta(orden) }}</p>
-
-                      @if (orden.detalles) {
-                        <p class="order-card__note">{{ orden.detalles }}</p>
-                      }
                     </div>
 
-                    <div class="order-card__footer order-card__footer--two">
+                    @if (orden.detalles) {
+                      <p class="order-card__note">{{ orden.detalles }}</p>
+                    }
+
+                    <div class="order-card__footer order-card__footer--pending">
                       <button
                         class="action-btn action-btn--secondary"
                         type="button"
-                        [disabled]="actualizando()"
                         (click)="pasarAPendiente(orden.id)"
+                        [disabled]="actualizando()"
                       >
                         Reabrir
                       </button>
 
-                      <button
-                        class="action-btn action-btn--ghost"
-                        type="button"
-                        (click)="toggleDetalle(orden.id)"
-                      >
+                      <button class="action-btn action-btn--ghost" type="button" (click)="toggleDetalle(orden.id)">
                         {{ detalleAbierto(orden.id) ? 'Ocultar detalle' : 'Detalle' }}
                       </button>
                     </div>
@@ -348,33 +355,13 @@
                           </div>
 
                           <div class="detail-item">
-                            <span class="detail-label">Origen mesa</span>
-                            <span class="detail-value">{{ origenMesa(orden) }}</span>
-                          </div>
-
-                          <div class="detail-item">
                             <span class="detail-label">ID orden</span>
                             <span class="detail-value">{{ orden.id }}</span>
                           </div>
 
                           <div class="detail-item">
-                            <span class="detail-label">ID pedido</span>
-                            <span class="detail-value">{{ pedidoIdDeOrden(orden) }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">ID cuenta</span>
-                            <span class="detail-value">{{ cuentaIdDeOrden(orden) }}</span>
-                          </div>
-
-                          <div class="detail-item">
                             <span class="detail-label">Fecha orden</span>
                             <span class="detail-value">{{ fechaLarga(orden.fecha) }}</span>
-                          </div>
-
-                          <div class="detail-item">
-                            <span class="detail-label">Fecha pedido</span>
-                            <span class="detail-value">{{ fechaLarga(orden.pedido?.fechaPedido) }}</span>
                           </div>
 
                           <div class="detail-item detail-item--full">
@@ -393,4 +380,4 @@
       </section>
     }
   </main>
-</div>
+</section>

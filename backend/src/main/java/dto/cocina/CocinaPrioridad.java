@@ -1,9 +1,16 @@
 package dto.cocina;
 
-public record CocinaPrioridad(int total,
-    int categoria,
-    int espera,
-    int mesa,
-    int flujo,
-    boolean urgente)
-{}
+import java.util.List;
+
+public record CocinaPrioridad(
+        int total,
+        int categoria,
+        int espera,
+        int mesa,
+        int flujo,
+        int tiempoEstimado,
+        int sincronizacion,
+        int urgencia,
+        List<String> motivos
+) {
+}

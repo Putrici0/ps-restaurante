@@ -40,25 +40,58 @@ public class OrdenController {
 
                 get(ctx -> ctx.json(service.findAll()));
 
-                path("pendientes", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesPendientes())));
-                path("en-preparacion", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesEnPreparacion())));
-                path("listas", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesListas())));
+                path("pendientes", () ->
+                        get(ctx -> ctx.json(applicationService.obtenerOrdenesPendientes()))
+                );
+
+                path("en-preparacion", () ->
+                        get(ctx -> ctx.json(applicationService.obtenerOrdenesEnPreparacion()))
+                );
+
+                path("listas", () ->
+                        get(ctx -> ctx.json(applicationService.obtenerOrdenesListas()))
+                );
 
                 path("cocina", () -> {
-                    path("pendientes", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaPendientes())));
-                    path("en-preparacion", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaEnPreparacion())));
-                    path("listas", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaListas())));
+                    path("tablero", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerTableroCocinaPriorizado()))
+                    );
+
+                    path("pendientes", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaPendientes()))
+                    );
+
+                    path("en-preparacion", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaEnPreparacion()))
+                    );
+
+                    path("listas", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerOrdenesCocinaListas()))
+                    );
                 });
 
                 path("barra", () -> {
-                    path("activas", () -> get(ctx -> ctx.json(applicationService.obtenerBebidasActivasBarra())));
-                    path("pendientes", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraPendientes())));
-                    path("en-preparacion", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraEnPreparacion())));
-                    path("listas", () -> get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraListas())));
+                    path("activas", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerBebidasActivasBarra()))
+                    );
+
+                    path("pendientes", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraPendientes()))
+                    );
+
+                    path("en-preparacion", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraEnPreparacion()))
+                    );
+
+                    path("listas", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerOrdenesBarraListas()))
+                    );
                 });
 
                 path("sala", () -> {
-                    path("platos", () -> get(ctx -> ctx.json(applicationService.obtenerPlatosActivosSala())));
+                    path("platos", () ->
+                            get(ctx -> ctx.json(applicationService.obtenerPlatosActivosSala()))
+                    );
                 });
 
                 path("pedido/{pedidoId}", () -> {
@@ -71,11 +104,13 @@ public class OrdenController {
                     post(ctx -> {
                         String pedidoId = ctx.pathParam("pedidoId");
                         CrearOrdenesBody body = ctx.bodyAsClass(CrearOrdenesBody.class);
+
                         List<Orden> creadas = applicationService.crearOrdenesDesdePedido(
                                 pedidoId,
                                 body.platosIds,
                                 body.detalles
                         );
+
                         ctx.status(201).json(creadas);
                     });
                 });
@@ -104,7 +139,9 @@ public class OrdenController {
                         ctx.status(204);
                     });
 
-                    path("listo", () -> post(ctx -> ctx.json(applicationService.marcarOrdenComoListoNuevamente(ctx.pathParam("id")))));
+                    path("listo", () ->
+                            post(ctx -> ctx.json(applicationService.marcarOrdenComoListoNuevamente(ctx.pathParam("id"))))
+                    );
 
                     path("pendiente", () -> {
                         post(ctx -> {

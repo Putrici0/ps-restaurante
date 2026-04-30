@@ -1,15 +1,16 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { catchError, forkJoin, map, of, take } from 'rxjs';
+import { catchError, map, of, take } from 'rxjs';
 import {
   CategoriaPlatoBackend,
+  CocinaTableroResponse,
   OrdenCocinaResponse,
   OrdenesApiService,
 } from '../../services/ordenes-api.service';
 
-type ResultadoCarga = {
+type ResultadoCargaTablero = {
   ok: boolean;
-  data: OrdenCocinaResponse[];
+  data: CocinaTableroResponse | null;
 };
 
 @Component({
@@ -28,8 +29,8 @@ export class TableroPedidos implements OnInit, OnDestroy {
   private readonly pollingMs = 8000;
   private readonly refreshAfterWriteMs = 1500;
 
-  readonly cargando = signal<boolean>(true);
-  readonly actualizando = signal<boolean>(false);
+  readonly cargando = signal(true);
+  readonly actualizando = signal(false);
   readonly error = signal<string | null>(null);
 
   readonly ordenesPendientes = signal<OrdenCocinaResponse[]>([]);
@@ -65,6 +66,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
     if (this.intervaloRefresco) {
       window.clearInterval(this.intervaloRefresco);
     }
+
     if (this.intervaloReloj) {
       window.clearInterval(this.intervaloReloj);
     }
@@ -79,6 +81,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
       this.ordenDetalleAbiertaId.set(null);
       return;
     }
+
     this.ordenDetalleAbiertaId.set(ordenId);
   }
 
@@ -165,10 +168,12 @@ export class TableroPedidos implements OnInit, OnDestroy {
       if (mesas.length === 1) {
         return `Mesa ${mesas[0].id}`;
       }
+
       return `Mesas ${mesas.map((mesa) => mesa.id).join(', ')}`;
     }
 
     const mesaDesdeDetalles = this.extraerMesaDesdeTexto(orden.detalles);
+
     if (mesaDesdeDetalles) {
       return `Mesa ${mesaDesdeDetalles}`;
     }
@@ -178,9 +183,11 @@ export class TableroPedidos implements OnInit, OnDestroy {
 
   origenMesa(orden: OrdenCocinaResponse): string {
     const mesas = orden.pedido?.cuenta?.mesas ?? [];
+
     if (mesas.length > 0) return 'pedido.cuenta.mesas';
 
     const mesaDesdeDetalles = this.extraerMesaDesdeTexto(orden.detalles);
+
     if (mesaDesdeDetalles) return 'detalles';
 
     return 'no enviada por la API';
@@ -188,11 +195,13 @@ export class TableroPedidos implements OnInit, OnDestroy {
 
   numeroMesaPlano(orden: OrdenCocinaResponse): string {
     const mesas = orden.pedido?.cuenta?.mesas ?? [];
+
     if (mesas.length > 0) {
       return mesas.map((mesa) => String(mesa.id)).join(', ');
     }
 
     const mesaDesdeDetalles = this.extraerMesaDesdeTexto(orden.detalles);
+
     if (mesaDesdeDetalles) {
       return mesaDesdeDetalles;
     }
@@ -223,16 +232,42 @@ export class TableroPedidos implements OnInit, OnDestroy {
     }
   }
 
+  prioridadTexto(orden: OrdenCocinaResponse): string {
+    const total = orden.prioridad?.total;
+
+    if (total === undefined || total === null) {
+      return 'Sin prioridad';
+    }
+
+    return `Prioridad ${total}`;
+  }
+
+  prioridadClase(orden: OrdenCocinaResponse): string {
+    const total = orden.prioridad?.total ?? 0;
+
+    if (total >= 95) return 'priority-badge priority-badge--critical';
+    if (total >= 75) return 'priority-badge priority-badge--high';
+    if (total >= 50) return 'priority-badge priority-badge--medium';
+
+    return 'priority-badge priority-badge--normal';
+  }
+
+  motivosPrioridad(orden: OrdenCocinaResponse): string[] {
+    return orden.prioridad?.motivos ?? [];
+  }
+
   tiempoTranscurrido(fechaIso: string): string {
     const diffMin = this.diferenciaEnMinutos(fechaIso);
 
     if (diffMin < 1) return '< 1 min';
+
     if (diffMin < 60) return `${diffMin} min`;
 
     const horas = Math.floor(diffMin / 60);
     const minutosRestantes = diffMin % 60;
 
     if (minutosRestantes === 0) return `${horas} h`;
+
     return `${horas} h ${minutosRestantes} min`;
   }
 
@@ -263,6 +298,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
 
     if (restantes > 0) return `ETA ${restantes} min`;
     if (restantes === 0) return 'ETA 0 min';
+
     return `Retraso ${Math.abs(restantes)} min`;
   }
 
@@ -274,6 +310,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
     if (orden.ordenEstado === 'Listo') return 'eta eta--ready';
     if (restantes <= 0) return 'eta eta--late';
     if (restantes <= 3) return 'eta eta--warning';
+
     return 'eta eta--ok';
   }
 
@@ -281,6 +318,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
     if (!fechaIso) return 'Sin fecha';
 
     const fecha = new Date(fechaIso);
+
     if (Number.isNaN(fecha.getTime())) return fechaIso;
 
     return new Intl.DateTimeFormat('es-ES', {
@@ -310,6 +348,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
 
   private diferenciaEnMinutos(fechaIso: string): number {
     const fecha = new Date(fechaIso).getTime();
+
     if (Number.isNaN(fecha)) return 0;
 
     return Math.max(0, Math.floor((this.ahora() - fecha) / 60000));
@@ -332,12 +371,10 @@ export class TableroPedidos implements OnInit, OnDestroy {
 
   private extraerMesaDesdeTexto(texto?: string | null): string | null {
     if (!texto) return null;
-    const match = texto.match(/\bmesa\s*[:#-]?\s*(\d+)\b/i);
-    return match?.[1] ?? null;
-  }
 
-  private filtrarNoPagadas(ordenes: OrdenCocinaResponse[]): OrdenCocinaResponse[] {
-    return ordenes;
+    const match = texto.match(/\bmesa\s*[:#-]?\s*(\d+)\b/i);
+
+    return match?.[1] ?? null;
   }
 
   private cargarTablero(mostrarLoading: boolean): void {
@@ -347,35 +384,29 @@ export class TableroPedidos implements OnInit, OnDestroy {
       this.cargando.set(true);
     }
 
-    const cargaSegura = (obs: ReturnType<OrdenesApiService['obtenerPendientesCocina']>) =>
-      obs.pipe(
-        map((data) => ({ ok: true, data }) as ResultadoCarga),
+    this.ordenesApiService
+      .obtenerTableroCocina()
+      .pipe(
+        map((data) => ({ ok: true, data }) as ResultadoCargaTablero),
         catchError((err) => {
           console.error(err);
-          return of({ ok: false, data: [] } as ResultadoCarga);
+          return of({ ok: false, data: null } as ResultadoCargaTablero);
         }),
-      );
-
-    forkJoin({
-      pendientes: cargaSegura(this.ordenesApiService.obtenerPendientesCocina()),
-      preparacion: cargaSegura(this.ordenesApiService.obtenerEnPreparacionCocina()),
-      listas: cargaSegura(this.ordenesApiService.obtenerListasCocina()),
-    })
-      .pipe(take(1))
+        take(1),
+      )
       .subscribe({
-        next: ({ pendientes, preparacion, listas }) => {
-          const pendientesFiltradas = pendientes.data;
-          const preparacionFiltradas = preparacion.data;
-          const listasFiltradas = listas.data;
+        next: ({ ok, data }) => {
+          const pendientes = data?.pendientes ?? [];
+          const preparacion = data?.enPreparacion ?? [];
+          const listas = data?.listas ?? [];
 
-          this.ordenesPendientes.set(pendientesFiltradas);
-          this.ordenesPreparacion.set(preparacionFiltradas);
-          this.ordenesListas.set(listasFiltradas);
+          this.ordenesPendientes.set(pendientes);
+          this.ordenesPreparacion.set(preparacion);
+          this.ordenesListas.set(listas);
 
-          const peticionesOk = [pendientes.ok, preparacion.ok, listas.ok].filter(Boolean).length;
-          const total = pendientesFiltradas.length + preparacionFiltradas.length + listasFiltradas.length;
+          const total = pendientes.length + preparacion.length + listas.length;
 
-          if (peticionesOk === 0 && total === 0) {
+          if (!ok && total === 0) {
             this.error.set('No se ha podido cargar el tablero de cocina.');
           } else {
             this.error.set(null);
@@ -385,23 +416,16 @@ export class TableroPedidos implements OnInit, OnDestroy {
           this.actualizando.set(false);
 
           const abierta = this.ordenDetalleAbiertaId();
+
           if (abierta) {
-            const sigueExistiendo = [
-              ...pendientesFiltradas,
-              ...preparacionFiltradas,
-              ...listasFiltradas,
-            ].some((orden) => orden.id === abierta);
+            const sigueExistiendo = [...pendientes, ...preparacion, ...listas].some(
+              (orden) => orden.id === abierta,
+            );
 
             if (!sigueExistiendo) {
               this.ordenDetalleAbiertaId.set(null);
             }
           }
-        },
-        error: (err) => {
-          console.error(err);
-          this.error.set('No se ha podido cargar el tablero de cocina.');
-          this.cargando.set(false);
-          this.actualizando.set(false);
         },
       });
   }
