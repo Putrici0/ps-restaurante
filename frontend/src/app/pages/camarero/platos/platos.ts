@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Subscription, timer, of } from 'rxjs';
 import { take, switchMap, catchError, filter } from 'rxjs/operators';
 import { OrdenCocinaResponse, OrdenesApiService } from '../../../services/ordenes-api.service';
-import { Navbar } from '../../../shared/navbar/navbar';
+import { Header } from '../../../shared/header/header';
 import { PedidoCard } from '../../../shared/pedido-card/pedido-card';
 
 @Component({
   selector: 'app-platos',
   standalone: true,
-  imports: [CommonModule, Navbar, PedidoCard],
+  imports: [CommonModule, Header, PedidoCard],
   templateUrl: './platos.html',
   styleUrl: './platos.css',
 })
@@ -53,14 +53,13 @@ export class PlatosCamarero implements OnInit, OnDestroy {
   }
 
   iniciarPolling() {
-    // timer(0, 5000) respeta tu intervalo original de 5 segundos
     this.pollingSub = timer(0, 5000)
       .pipe(
         filter(() => !this.procesandoOrdenId()),
         switchMap(() =>
           this.ordenesApi.obtenerPlatosSala().pipe(
             catchError(() => {
-              this.error.set('Error de conexión con el servidor');
+              this.error.set('Error de conexión');
               this.cargando.set(false);
               return of(null);
             }),
@@ -79,7 +78,7 @@ export class PlatosCamarero implements OnInit, OnDestroy {
   entregarPlato(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
     this.procesandoOrdenId.set(orden.id);
-    this.error.set(null); // Limpiamos errores previos
+    this.error.set(null);
 
     this.ordenesApi
       .marcarEntregada(orden.id)
@@ -93,7 +92,7 @@ export class PlatosCamarero implements OnInit, OnDestroy {
         },
         error: () => {
           this.procesandoOrdenId.set(null);
-          this.error.set('No se pudo entregar el plato. Revisa la conexión.');
+          this.error.set('Error al entregar');
         },
       });
   }
@@ -101,7 +100,7 @@ export class PlatosCamarero implements OnInit, OnDestroy {
   deshacerEntrega(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
     this.procesandoOrdenId.set(orden.id);
-    this.error.set(null); // Limpiamos errores previos
+    this.error.set(null);
 
     this.ordenesApi
       .deshacerEntregaPlato(orden.id)
@@ -115,13 +114,13 @@ export class PlatosCamarero implements OnInit, OnDestroy {
         },
         error: () => {
           this.procesandoOrdenId.set(null);
-          this.error.set('No se pudo deshacer la entrega. Revisa la conexión.');
+          this.error.set('Error al deshacer');
         },
       });
   }
 
   private calcularTiempo(fecha: string) {
     const min = Math.floor((Date.now() - new Date(fecha).getTime()) / 60000);
-    return min < 1 ? '< 1 min' : `${min} min`;
+    return min < 1 ? '< 1m' : `${min}m`;
   }
 }

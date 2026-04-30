@@ -1,8 +1,9 @@
-<app-navbar></app-navbar>
+<app-header/>
+
 <section class="platos-page">
   <div class="page-shell">
     <header class="page-header">
-      <h1>Platos en Sala</h1>
+      <h1>Platos</h1>
       <div class="summary-badge">
         <span class="dot"></span>
         <span class="count">{{ pendientesDeEntregaCount() }}</span>
@@ -17,7 +18,7 @@
     @if (cargando() && ordenes().length === 0 && !error()) {
     <p>Cargando platos...</p>
     } @else {
-    <div class="platos-grid" style="display: grid; gap: 16px;">
+    <div class="platos-grid">
       @for (item of ordenesVisuales(); track item.id) {
       <app-pedido-card
         [numeroMesa]="item.mesa"
@@ -25,18 +26,16 @@
         [etiquetaEstado]="item.etiqueta"
         [esOpaco]="item.esEntregado"
         [tiempo]="item.tiempo"
-
         [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : 'ENTREGAR'"
         [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
         [disablePrincipal]="item.esEntregado || item.procesando"
         (principal)="entregarPlato(item.original)"
-
         [mostrarBotonSecundario]="item.esEntregado"
         [textoBotonSecundario]="'DESHACER'"
         [claseBotonSecundario]="'rojo'"
         [disableSecundario]="item.procesando"
-        (secundario)="deshacerEntrega(item.original)">
-
+        (secundario)="deshacerEntrega(item.original)"
+      >
         {{ item.nombre }}
       </app-pedido-card>
       }

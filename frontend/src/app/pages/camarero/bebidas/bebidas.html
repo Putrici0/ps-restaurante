@@ -1,8 +1,9 @@
-<app-navbar></app-navbar>
+<app-header/>
+
 <section class="bebidas-page">
   <div class="page-shell">
     <header class="page-header">
-      <h1>Cola de Bebidas</h1>
+      <h1>Bebidas</h1>
       <div class="summary-badge">
         <span class="dot"></span>
         <span class="count">{{ pendientesCount() }}</span>
@@ -17,7 +18,7 @@
     @if (cargando() && ordenes().length === 0 && !error()) {
     <p>Cargando bebidas...</p>
     } @else {
-    <div class="bebidas-grid" style="display: grid; gap: 16px;">
+    <div class="bebidas-grid">
       @for (item of ordenesVisuales(); track item.id) {
       <app-pedido-card
         [numeroMesa]="item.mesa"
@@ -29,13 +30,12 @@
         [claseBotonPrincipal]="item.esListo ? 'gris' : 'verde'"
         [disablePrincipal]="item.esListo || item.procesando"
         (principal)="avanzarEstado(item.original)"
-
         [mostrarBotonSecundario]="!item.esPendiente"
         [textoBotonSecundario]="'VOLVER'"
         [claseBotonSecundario]="'rojo'"
         [disableSecundario]="item.procesando"
-        (secundario)="retrocederEstado(item.original)">
-
+        (secundario)="retrocederEstado(item.original)"
+      >
         <strong>{{ item.nombre }}</strong>
       </app-pedido-card>
       }

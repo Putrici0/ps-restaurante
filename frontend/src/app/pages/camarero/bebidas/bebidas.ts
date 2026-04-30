@@ -3,13 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Subscription, timer, of } from 'rxjs';
 import { take, switchMap, catchError, filter } from 'rxjs/operators';
 import { OrdenCocinaResponse, OrdenesApiService } from '../../../services/ordenes-api.service';
-import { Navbar } from '../../../shared/navbar/navbar';
+import { Header } from '../../../shared/header/header';
 import { PedidoCard } from '../../../shared/pedido-card/pedido-card';
 
 @Component({
   selector: 'app-bebidas',
   standalone: true,
-  imports: [CommonModule, Navbar, PedidoCard],
+  imports: [CommonModule, Header, PedidoCard],
   templateUrl: './bebidas.html',
   styleUrl: './bebidas.css',
 })
@@ -31,7 +31,6 @@ export class BebidasCamarero implements OnInit, OnDestroy {
 
   readonly ordenesVisuales = computed(() => {
     this.ahora();
-    // Clonamos para evitar errores de mutación en el sort
     return [...this.ordenes()]
       .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
       .map((o) => ({
@@ -40,8 +39,7 @@ export class BebidasCamarero implements OnInit, OnDestroy {
         nombre: o.plato.nombre,
         mesa: o.pedido?.cuenta?.mesas?.map((m) => m.id).join(', ') || '?',
         estado: o.ordenEstado,
-        etiqueta:
-          this.procesandoOrdenId() === o.id ? 'ACTUALIZANDO...' : o.ordenEstado.toUpperCase(),
+        etiqueta: this.procesandoOrdenId() === o.id ? '...' : o.ordenEstado.toUpperCase(),
         tiempo: this.calcularTiempo(o.fecha),
         esListo: o.ordenEstado === 'Listo',
         esPendiente: o.ordenEstado === 'Pendiente',
@@ -58,14 +56,13 @@ export class BebidasCamarero implements OnInit, OnDestroy {
   }
 
   iniciarPolling() {
-    // timer(0, 8000) respeta tu intervalo original de 8 segundos
     this.pollingSub = timer(0, 8000)
       .pipe(
         filter(() => !this.procesandoOrdenId()),
         switchMap(() =>
           this.ordenesApi.obtenerBebidasActivasBarra().pipe(
             catchError(() => {
-              this.error.set('Error de conexión con el servidor');
+              this.error.set('Error de conexión');
               this.cargando.set(false);
               return of(null);
             }),
@@ -84,7 +81,7 @@ export class BebidasCamarero implements OnInit, OnDestroy {
   avanzarEstado(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
     this.procesandoOrdenId.set(orden.id);
-    this.error.set(null); // Limpiamos errores previos
+    this.error.set(null);
 
     const peticion =
       orden.ordenEstado === 'Pendiente'
@@ -100,7 +97,7 @@ export class BebidasCamarero implements OnInit, OnDestroy {
       },
       error: () => {
         this.procesandoOrdenId.set(null);
-        this.error.set('No se pudo actualizar el estado. Revisa la conexión.');
+        this.error.set('Error al actualizar');
       },
     });
   }
@@ -108,7 +105,7 @@ export class BebidasCamarero implements OnInit, OnDestroy {
   retrocederEstado(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
     this.procesandoOrdenId.set(orden.id);
-    this.error.set(null); // Limpiamos errores previos
+    this.error.set(null);
 
     this.ordenesApi
       .marcarPendiente(orden.id)
@@ -122,13 +119,13 @@ export class BebidasCamarero implements OnInit, OnDestroy {
         },
         error: () => {
           this.procesandoOrdenId.set(null);
-          this.error.set('No se pudo actualizar el estado. Revisa la conexión.');
+          this.error.set('Error al retroceder');
         },
       });
   }
 
   private calcularTiempo(fecha: string) {
     const min = Math.floor((Date.now() - new Date(fecha).getTime()) / 60000);
-    return min < 1 ? '< 1 min' : `${min} min`;
+    return min < 1 ? '< 1m' : `${min}m`;
   }
 }
