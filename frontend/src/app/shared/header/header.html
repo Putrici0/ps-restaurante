@@ -18,6 +18,29 @@
   @if (menuAbierto()) {
     <div class="menu-panel">
       <nav class="nav-links">
+        @if (esCamarero()) {
+        <a
+          routerLink="/camarero/mesas"
+          routerLinkActive="active"
+          (click)="cerrarMenu()"
+        >
+          Mesas
+        </a>
+        <a
+          routerLink="/camarero/platos"
+          routerLinkActive="active"
+          (click)="cerrarMenu()"
+        >
+          Platos
+        </a>
+        <a
+          routerLink="/camarero/bebidas"
+          routerLinkActive="active"
+          (click)="cerrarMenu()"
+        >
+          Bebidas
+        </a>
+        } @else {
         <a
           [routerLink]="['/menu', tableId()]"
           routerLinkActive="active"
@@ -37,6 +60,7 @@
         >
           Cuenta
         </a>
+        }
       </nav>
     </div>
   }
