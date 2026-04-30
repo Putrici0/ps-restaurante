@@ -13,8 +13,6 @@ export class Header {
 
   tableId = signal(this.route.snapshot.params['id'] || '1');
 
-  estadoLlamada = signal<'oculto' | 'confirmacion' | 'en-camino'>('oculto');
-
   menuAbierto = signal(false);
 
   toggleMenu() {
@@ -29,22 +27,5 @@ export class Header {
 
     // restaurar scroll
     document.body.style.overflow = '';
-  }
-
-  abrirConfirmacion(event: Event) {
-    event.preventDefault();
-    this.estadoLlamada.set('confirmacion');
-  }
-
-  cancelarLlamada() {
-    this.estadoLlamada.set('oculto');
-  }
-
-  confirmarLlamada() {
-    this.estadoLlamada.set('en-camino');
-
-    setTimeout(() => {
-      this.estadoLlamada.set('oculto');
-    }, 3000);
   }
 }

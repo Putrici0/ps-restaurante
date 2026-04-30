@@ -26,10 +26,6 @@
           Menú
         </a>
 
-        <a href="#" (click)="abrirConfirmacion($event)">
-          Solicitar Atención
-        </a>
-
         <a
           [routerLink]="['/cuenta', tableId()]"
           routerLinkActive="active"
@@ -41,25 +37,5 @@
     </div>
   }
 
-  @if (estadoLlamada() !== 'oculto') {
-    <div class="overlay-camarero">
-      @if (estadoLlamada() === 'confirmacion') {
-        <div class="popup-camarero">
-          <p class="popup-mensaje">
-            ¿Seguro que quieres llamar al camarero?
-          </p>
-          <div class="popup-botones">
-            <button class="btn-opcion" (click)="confirmarLlamada()">Sí</button>
-            <button class="btn-opcion" (click)="cancelarLlamada()">No</button>
-          </div>
-        </div>
-      } @else if (estadoLlamada() === 'en-camino') {
-        <div class="popup-camarero">
-          <p class="popup-mensaje exito">
-            Un camarero está en camino
-          </p>
-        </div>
-      }
-    </div>
-  }
+
 </header>

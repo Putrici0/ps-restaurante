@@ -53,18 +53,6 @@
   align-items: flex-end;
   gap: 12px;
 }
-.edit-btn {
-  min-width: 134px;
-  height: 40px;
-  border: 1px solid #d9dee5;
-  background: #f4f6f8;
-  color: #243247;
-  border-radius: 12px;
-  font-size: 0.95rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  cursor: not-allowed;
-}
 
 .estado-legend {
   display: flex;
