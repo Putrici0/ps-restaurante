@@ -90,4 +90,27 @@ public class NotificacionApplicationService {
 
         return notificacionRepository.update(notificacion.id(), actualizada);
     }
+
+    public void marcarNotificacionesRecogerComoLeidasDeCuenta(String cuentaId) {
+        if (cuentaId == null || cuentaId.isBlank()) {
+            return;
+        }
+
+        notificacionRepository.findAll().stream()
+                .filter(notificacion -> !notificacion.leida())
+                .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
+                .filter(notificacion -> notificacion.cuenta() != null)
+                .filter(notificacion -> cuentaId.equals(notificacion.cuenta().id()))
+                .forEach(notificacion -> {
+                    Notificacion actualizada = new Notificacion(
+                            notificacion.id(),
+                            notificacion.cuenta(),
+                            notificacion.tipo(),
+                            true,
+                            notificacion.fecha()
+                    );
+
+                    notificacionRepository.update(notificacion.id(), actualizada);
+                });
+    }
 }

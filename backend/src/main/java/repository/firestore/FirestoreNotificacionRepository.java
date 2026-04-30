@@ -1,16 +1,19 @@
 package repository.firestore;
 
 import com.google.cloud.firestore.Firestore;
-import model.*;
+import model.Cuenta;
+import model.Mesa;
+import model.Notificacion;
+import model.TipoNotificacion;
 import repository.interfaces.NotificacionRepository;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class FirestoreNotificacionRepository extends AbstractFirestoreRepository<Notificacion> implements NotificacionRepository {
+public class FirestoreNotificacionRepository extends AbstractFirestoreRepository<Notificacion>
+        implements NotificacionRepository {
 
     public FirestoreNotificacionRepository(Firestore db) {
         super(db, "notificaciones");
@@ -19,11 +22,15 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
     @Override
     protected Notificacion mapToEntity(String id, Map<String, Object> data) {
         Map<String, Object> cData = (Map<String, Object>) data.get("cuenta");
+
         Cuenta cuenta = null;
+
         if (cData != null) {
+            List<Mesa> mesas = mapMesas(cData.get("mesas"));
+
             cuenta = new Cuenta(
                     (String) cData.get("id"),
-                    List.of(),
+                    mesas,
                     get(cData, "estaPagada", false),
                     Optional.empty(),
                     toInstant(cData.get("fechaCreacion")),
@@ -45,16 +52,21 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
     @Override
     protected Map<String, Object> entityToMap(Notificacion notificacion) {
         Map<String, Object> map = new HashMap<>();
+
         if (notificacion.cuenta() != null) {
             Map<String, Object> cMap = new HashMap<>();
             cMap.put("id", notificacion.cuenta().id());
             cMap.put("estaPagada", notificacion.cuenta().payed());
             cMap.put("fechaCreacion", toTimestamp(notificacion.cuenta().fechaCreacion()));
+            cMap.put("mesas", mapMesas(notificacion.cuenta().mesas()));
+
             map.put("cuenta", cMap);
         }
+
         map.put("tipo", notificacion.tipo().name());
         map.put("leida", notificacion.leida());
         map.put("fecha", toTimestamp(notificacion.fecha()));
+
         return map;
     }
 
@@ -65,7 +77,13 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
 
     @Override
     protected Notificacion createWithId(Notificacion notificacion, String id) {
-        return new Notificacion(id, notificacion.cuenta(), notificacion.tipo(), notificacion.leida(), notificacion.fecha());
+        return new Notificacion(
+                id,
+                notificacion.cuenta(),
+                notificacion.tipo(),
+                notificacion.leida(),
+                notificacion.fecha()
+        );
     }
 
     @Override
@@ -81,5 +99,44 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
     @Override
     public List<Notificacion> findByLeida(boolean leida) {
         return buscarPorCampo("leida", leida);
+    }
+
+    private List<Map<String, Object>> mapMesas(List<Mesa> mesas) {
+        if (mesas == null) {
+            return List.of();
+        }
+
+        return mesas.stream()
+                .map(mesa -> {
+                    Map<String, Object> mesaMap = new HashMap<>();
+                    mesaMap.put("id", mesa.id());
+                    mesaMap.put("capacidad", mesa.capacidad());
+                    return mesaMap;
+                })
+                .toList();
+    }
+
+    private List<Mesa> mapMesas(Object mesasObject) {
+        if (!(mesasObject instanceof List<?> mesasRaw)) {
+            return List.of();
+        }
+
+        return mesasRaw.stream()
+                .filter(item -> item instanceof Map<?, ?>)
+                .map(item -> {
+                    Map<?, ?> mesaMap = (Map<?, ?>) item;
+
+                    String mesaId = String.valueOf(mesaMap.get("id"));
+
+                    int capacidad = 0;
+                    Object capacidadObject = mesaMap.get("capacidad");
+
+                    if (capacidadObject instanceof Number number) {
+                        capacidad = number.intValue();
+                    }
+
+                    return new Mesa(mesaId, capacidad);
+                })
+                .toList();
     }
 }

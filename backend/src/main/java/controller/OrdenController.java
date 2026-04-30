@@ -164,9 +164,11 @@ public class OrdenController {
                             String id = ctx.pathParam("id");
                             Orden orden = applicationService.marcarOrdenLista(id);
 
-                            if (orden.pedido() != null
-                                    && orden.pedido().cuenta() != null
-                                    && orden.pedido().cuenta().id() != null) {
+                            if (
+                                    orden.pedido() != null
+                                            && orden.pedido().cuenta() != null
+                                            && orden.pedido().cuenta().id() != null
+                            ) {
                                 notificacionApplicationService.crearNotificacionPedidoListo(
                                         orden.pedido().cuenta().id()
                                 );
@@ -180,6 +182,17 @@ public class OrdenController {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
                             Orden orden = applicationService.marcarOrdenEntregada(id);
+
+                            if (
+                                    orden.pedido() != null
+                                            && orden.pedido().cuenta() != null
+                                            && orden.pedido().cuenta().id() != null
+                            ) {
+                                notificacionApplicationService.marcarNotificacionesRecogerComoLeidasDeCuenta(
+                                        orden.pedido().cuenta().id()
+                                );
+                            }
+
                             ctx.json(orden);
                         });
                     });

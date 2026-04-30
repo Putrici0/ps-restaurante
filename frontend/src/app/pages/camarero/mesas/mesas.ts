@@ -1,10 +1,9 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
 
 import { Mesa, ZonaMesa } from '../../../models/mesa.model';
-import { CuentaApiService, OrdenCuentaResponse } from '../../../services/cuenta-api.service';
+import { CuentaApiService } from '../../../services/cuenta-api.service';
 import { MesasApiService } from '../../../services/mesas-api.service';
 import { CamareroHeader } from '../camarero-header/camarero-header';
 import { MesaCardComponent } from '../../../shared/mesa-card/mesa-card';
@@ -23,7 +22,7 @@ interface ItemCobroAgrupado {
 @Component({
   selector: 'app-mesas-camarero',
   standalone: true,
-  imports: [CommonModule, CamareroHeader, MesaCardComponent],
+  imports: [CommonModule, CamareroHeader],
   templateUrl: './mesas.html',
   styleUrl: './mesas.css',
 })

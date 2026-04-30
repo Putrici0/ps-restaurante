@@ -1,0 +1,135 @@
+<main class="waiter-page">
+  <section class="waiter-hero">
+    <div>
+      <p class="eyebrow">Panel de camarero</p>
+      <h1>Notificaciones de cocina</h1>
+      <p>
+        Aquí aparecen los pedidos que cocina marca como listos para recoger.
+      </p>
+    </div>
+
+    <div class="hero-actions">
+      <button type="button" class="secondary-button" (click)="recargar()">
+        Actualizar
+      </button>
+
+      @if (!avisosActivados()) {
+        <button type="button" class="primary-button" (click)="activarAvisos()">
+          Activar sonido y vibración
+        </button>
+      } @else if (estaSilenciado()) {
+        <button type="button" class="primary-button" (click)="reactivarAvisos()">
+          Reactivar avisos
+        </button>
+      } @else {
+        <button type="button" class="secondary-button" (click)="silenciarCincoMinutos()">
+          Silenciar 5 min
+        </button>
+      }
+    </div>
+  </section>
+
+  <section class="status-card">
+    <div class="status-main">
+      <div class="bell">
+        @if (estaSilenciado()) {
+          🔕
+        } @else {
+          🔔
+        }
+      </div>
+
+      <div>
+        <p class="status-label">Pedidos listos pendientes</p>
+        <h2>{{ totalPendientes() }}</h2>
+      </div>
+    </div>
+
+    <div class="status-side">
+      <span [class.muted]="estaSilenciado()">
+        {{ textoSilencio() }}
+      </span>
+
+      @if (totalPendientes() > 0) {
+        <button
+          type="button"
+          class="link-button"
+          [disabled]="actualizando()"
+          (click)="marcarTodasComoLeidas()"
+        >
+          Marcar todas como vistas
+        </button>
+      }
+    </div>
+  </section>
+
+  @if (toast()) {
+    <aside class="toast" role="status" aria-live="polite">
+      <strong>{{ tituloNotificacion(toast()!) }}</strong>
+      <span>{{ descripcionNotificacion(toast()!) }}</span>
+    </aside>
+  }
+
+  @if (error()) {
+    <section class="error-card">
+      {{ error() }}
+    </section>
+  }
+
+  @if (cargando()) {
+    <section class="empty-card">
+      Cargando notificaciones...
+    </section>
+  } @else if (notificacionesRecoger().length === 0) {
+    <section class="empty-card">
+      <h2>No hay pedidos listos pendientes</h2>
+      <p>
+        Cuando cocina marque un plato como listo, aparecerá aquí.
+      </p>
+    </section>
+  } @else {
+    <section class="notifications-list">
+      @for (notificacion of notificacionesRecoger(); track notificacion.id) {
+        <article class="notification-card">
+          <div class="notification-icon">
+            🍽️
+          </div>
+
+          <div class="notification-content">
+            <div class="notification-header">
+              <div>
+                <p class="notification-type">
+                  {{ tituloNotificacion(notificacion) }}
+                </p>
+                <h2>{{ mesaTexto(notificacion) }}</h2>
+              </div>
+
+              <span class="time-badge">
+                {{ tiempoTranscurrido(notificacion.fecha) }}
+              </span>
+            </div>
+
+            <p class="notification-description">
+              {{ descripcionNotificacion(notificacion) }}
+            </p>
+
+            <p class="notification-date">
+              {{ fechaLarga(notificacion.fecha) }}
+            </p>
+
+            <div class="notification-actions">
+              <button
+                type="button"
+                class="primary-button"
+                [disabled]="actualizando()"
+                (click)="marcarComoLeida(notificacion)"
+              >
+                Marcar como vista
+              </button>
+            </div>
+          </div>
+        </article>
+      }
+    </section>
+  }
+</main>
