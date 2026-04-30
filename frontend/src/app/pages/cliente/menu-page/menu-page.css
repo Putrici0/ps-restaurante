@@ -369,6 +369,101 @@
   gap: 10px;
 }
 
+@media (max-width: 640px) {
+  .menu-page {
+    padding: 12px 10px 100px;
+  }
+
+  .hero {
+    padding: 14px;
+    border-radius: 18px;
+  }
+
+  .hero h1 {
+    font-size: 1.5rem;
+  }
+
+  .filter-chip {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  .dish-card {
+    display: flex;
+    flex-direction: row;
+    height: 110px;
+    border-radius: 14px;
+  }
+
+  .dish-image-wrapper {
+    width: 100px;
+    min-width: 100px;
+    height: 100%;
+    aspect-ratio: auto;
+  }
+
+  .dish-category {
+    top: 5px;
+    left: 5px;
+    padding: 3px 6px;
+    font-size: 0.6rem;
+  }
+
+  .dish-content {
+    flex: 1;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-width: 0;
+  }
+
+  .dish-header h2 {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dish-price {
+    font-size: 0.9rem;
+  }
+
+  .dish-description {
+    display: none;
+  }
+
+  .dish-actions {
+    margin-top: 0;
+    grid-template-columns: 36px 1fr 36px;
+    gap: 8px;
+  }
+
+  .qty-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 1.2rem;
+  }
+
+  .qty-label {
+    font-size: 0.8rem;
+  }
+
+  .sticky-summary {
+    padding: 10px 14px;
+    border-radius: 16px;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+  }
+
+  .order-btn {
+    min-height: 42px;
+    font-size: 0.9rem;
+  }
+}
+
 @media (min-width: 640px) {
   .menu-page {
     padding: 20px 20px 132px;
