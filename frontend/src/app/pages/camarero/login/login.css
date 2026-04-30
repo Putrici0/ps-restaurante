@@ -1,11 +1,10 @@
-/* Bloqueamos el scroll desde la raíz del componente */
 :host {
   display: block;
-  height: 100dvh; /* dvh se adapta dinámicamente si el navegador móvil muestra/oculta su interfaz */
+  height: 100dvh;
   width: 100vw;
-  background-color: #dfcdab;
+  background: linear-gradient(135deg, #dfcdab 0%, #cdc1b0 100%);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  overflow: hidden; /* Elimina cualquier posibilidad de scroll */
+  overflow: hidden;
 }
 
 .login-wrapper {
@@ -14,63 +13,109 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  padding: 0 20px;
-  gap: 5rem;
+  padding: 20px;
   box-sizing: border-box;
 }
 
 .logo-container {
-  /* Reducimos el margen inferior porque el logo ya ocupará más espacio visual */
-  margin-bottom: 3vh;
+  margin-bottom: 3rem;
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
 }
 
 .logo {
-  max-width: 850px;
-  width: 95vw; /* Permitimos que ocupe casi todo el ancho de la pantalla */
-  max-height: 55vh; /* AUMENTAMOS ESTO: Ahora el logo puede ocupar hasta un 55% de la altura total */
+  max-width: 450px;
+  width: 90vw;
+  max-height: 40vh;
   object-fit: contain;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,0.15));
   transform: scale(1.5);
+  clip-path: inset(0 10% 0 10%); /* Recorta un 10% de los laterales vacíos */
 }
+
+
+.login-card {
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+  padding: 2rem 1.5rem;
+  border-radius: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 85%;
+  max-width: 310px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 3vh; /* El espacio entre inputs también se reduce en pantallas pequeñas */
-  width: 100%;
-  max-width: 320px;
+  gap: 1.2rem;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 1vh;
+  gap: 0.5rem;
 }
 
 .input-group label {
-  /* clamp(mínimo, ideal, máximo) asegura que la letra no sea ni minúscula ni gigante */
-  font-size: clamp(1.2rem, 2.5vh, 1.4rem);
-  color: #000000;
-  margin-left: 5px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #4a3f35;
+  margin-left: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .input-group input {
-  padding: clamp(10px, 2vh, 12px) 20px;
-  border-radius: 25px;
-  border: none;
-  background-color: rgba(216, 216, 216, 0.6);
+  padding: 14px 20px;
+  border-radius: 20px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  background-color: rgba(255, 255, 255, 0.8);
   font-size: 1rem;
-  color: #333333;
+  color: #333;
   outline: none;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .input-group input:focus {
-  background-color: rgba(216, 216, 216, 0.9);
+  background-color: #fff;
+  border-color: #b92b27;
+  box-shadow: 0 0 0 4px rgba(185, 43, 39, 0.1);
 }
 
-.input-group input::placeholder {
-  color: #666666;
+.btn-entrar {
+  margin-top: 1rem;
+  padding: 16px;
+  border-radius: 20px;
+  border: none;
+  background: #1cb02c;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 800;
+  letter-spacing: 1px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(28, 176, 44, 0.3);
+}
+
+.btn-entrar:hover {
+  background: #169424;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(28, 176, 44, 0.4);
+}
+
+.btn-entrar:active {
+  transform: translateY(0);
+}
+
+@media (max-height: 600px) {
+  .logo-container { margin-bottom: 1rem; }
+  .logo { max-height: 15vh; }
+  .login-card { padding: 1.5rem; }
 }

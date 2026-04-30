@@ -117,7 +117,7 @@ export class MesasCamarero {
   }
 
   mostrarContrasena(mesaId: string): void {
-    alert(`Contraseña de la mesa ${mesaId}: 1234 (Simulado)`);
+    alert(`Contraseña de la mesa M${mesaId}: 1234 (Simulado)`);
   }
 
   verCuenta(mesa: Mesa): void {

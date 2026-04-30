@@ -3,26 +3,29 @@
     <img src="logo.png" alt="Logo Restaurante" class="logo">
   </div>
 
-  <form class="login-form">
-    <div class="input-group">
-      <label for="usuario">Usuario:</label>
-      <input
-        type="text"
-        id="usuario"
-        name="usuario"
-        placeholder="Introducir usuario..."
-      >
-    </div>
+  <div class="login-card">
+    <form class="login-form">
+      <div class="input-group">
+        <label for="usuario">Usuario</label>
+        <input
+          type="text"
+          id="usuario"
+          name="usuario"
+          placeholder="Introducir usuario..."
+        >
+      </div>
 
-    <div class="input-group">
-      <label for="contrasena">Contraseña:</label>
-      <input
-        type="password"
-        id="contrasena"
-        name="contrasena"
-        placeholder="Introducir contraseña..."
-      >
-    </div>
-  </form>
-  <button type="button" (click)="iniciarSesion()" class="btn-entrar">ENTRAR</button>
+      <div class="input-group">
+        <label for="contrasena">Contraseña</label>
+        <input
+          type="password"
+          id="contrasena"
+          name="contrasena"
+          placeholder="Introducir contraseña..."
+        >
+      </div>
+
+      <button type="button" (click)="iniciarSesion()" class="btn-entrar">ENTRAR</button>
+    </form>
+  </div>
 </div>
