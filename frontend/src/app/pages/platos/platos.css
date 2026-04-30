@@ -1,0 +1,263 @@
+.platos-page {
+  padding: 2rem 2.5rem;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.header-platos {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #456a8a; /* Azulado para diferenciar de bebidas */
+}
+
+.header-platos h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #1f1f1f;
+}
+
+.subtitulo {
+  margin: 0.35rem 0 0;
+  color: #48515a;
+  font-size: 0.95rem;
+}
+
+.contador-pendientes {
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid #a8becf;
+  padding: 0.7rem 1rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #333;
+  white-space: nowrap;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot.azul {
+  background: #1c6ab3;
+}
+
+.lista-pedidos {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.pedido-card {
+  display: flex;
+  align-items: stretch;
+  gap: 1.25rem;
+  padding: 1rem 1.15rem;
+  border-radius: 18px;
+  border: 2px solid #b4c8d8;
+  background: rgba(255, 255, 255, 0.34);
+  transition: transform 0.15s ease, opacity 0.2s ease, border-color 0.2s ease;
+}
+
+/* Estado entregado: más tenue para indicar que ya se procesó */
+.pedido-card.es-entregado {
+  opacity: 0.6;
+  border-color: #d1d5db;
+  background: rgba(243, 244, 246, 0.4);
+}
+
+.bloque-mesa {
+  position: relative;
+  min-width: 106px;
+  border-radius: 14px;
+  border: 1px solid #a7bccd;
+  background: #cedfea;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 0.85rem 1rem;
+}
+
+.indicador-color {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 7px;
+  background: #1c6ab3; /* Por defecto azul (Listo) */
+}
+
+.pedido-card.es-entregado .indicador-color {
+  background: #6b7280; /* Gris para entregado */
+}
+
+.mesa-texto {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.mesa-texto span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #1b1b1b;
+}
+
+.mesa-texto strong {
+  font-size: 1.7rem;
+  line-height: 1;
+  color: #1b1b1b;
+  margin-top: 0.15rem;
+}
+
+.bloque-contenido {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  justify-content: center;
+}
+
+.info-superior {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pildora-estado {
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: white;
+  background: #1c6ab3;
+}
+
+.pedido-card.es-entregado .pildora-estado {
+  background: #159d43; /* Verde para confirmar entrega */
+}
+
+.dato-secundario {
+  font-size: 0.82rem;
+  color: #48525b;
+  font-weight: 600;
+}
+
+.lista-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1rem;
+}
+
+.item-plato {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.45);
+  border: 1px solid #b9ccdcc;
+  border-radius: 999px;
+  padding: 0.5rem 0.75rem;
+  color: #1f1f1f;
+}
+
+.item-plato strong {
+  font-size: 0.95rem;
+}
+
+.bloque-accion {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+}
+
+.btn-entregar,
+.btn-deshacer {
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 800;
+  transition: transform 0.1s ease, opacity 0.15s ease;
+}
+
+.btn-entregar {
+  padding: 0.95rem 1.2rem;
+  color: white;
+  font-size: 0.95rem;
+  background: #159d43;
+}
+
+.btn-deshacer {
+  padding: 0.95rem 1.2rem;
+  background: #c8ccd4;
+  color: #334155;
+  font-size: 0.85rem;
+}
+
+.btn-entregar:active,
+.btn-deshacer:active {
+  transform: scale(0.96);
+}
+
+button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.estado-vacio {
+  border: 2px dashed #b0c6d7;
+  border-radius: 18px;
+  padding: 2rem;
+  text-align: center;
+  color: #4c565f;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.estado-vacio.error {
+  border-color: #dca9a9;
+  color: #8a1f1f;
+}
+
+@media (max-width: 900px) {
+  .platos-page {
+    padding: 1.25rem;
+  }
+
+  .header-platos {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pedido-card {
+    flex-direction: column;
+  }
+
+  .bloque-accion {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .btn-entregar, .btn-deshacer {
+    width: 100%;
+  }
+}

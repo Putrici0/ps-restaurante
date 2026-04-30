@@ -1,0 +1,90 @@
+
+<section class="platos-page">
+  <header class="header-platos">
+    <div>
+      <p class="eyebrow">Cocina / Servicio</p>
+      <h1>Cola de Platos</h1>
+      <p class="subtitulo">
+        Platos listos para ser entregados a la mesa.
+      </p>
+    </div>
+
+    <div class="contador-pendientes">
+      <span class="dot azul"></span>
+      <span>{{ pendientesCount() }} por entregar</span>
+    </div>
+  </header>
+
+  @if (cargando()) {
+    <div class="estado-vacio">
+      <p>Cargando platos...</p>
+    </div>
+  } @else if (error()) {
+    <div class="estado-vacio error">
+      <p>{{ error() }}</p>
+    </div>
+  } @else if (pedidosOrdenados().length === 0) {
+    <div class="estado-vacio">
+      <p>No hay platos pendientes de entrega.</p>
+    </div>
+  } @else {
+    <div class="lista-pedidos">
+      @for (pedido of pedidosOrdenados(); track pedido.pedidoId) {
+        <article
+          class="pedido-card"
+          [class.es-entregado]="pedido.estado === 'entregado'"
+          [class.es-listo]="pedido.estado === 'listo'"
+        >
+          <div class="bloque-mesa">
+            <span class="indicador-color"></span>
+            <div class="mesa-texto">
+              <span>MESA</span>
+              <strong>{{ pedido.mesaId }}</strong>
+            </div>
+          </div>
+
+          <div class="bloque-contenido">
+            <div class="info-superior">
+              <span class="pildora-estado">
+                {{ pedido.estado === 'listo' ? 'Listo en Barra' : 'Entregado' }}
+              </span>
+              <span class="dato-secundario">Pedido {{ pedido.pedidoId }}</span>
+              <span class="dato-secundario">{{ pedido.totalItems }} platos</span>
+            </div>
+
+            <div class="lista-items">
+              @for (item of pedido.items; track item.nombre) {
+                <div class="item-plato">
+                  <strong>{{ item.cantidad }}x</strong>
+                  <span>{{ item.nombre }}</span>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="bloque-accion">
+            @if (pedido.estado === 'listo') {
+              <button
+                class="btn-entregar"
+                type="button"
+                [disabled]="procesandoPedidoId() === pedido.pedidoId"
+                (click)="avanzarEstado(pedido)"
+              >
+                MARCAR ENTREGADO
+              </button>
+            } @else {
+              <button
+                class="btn-deshacer"
+                type="button"
+                [disabled]="procesandoPedidoId() === pedido.pedidoId"
+                (click)="retrocederEstado(pedido)"
+              >
+                REVERTIR A LISTO
+              </button>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</section>
