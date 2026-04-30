@@ -46,7 +46,8 @@ export class BillPage implements OnInit, OnDestroy {
   readonly estadoSaldada = signal<EstadoCuentaResponse | null>(null);
 
   readonly procesandoPago = signal(false);
-  readonly pagoRealizado = signal(false);
+  readonly mostrarConfirmacionPago = signal(false);
+  readonly ultimoPagoImporte = signal(0);
 
   readonly vistaPago = signal<'ninguna' | 'seleccion' | 'tarjeta'>('ninguna');
   readonly ordenesSeleccionadas = signal<string[]>([]);
@@ -241,7 +242,6 @@ export class BillPage implements OnInit, OnDestroy {
 
     this.error.set(null);
     this.procesandoPago.set(true);
-    this.pagoRealizado.set(false);
 
     const request$ =
       ordenesSeleccionadas.length === totalOrdenesPendientes
@@ -254,8 +254,10 @@ export class BillPage implements OnInit, OnDestroy {
 
     request$.pipe(take(1)).subscribe({
       next: () => {
+        const importePagado = this.totalSeleccionado();
         this.procesandoPago.set(false);
-        this.pagoRealizado.set(true);
+        this.mostrarConfirmacionPago.set(true);
+        this.ultimoPagoImporte.set(importePagado);
 
         this.numeroTarjeta = '';
         this.nombreCompleto = '';
@@ -263,9 +265,9 @@ export class BillPage implements OnInit, OnDestroy {
         this.cvc = '';
 
         this.ordenesSeleccionadas.set([]);
-        this.vistaPago.set('seleccion');
+        this.vistaPago.set('ninguna');
 
-        this.cargarCuentaCompleta(true);
+        this.cargarCuentaCompleta(false);
       },
       error: () => {
         this.procesandoPago.set(false);

@@ -50,11 +50,36 @@
         </article>
       </section>
 
-      @if (pagoRealizado()) {
-        <section class="bill-state-card">
-          <h2>Pago realizado</h2>
-          <p>La cuenta se ha marcado como pagada correctamente.</p>
-        </section>
+    @if (mostrarConfirmacionPago()) {
+    <div class="payment-overlay">
+      <section class="payment-panel payment-panel--confirmacion">
+        <div class="confirmacion-icono">✓</div>
+        <h2 class="confirmacion-titulo">Pago realizado</h2>
+        <p class="confirmacion-importe">
+          Se han pagado <strong>{{ ultimoPagoImporte() | number:'1.2-2' }} €</strong>
+        </p>
+
+        @if (importePendiente() > 0) {
+        <div class="confirmacion-pendiente">
+          <p class="confirmacion-pendiente__label">Resta por pagar</p>
+          <p class="confirmacion-pendiente__importe">
+            {{ importePendiente() | number:'1.2-2' }} €
+          </p>
+        </div>
+        } @else {
+        <p class="confirmacion-cuenta-cerrada">
+          La cuenta está completamente pagada.
+        </p>
+        }
+
+        <button
+          type="button"
+          class="payment-submit-btn"
+          (click)="mostrarConfirmacionPago.set(false)">
+          Aceptar
+        </button>
+      </section>
+    </div>
       }
 
       @if (itemsAgrupados().length === 0) {
