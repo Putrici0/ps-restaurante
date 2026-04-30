@@ -1,0 +1,107 @@
+<div class="bill-page">
+
+  <main class="bill-main">
+    <section class="bill-hero">
+      <div>
+        <p class="bill-hero__eyebrow">Mesa (Camarero)</p>
+        <h1 class="bill-hero__title">Resumen de pedidos</h1>
+        <p class="bill-hero__subtitle">
+          Estado actual de la cuenta y platos servidos en esta mesa.
+        </p>
+      </div>
+
+      @if (cuentaCerrada()) {
+      <span class="bill-status-chip bill-status-chip--success">Pagada / cerrada</span>
+      } @else if (cuentaActiva()) {
+      <span class="bill-status-chip bill-status-chip--warning">Abierta</span>
+      }
+    </section>
+
+    @if (cargando()) {
+    <section class="bill-state-card">
+      <div class="spinner"></div>
+      <p>Cargando cuenta...</p>
+    </section>
+    } @else if (error()) {
+    <section class="bill-state-card">
+      <p class="bill-state-card__error">{{ error() }}</p>
+      <button type="button" class="bill-retry-btn" (click)="recargar()">
+        Reintentar
+      </button>
+    </section>
+    } @else if (sinCuentaActiva()) {
+    <section class="bill-state-card">
+      <h2>No hay una cuenta activa para esta mesa</h2>
+      <p>
+        Es necesario abrir una cuenta desde la administración para ver los detalles.
+      </p>
+    </section>
+    } @else {
+    <section class="bill-summary-grid">
+      <article class="summary-card">
+        <span class="summary-card__label">Total productos</span>
+        <strong class="summary-card__value">{{ totalItems() }}</strong>
+      </article>
+
+      <article class="summary-card">
+        <span class="summary-card__label">Importe pendiente</span>
+        <strong class="summary-card__value">{{ importePendiente() | number:'1.2-2' }} €</strong>
+      </article>
+    </section>
+
+    @if (itemsAgrupados().length === 0) {
+    <section class="bill-state-card">
+      <h2>No hay platos en la cuenta</h2>
+      <p>La cuenta está vacía en este momento.</p>
+    </section>
+    } @else {
+    <section class="bill-list">
+      @for (item of itemsAgrupados(); track item.platoId) {
+      <article class="bill-item-card">
+        <div class="bill-item-card__image-wrap">
+          <img
+            class="bill-item-card__image"
+            [src]="item.imagen"
+            [alt]="item.nombre"
+            loading="lazy"
+            (error)="onImageError($event)"
+          />
+        </div>
+
+        <div class="bill-item-card__content">
+          <div class="bill-item-card__top">
+            <div>
+              <p class="bill-item-card__category">{{ item.categoria }}</p>
+              <h2 class="bill-item-card__name">{{ item.nombre }}</h2>
+            </div>
+
+            <strong class="bill-item-card__subtotal">
+              {{ item.subtotal | number:'1.2-2' }} €
+            </strong>
+          </div>
+
+          <p class="bill-item-card__description">
+            {{ item.descripcion }}
+          </p>
+
+          <div class="bill-item-card__meta">
+                  <span class="bill-badge">
+                    {{ item.cantidad }} {{ item.cantidad === 1 ? 'unidad' : 'unidades' }}
+                  </span>
+
+            <span class="bill-badge bill-badge--light">
+                    {{ item.precioUnitario | number:'1.2-2' }} € / ud.
+                  </span>
+          </div>
+
+          <p class="bill-item-card__status">
+            Estado: {{ obtenerResumenEstado(item) }}
+          </p>
+        </div>
+      </article>
+      }
+    </section>
+    }
+    }
+  </main>
+</div>

@@ -12,6 +12,8 @@ import { TableroPedidos } from './pages/cocina/tablero-pedidos';
 import { BebidasCamarero } from './pages/camarero/bebidas/bebidas';
 import { PlatosCamarero } from './pages/camarero/platos/platos';
 import { CamareroHeader } from './pages/camarero/camarero-header/camarero-header';
+import { MenuCamarero } from './pages/camarero/menu/menu'
+import { PedidoCamarero } from './pages/camarero/pedido/pedido'
 
 export const routes: Routes = [
   { path: '', redirectTo: 'mesas', pathMatch: 'full' },
@@ -30,6 +32,8 @@ export const routes: Routes = [
     children: [
       { path: 'platos', component: PlatosCamarero },
       { path: 'bebidas', component: BebidasCamarero },
+      { path: 'menu/:id', component: MenuCamarero },
+      { path: 'cuenta/:id', component: PedidoCamarero }
     ],
   },
 ];

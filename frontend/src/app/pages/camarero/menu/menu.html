@@ -1,0 +1,184 @@
+<app-header></app-header>
+
+<!-- resto del acceso -->
+<div class="menu-page">
+  <section class="hero">
+    <p class="hero-kicker">Carta digital</p>
+    <h1>Descubre nuestro menú</h1>
+    <p class="hero-text">
+      Consulta los platos disponibles y prepara tu pedido cómodamente desde el móvil.
+    </p>
+  </section>
+
+  @if (sinCuentaActiva()) {
+  <section class="state-card warning">
+    <h2>No hay una cuenta activa para esta mesa</h2>
+    <p>
+      Cuando central o sala abra una cuenta para esta mesa, aquí se actualizará automáticamente.
+    </p>
+  </section>
+  } @else if (cuentaCerrada()) {
+  <section class="state-card danger">
+    <h2>Cuenta cerrada</h2>
+    <p>
+      Esta mesa ya ha sido marcada como pagada desde central. Ya no se pueden enviar más pedidos.
+    </p>
+  </section>
+  }
+
+  <section class="filters">
+    <button
+      class="filter-chip"
+      [class.active]="categoriaSeleccionada() === 'Todos'"
+      (click)="seleccionarCategoria('Todos')"
+      type="button"
+    >
+      Todos
+    </button>
+
+    @for (categoria of categorias; track categoria) {
+    <button
+      class="filter-chip"
+      [class.active]="categoriaSeleccionada() === categoria"
+      (click)="seleccionarCategoria(categoria)"
+      type="button"
+    >
+      {{ categoria }}
+    </button>
+    }
+  </section>
+
+  @if (cargando()) {
+  <section class="feedback-card">
+    <p>Cargando carta...</p>
+  </section>
+  } @else if (error()) {
+  <section class="feedback-card error-card">
+    <p>{{ error() }}</p>
+    <button class="retry-btn" (click)="recargar()" type="button">Reintentar</button>
+  </section>
+  } @else if (platosFiltrados().length === 0) {
+  <section class="feedback-card">
+    <p>No hay platos disponibles en esta categoría.</p>
+  </section>
+  } @else {
+  <section class="menu-grid">
+    @for (plato of platosFiltrados(); track trackByPlato($index, plato)) {
+    <article class="dish-card">
+      <div class="dish-image-wrapper">
+        <img
+          class="dish-image"
+          [src]="plato.imagen"
+          [alt]="plato.nombre"
+          (error)="onImageError($event)"
+        />
+        <span class="dish-category">{{ plato.categoria }}</span>
+      </div>
+
+      <div class="dish-content">
+        <div class="dish-header">
+          <h2>{{ plato.nombre }}</h2>
+          <p class="dish-price">{{ plato.precio | number:'1.2-2' }} €</p>
+        </div>
+
+        <p class="dish-description">{{ plato.descripcion }}</p>
+
+        <div class="dish-actions">
+          <button
+            class="qty-btn"
+            type="button"
+            (click)="decrementar(plato.id)"
+            [disabled]="!puedePedir() || plato.cantidad === 0"
+          >
+            −
+          </button>
+
+          <span class="qty-label">Cantidad {{ plato.cantidad }}</span>
+
+          <button
+            class="qty-btn"
+            type="button"
+            (click)="incrementar(plato.id)"
+            [disabled]="!puedePedir()"
+          >
+            +
+          </button>
+        </div>
+      </div>
+    </article>
+    }
+  </section>
+  }
+
+  @if (totalSeleccionado() > 0) {
+  <div class="sticky-summary">
+    <div class="sticky-summary__info">
+      <strong>
+        {{ totalSeleccionado() }}
+        {{ totalSeleccionado() === 1 ? 'producto' : 'productos' }}
+      </strong>
+      <span>{{ importeSeleccionado() | number:'1.2-2' }} €</span>
+    </div>
+
+    <button
+      class="order-btn"
+      (click)="abrirConfirmacionPedido()"
+      [disabled]="!puedePedir()"
+      type="button"
+    >
+      Realizar pedido
+    </button>
+  </div>
+  }
+
+  @if (showConfirmPopup()) {
+  <div class="modal-backdrop" (click)="cerrarConfirmacionPedido()">
+    <div class="modal-card" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <p class="modal-kicker">Confirmación</p>
+          <h2>Revisa tu pedido</h2>
+        </div>
+
+        <button class="close-btn" (click)="cerrarConfirmacionPedido()" type="button">
+          ×
+        </button>
+      </div>
+
+      <div class="modal-body">
+        @for (plato of platosSeleccionados(); track plato.id) {
+        <div class="modal-row">
+          <div>
+            <strong>{{ plato.nombre }}</strong>
+            <p>{{ plato.cantidad }} × {{ plato.precio | number:'1.2-2' }} €</p>
+          </div>
+          <strong>{{ plato.cantidad * plato.precio | number:'1.2-2' }} €</strong>
+        </div>
+        }
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-total">
+          <span>Total</span>
+          <strong>{{ importeSeleccionado() | number:'1.2-2' }} €</strong>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary-btn" (click)="cerrarConfirmacionPedido()" type="button">
+            Seguir eligiendo
+          </button>
+
+          <button
+            class="primary-btn"
+            (click)="confirmarPedido()"
+            [disabled]="enviando()"
+            type="button"
+          >
+            {{ enviando() ? 'Enviando...' : 'Confirmar pedido' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  }
+</div>
