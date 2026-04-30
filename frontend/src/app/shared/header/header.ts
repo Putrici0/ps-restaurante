@@ -11,11 +11,25 @@ import { RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
 export class Header {
   private route = inject(ActivatedRoute);
 
-  // Capturamos el id de la mesa desde la URL
-  tableId = signal <string> (this.route.snapshot.params['id'] || '1');
+  tableId = signal(this.route.snapshot.params['id'] || '1');
 
-  // Controla el estado del PopUp del camarero
   estadoLlamada = signal<'oculto' | 'confirmacion' | 'en-camino'>('oculto');
+
+  menuAbierto = signal(false);
+
+  toggleMenu() {
+    this.menuAbierto.update(v => !v);
+
+    // bloquear scroll cuando el menú está abierto
+    document.body.style.overflow = this.menuAbierto() ? 'hidden' : '';
+  }
+
+  cerrarMenu() {
+    this.menuAbierto.set(false);
+
+    // restaurar scroll
+    document.body.style.overflow = '';
+  }
 
   abrirConfirmacion(event: Event) {
     event.preventDefault();
@@ -29,7 +43,6 @@ export class Header {
   confirmarLlamada() {
     this.estadoLlamada.set('en-camino');
 
-    //Ocultamos el mensaje automáticamente después de 3 segundos
     setTimeout(() => {
       this.estadoLlamada.set('oculto');
     }, 3000);

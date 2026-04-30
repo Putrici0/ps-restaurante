@@ -20,6 +20,15 @@ interface ItemDetalleAgrupado {
   estados: string[];
 }
 
+interface PagoDetalleAgrupado {
+  clave: string;
+  numero: number;
+  fechaPago: string;
+  metodoPago: string;
+  total: number;
+  items: ItemDetalleAgrupado[];
+}
+
 @Component({
   selector: 'app-historial',
   standalone: true,
@@ -60,7 +69,13 @@ export class HistorialComponent {
     return `Mostrando ${mostradas} de ${total} transacciones`;
   });
 
-  readonly detalleAgrupado = computed(() => this.agruparOrdenes(this.ordenesDetalle()));
+  readonly detalleAgrupado = computed(() =>
+    this.agruparOrdenes(this.ordenesDetalle()),
+  );
+
+  readonly pagosDetalle = computed(() =>
+    this.agruparOrdenesPorPago(this.ordenesDetalle()),
+  );
 
   constructor() {
     this.cargarHistorial();
@@ -101,6 +116,7 @@ export class HistorialComponent {
     if (pagina < 1 || pagina > this.totalPaginas()) {
       return;
     }
+
     this.paginaActual.set(pagina);
   }
 
@@ -139,6 +155,7 @@ export class HistorialComponent {
 
   formatearFecha(fechaIso: string): string {
     const fecha = new Date(fechaIso);
+
     return new Intl.DateTimeFormat('es-ES', {
       day: '2-digit',
       month: '2-digit',
@@ -159,7 +176,9 @@ export class HistorialComponent {
 
   obtenerResumenEstado(estados: string[]): string {
     const estadosNormalizados = estados.map((estado) =>
-      estado === 'Preparación' || estado === 'Preparacion' ? 'En preparación' : estado,
+      estado === 'Preparación' || estado === 'Preparacion'
+        ? 'En preparación'
+        : estado,
     );
 
     return Array.from(new Set(estadosNormalizados)).join(' · ');
@@ -201,16 +220,64 @@ export class HistorialComponent {
     );
   }
 
+  private agruparOrdenesPorPago(
+    ordenes: OrdenCuentaResponse[],
+  ): PagoDetalleAgrupado[] {
+    const mapa = new Map<string, OrdenCuentaResponse[]>();
+
+    for (const orden of ordenes) {
+      const fechaPago = orden.fechaPago ?? 'SIN_FECHA';
+      const metodoPago = orden.metodoPago ?? 'SIN_METODO';
+      const clave = `${fechaPago}-${metodoPago}`;
+
+      if (!mapa.has(clave)) {
+        mapa.set(clave, []);
+      }
+
+      mapa.get(clave)!.push(orden);
+    }
+
+    return Array.from(mapa.entries())
+      .map(([clave, ordenesPago], index) => {
+        const fechaPago = ordenesPago[0].fechaPago ?? '';
+        const metodoPago = ordenesPago[0].metodoPago ?? '-';
+
+        return {
+          clave,
+          numero: index + 1,
+          fechaPago,
+          metodoPago,
+          total: ordenesPago.reduce(
+            (acc, orden) => acc + Number(orden.precio ?? 0),
+            0,
+          ),
+          items: this.agruparOrdenes(ordenesPago),
+        };
+      })
+      .sort((a, b) => {
+        if (!a.fechaPago) return 1;
+        if (!b.fechaPago) return -1;
+
+        return a.fechaPago.localeCompare(b.fechaPago);
+      })
+      .map((pago, index) => ({
+        ...pago,
+        numero: index + 1,
+      }));
+  }
+
   private hoyISO(): string {
     const hoy = new Date();
     const yyyy = hoy.getFullYear();
     const mm = String(hoy.getMonth() + 1).padStart(2, '0');
     const dd = String(hoy.getDate()).padStart(2, '0');
+
     return `${yyyy}-${mm}-${dd}`;
   }
 
   private extraerMensaje(error: unknown): string {
     const err = error as { error?: { message?: string } };
+
     return err?.error?.message ?? 'Ha ocurrido un error al comunicar con el backend';
   }
 }

@@ -9,6 +9,8 @@ import { QrGenerator } from './pages/cliente/qr-generator/qr-generator';
 import { MenuPage } from './pages/cliente/menu-page/menu-page';
 import { BillPage } from './pages/cliente/bill-page/bill-page';
 import { TableroPedidos } from './pages/cocina/tablero-pedidos';
+import { MenuCamarero } from './pages/camarero/menu/menu';
+import { PedidoCamarero } from './pages/camarero/pedido/pedido';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'mesas', pathMatch: 'full' },
@@ -21,4 +23,6 @@ export const routes: Routes = [
   { path: 'menu/:id', component: MenuPage, canActivate: [tableAccessGuard] },
   { path: 'cuenta/:id', component: BillPage, canActivate: [tableAccessGuard] },
   { path: 'cocina', component: TableroPedidos },
+  { path: 'camarero/menu/:id', component: MenuCamarero },
+  { path: 'camarero/pedido/:id', component: PedidoCamarero },
 ];

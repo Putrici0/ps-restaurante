@@ -1,27 +1,65 @@
 <header class="app-header">
-  <div class="logo-container">
-    <img src="logo.png" alt="Logo Restaurante" class="logo" />
-  </div>
+  <div class="header-bar">
+    <button
+      type="button"
+      class="hamburger-btn"
+      (click)="toggleMenu()"
+      [attr.aria-expanded]="menuAbierto()"
+      aria-label="Abrir menú"
+    >
+      ☰
+    </button>
 
-  <nav class="nav-links">
-    <a [routerLink]="['/menu', tableId()]" routerLinkActive="active">MENÚ</a>
-    <a href="#" (click)="abrirConfirmacion($event)">SOLICITAR ATENCIÓN</a>
-    <a [routerLink]="['/cuenta', tableId()]" routerLinkActive="active">CUENTA</a>
-  </nav>
-</header>
-
-@if (estadoLlamada() !== 'oculto') {
-  <div class="overlay-camarero">
-    <div class="popup-camarero">
-      @if (estadoLlamada() === 'confirmacion') {
-        <p class="popup-mensaje">¿SEGURO QUE QUIERES LLAMAR AL CAMARERO?</p>
-        <div class="popup-botones">
-          <button class="btn-opcion" (click)="confirmarLlamada()">SI</button>
-          <button class="btn-opcion" (click)="cancelarLlamada()">NO</button>
-        </div>
-      } @else if (estadoLlamada() === 'en-camino') {
-        <p class="popup-mensaje exito">UN CAMARERO ESTÁ EN CAMINO</p>
-      }
+    <div class="logo-container">
+      <img class="logo" src="logo.png" />
     </div>
   </div>
-}
+
+  @if (menuAbierto()) {
+    <div class="menu-panel">
+      <nav class="nav-links">
+        <a
+          [routerLink]="['/menu', tableId()]"
+          routerLinkActive="active"
+          (click)="cerrarMenu()"
+        >
+          Menú
+        </a>
+
+        <a href="#" (click)="abrirConfirmacion($event)">
+          Solicitar Atención
+        </a>
+
+        <a
+          [routerLink]="['/cuenta', tableId()]"
+          routerLinkActive="active"
+          (click)="cerrarMenu()"
+        >
+          Cuenta
+        </a>
+      </nav>
+    </div>
+  }
+
+  @if (estadoLlamada() !== 'oculto') {
+    <div class="overlay-camarero">
+      @if (estadoLlamada() === 'confirmacion') {
+        <div class="popup-camarero">
+          <p class="popup-mensaje">
+            ¿Seguro que quieres llamar al camarero?
+          </p>
+          <div class="popup-botones">
+            <button class="btn-opcion" (click)="confirmarLlamada()">Sí</button>
+            <button class="btn-opcion" (click)="cancelarLlamada()">No</button>
+          </div>
+        </div>
+      } @else if (estadoLlamada() === 'en-camino') {
+        <div class="popup-camarero">
+          <p class="popup-mensaje exito">
+            Un camarero está en camino
+          </p>
+        </div>
+      }
+    </div>
+  }
+</header>

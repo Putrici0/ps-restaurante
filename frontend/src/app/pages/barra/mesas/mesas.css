@@ -137,13 +137,13 @@
 
 .detalle-columna {
   position: fixed;
-  right: 0;
-  top: 250px; /* Anclado debajo del navbar actual */
-  bottom: 0;
-  width: 320px; /* Usamos el ancho de tu compañero para no romper su interior */
+  right: 26px;
+  top: 250px;
+  width: 320px;
+  height: auto;
+  bottom: auto;
   z-index: 1000;
-  padding-right: 26px;
-  padding-top: 10px;
+  padding: 0;
   animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
@@ -539,12 +539,6 @@
     grid-template-columns: 1fr;
     transform: none;
     margin-right: 0; /* Añadir esto */
-  }
-
-  .detalle-columna {
-    position: static;
-    width: 100%;
-    animation: none; /* Añadir esto */
   }
 
   .mesas-topbar-right {

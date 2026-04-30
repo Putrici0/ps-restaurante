@@ -2,9 +2,8 @@
   background: #f7f7f7;
   border-radius: 18px;
   padding: 26px 20px 18px;
-  margin-top: 10px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.12);
-  min-height: 760px;
+  min-height: 620px;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
