@@ -26,7 +26,7 @@ export const routes: Routes = [
   { path: 'cuenta/:id', component: BillPage, canActivate: [tableAccessGuard] },
   { path: 'cocina', component: TableroPedidos },
   { path: 'camarero/menu/:id', component: MenuCamarero },
-  { path: 'camarero/pedido/:id', component: PedidoCamarero },
+  { path: 'camarero/cuenta/:id', component: PedidoCamarero },
   { path: 'camarero/bebidas', component: BebidasCamarero },
   { path: 'camarero/platos', component: PlatosCamarero },
 ];
