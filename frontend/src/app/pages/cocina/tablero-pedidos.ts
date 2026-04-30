@@ -29,6 +29,10 @@ export class TableroPedidos implements OnInit, OnDestroy {
   private readonly pollingMs = 8000;
   private readonly refreshAfterWriteMs = 1500;
 
+  private readonly urgentesStorageKey = 'cocina-ordenes-urgentes';
+
+  readonly ordenesUrgentes = signal<Set<string>>(new Set<string>());
+
   readonly cargando = signal(true);
   readonly actualizando = signal(false);
   readonly error = signal<string | null>(null);
@@ -49,6 +53,7 @@ export class TableroPedidos implements OnInit, OnDestroy {
   );
 
   ngOnInit(): void {
+    this.ordenesUrgentes.set(this.cargarUrgentesLocales());
     this.cargarTablero(true);
 
     this.intervaloRefresco = window.setInterval(() => {
@@ -72,6 +77,77 @@ export class TableroPedidos implements OnInit, OnDestroy {
     }
   }
 
+  private cargarUrgentesLocales(): Set<string> {
+    try {
+      const raw = localStorage.getItem(this.urgentesStorageKey);
+
+      if (!raw) {
+        return new Set<string>();
+      }
+
+      const ids = JSON.parse(raw);
+
+      if (!Array.isArray(ids)) {
+        return new Set<string>();
+      }
+
+      return new Set(ids.filter((id): id is string => typeof id === 'string'));
+    } catch {
+      return new Set<string>();
+    }
+  }
+
+  private guardarUrgentesLocales(urgentes: Set<string>): void {
+    localStorage.setItem(this.urgentesStorageKey, JSON.stringify([...urgentes]));
+  }
+
+  private desmarcarUrgenteLocal(ordenId: string): void {
+    const urgentes = new Set(this.ordenesUrgentes());
+
+    if (!urgentes.has(ordenId)) {
+      return;
+    }
+
+    urgentes.delete(ordenId);
+    this.ordenesUrgentes.set(urgentes);
+    this.guardarUrgentesLocales(urgentes);
+  }
+
+  private ordenarConUrgentes(ordenes: OrdenCocinaResponse[]): OrdenCocinaResponse[] {
+    const urgentes = this.ordenesUrgentes();
+
+    return [...ordenes].sort((a, b) => {
+      const aUrgente = urgentes.has(a.id);
+      const bUrgente = urgentes.has(b.id);
+
+      if (aUrgente && !bUrgente) return -1;
+      if (!aUrgente && bUrgente) return 1;
+
+      const prioridadA = a.prioridad?.total ?? 0;
+      const prioridadB = b.prioridad?.total ?? 0;
+
+      if (prioridadA !== prioridadB) {
+        return prioridadB - prioridadA;
+      }
+
+      return new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+    });
+  }
+
+  private limpiarUrgentesInexistentes(ordenes: OrdenCocinaResponse[]): void {
+    const idsExistentes = new Set(ordenes.map((orden) => orden.id));
+    const urgentesActuales = this.ordenesUrgentes();
+
+    const urgentesLimpios = new Set(
+      [...urgentesActuales].filter((id) => idsExistentes.has(id)),
+    );
+
+    if (urgentesLimpios.size !== urgentesActuales.size) {
+      this.ordenesUrgentes.set(urgentesLimpios);
+      this.guardarUrgentesLocales(urgentesLimpios);
+    }
+  }
+
   recargar(): void {
     this.cargarTablero(true);
   }
@@ -89,6 +165,25 @@ export class TableroPedidos implements OnInit, OnDestroy {
     return this.ordenDetalleAbiertaId() === ordenId;
   }
 
+  esUrgente(orden: OrdenCocinaResponse): boolean {
+    return this.ordenesUrgentes().has(orden.id);
+  }
+
+  toggleUrgente(orden: OrdenCocinaResponse): void {
+    const urgentes = new Set(this.ordenesUrgentes());
+
+    if (urgentes.has(orden.id)) {
+      urgentes.delete(orden.id);
+    } else {
+      urgentes.add(orden.id);
+    }
+
+    this.ordenesUrgentes.set(urgentes);
+    this.guardarUrgentesLocales(urgentes);
+
+    this.ordenesPendientes.set(this.ordenarConUrgentes(this.ordenesPendientes()));
+  }
+
   pasarAPreparacion(ordenId: string): void {
     if (this.actualizando()) return;
 
@@ -103,7 +198,10 @@ export class TableroPedidos implements OnInit, OnDestroy {
       .marcarEnPreparacion(ordenId)
       .pipe(take(1))
       .subscribe({
-        next: () => this.recargarConRetardo(this.refreshAfterWriteMs),
+        next: () => {
+          this.desmarcarUrgenteLocal(ordenId);
+          this.recargarConRetardo(this.refreshAfterWriteMs);
+        },
         error: (err) => {
           console.error(err);
           this.error.set('No se ha podido actualizar el estado de la orden.');
@@ -400,9 +498,17 @@ export class TableroPedidos implements OnInit, OnDestroy {
           const preparacion = data?.enPreparacion ?? [];
           const listas = data?.listas ?? [];
 
-          this.ordenesPendientes.set(pendientes);
+          const pendientesConUrgentes = this.ordenarConUrgentes(pendientes);
+
+          this.ordenesPendientes.set(pendientesConUrgentes);
           this.ordenesPreparacion.set(preparacion);
           this.ordenesListas.set(listas);
+
+          this.limpiarUrgentesInexistentes([
+            ...pendientes,
+            ...preparacion,
+            ...listas,
+          ]);
 
           const total = pendientes.length + preparacion.length + listas.length;
 

@@ -524,3 +524,26 @@
   display: block;
   margin-bottom: 0.2rem;
 }
+
+.urgent-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.33rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+  background: #fdeceb;
+  color: #a13028;
+  border: 1px solid rgba(161, 48, 40, 0.22);
+}
+
+.action-btn--urgent {
+  background: #a13028;
+  color: #fff;
+}
+
+.action-btn--urgent:hover {
+  filter: brightness(0.96);
+}

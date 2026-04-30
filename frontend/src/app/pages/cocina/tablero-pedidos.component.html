@@ -64,6 +64,9 @@
                         <span [class]="prioridadClase(orden)">
                           {{ prioridadTexto(orden) }}
                         </span>
+                        @if (esUrgente(orden)) {
+                          <span class="urgent-badge">URGENTE</span>
+                        }
                       </div>
 
                       <span [class]="etaClase(orden)">
@@ -85,7 +88,13 @@
                       <button class="action-btn action-btn--ghost" type="button" (click)="toggleDetalle(orden.id)">
                         {{ detalleAbierto(orden.id) ? 'Ocultar detalle' : 'Detalle' }}
                       </button>
-
+                      <button
+                        class="action-btn action-btn--urgent"
+                        type="button"
+                        (click)="toggleUrgente(orden)"
+                      >
+                        {{ esUrgente(orden) ? 'Quitar urgente' : 'Urgente' }}
+                      </button>
                       <button
                         class="action-btn action-btn--primary"
                         type="button"
