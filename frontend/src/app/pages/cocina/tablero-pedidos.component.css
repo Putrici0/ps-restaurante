@@ -1,16 +1,11 @@
-:host {
-  display: block;
-}
+:host { display: block; }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 .kitchen-page {
   min-height: 100vh;
-  background:
-    radial-gradient(circle at top left, rgba(212, 181, 150, 0.16), transparent 35%),
-    linear-gradient(180deg, #fffaf5 0%, #f5eee6 100%);
+  background: radial-gradient(circle at top left, rgba(212, 181, 150, 0.16), transparent 35%),
+  linear-gradient(180deg, #fffaf5 0%, #f5eee6 100%);
   color: #2b2018;
 }
 
@@ -34,9 +29,7 @@
   align-items: center;
 }
 
-.kitchen-hero__content {
-  min-width: 0;
-}
+.kitchen-hero__content { min-width: 0; }
 
 .kitchen-hero__eyebrow {
   margin: 0 0 0.25rem;
@@ -359,6 +352,17 @@
   border: 1px solid rgba(95, 72, 58, 0.22);
 }
 
+/* Botón urgente: outline para no saturar la tarjeta de rojo */
+.action-btn--urgent {
+  background: transparent;
+  color: #a13028;
+  border: 1px solid rgba(161, 48, 40, 0.45);
+}
+
+.action-btn--urgent:hover {
+  background: rgba(253, 236, 235, 0.9);
+}
+
 .eta {
   display: inline-flex;
   align-items: center;
@@ -380,9 +384,10 @@
   color: #8a6200;
 }
 
+/* Retraso crítico: rojo suave, menos protagonista que URGENTE */
 .eta--late {
-  background: #fdeceb;
-  color: #a13028;
+  background: #fff0e8;
+  color: #9a4b12;
 }
 
 .eta--ready {
@@ -448,6 +453,50 @@
   }
 }
 
+/* Prioridad: neutra. No debe competir con URGENTE */
+.priority-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.33rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+  background: #f0ebe5;
+  color: #4b3a2f;
+  border: 1px solid rgba(75, 58, 47, 0.12);
+}
+
+.priority-badge--normal,
+.priority-badge--medium,
+.priority-badge--high,
+.priority-badge--critical {
+  background: #f0ebe5;
+  color: #4b3a2f;
+  border: 1px solid rgba(75, 58, 47, 0.12);
+}
+
+.priority-reason {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+/* Único indicador rojo fuerte de la tarjeta */
+.urgent-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.33rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+  background: #fff;
+  color: #a13028;
+  border: 1.5px solid rgba(161, 48, 40, 0.42);
+}
+
 @media (min-width: 980px) {
   .board {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -486,64 +535,4 @@
   .order-card__footer--two {
     grid-template-columns: 1fr;
   }
-}
-
-
-.priority-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.33rem 0.58rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
-.priority-badge--normal {
-  background: #f0ebe5;
-  color: #6a4f3b;
-}
-
-.priority-badge--medium {
-  background: #fff6dd;
-  color: #8a6200;
-}
-
-.priority-badge--high {
-  background: #fde8d1;
-  color: #9a4b12;
-}
-
-.priority-badge--critical {
-  background: #fdeceb;
-  color: #a13028;
-}
-
-.priority-reason {
-  display: block;
-  margin-bottom: 0.2rem;
-}
-
-.urgent-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.33rem 0.58rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 900;
-  white-space: nowrap;
-  background: #fdeceb;
-  color: #a13028;
-  border: 1px solid rgba(161, 48, 40, 0.22);
-}
-
-.action-btn--urgent {
-  background: #a13028;
-  color: #fff;
-}
-
-.action-btn--urgent:hover {
-  filter: brightness(0.96);
 }
