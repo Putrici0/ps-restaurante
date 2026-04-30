@@ -1,0 +1,135 @@
+/* --- ESTILO GENERAL DE LA PÁGINA --- */
+.bebidas-page {
+  background-color: #e5ddd0; /* Color de fondo unificado para toda la pantalla */
+  min-height: 100vh;
+}
+
+/* --- HEADER SUB-MENU --- */
+.mobile-sub-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background-color: #e5ddd0; /* Mismo color que la página */
+  border-bottom: 1px solid rgba(0,0,0,0.05); /* Línea sutil para separar */
+}
+
+.page-title {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: #000;
+  margin: 0;
+  font-family: 'Arial Black', sans-serif;
+}
+
+/* La etiqueta (Badge) modo cápsula */
+.summary-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #d1c5b4; /* Un tono ligeramente más oscuro para resaltar */
+  border: 1px solid #a89d8e;
+  border-radius: 20px;
+  padding: 6px 14px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  background-color: #b91d1d;
+  border-radius: 50%;
+}
+
+.count-text {
+  font-size: 0.8rem;
+  color: #333;
+  font-weight: 600;
+}
+
+/* --- CONTENEDOR DE LA LISTA --- */
+.bebidas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 15px;
+  background-color: #e5ddd0;
+}
+
+/* --- AJUSTES DEL COMPONENTE HIJO (pedido-card) --- */
+
+/* Forzar fila horizontal */
+.bebidas-list ::ng-deep .pedido-card {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  background-color: #cdc1b0 !important;
+  border-radius: 25px !important;
+  padding: 10px !important;
+  gap: 10px !important;
+}
+
+/* Caja de la mesa: Pequeña y con borde izquierdo */
+.bebidas-list ::ng-deep .mesa-box {
+  min-width: 60px !important;
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 12px !important;
+  background-color: #e5ddd0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin: 0 !important;
+  gap: 0 !important;
+
+  /* Limpieza de bordes y sombras para que no se vea el "recuadro feo" */
+  box-shadow: none !important;
+  border: none !important;
+  border-top: 5px solid #b91d1d !important;
+}
+
+.bebidas-list ::ng-deep .mesa-label {
+  font-size: 0.55rem !important;
+  font-weight: 700 !important;
+  margin-bottom: -2px !important;
+}
+
+.bebidas-list ::ng-deep .mesa-numero {
+  font-size: 1.2rem !important;
+  font-weight: 900 !important;
+}
+
+/* Bloque central de texto */
+.bebidas-list ::ng-deep .pedido-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+}
+
+/* Botones: Ajustados para móvil */
+.bebidas-list ::ng-deep .pedido-actions {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+  margin-left: auto !important;
+  width: 100px !important;
+}
+
+.bebidas-list ::ng-deep .btn-action {
+  padding: 6px 4px !important;
+  font-size: 0.65rem !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  min-height: 30px !important;
+  width: 100% !important;
+  text-transform: uppercase !important;
+}
+
+/* Ajuste del nombre de la bebida */
+.bebidas-list ::ng-deep .pedido-items {
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  color: #222 !important;
+}

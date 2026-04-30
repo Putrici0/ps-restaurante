@@ -1,0 +1,72 @@
+<app-camarero-header/>
+
+<div class="layout">
+  <div class="controls-bar">
+    <div class="tabs">
+      <button [class.active]="zonaActiva() === 'interior'" (click)="cambiarZona('interior')">INTERIOR</button>
+      <button [class.active]="zonaActiva() === 'terraza'" (click)="cambiarZona('terraza')">TERRAZA</button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item"><span class="dot libre"></span> Libre</div>
+      <div class="legend-item"><span class="dot ocupada"></span> Ocupado</div>
+      <div class="legend-item"><span class="dot reservada"></span> Reservado</div>
+    </div>
+  </div>
+
+  @if (error()) {
+    <div class="error-banner">{{ error() }}</div>
+  }
+
+  <div class="mesas-scroll-area">
+    <div class="mesas-grid">
+      @for(mesa of mesasFiltradas(); track mesa.id) {
+      <div class="mesa-card-wrapper" (click)="abrirMesa(mesa)">
+        <div class="mesa-card" [ngClass]="mesa.estado.toLowerCase()">
+          <span class="mesa-id">{{ mesa.id.replace('M', '') }}</span>
+          <span class="mesa-pax">{{ mesa.capacidad || 4 }} Pax</span>
+        </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if(mesaSeleccionada(); as mesaSel) {
+    <div class="modal-overlay" (click)="cerrarModal()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+
+        <p class="modal-subtitle">MESA SELECCIONADA</p>
+        <h2 class="modal-title">Mesa {{ mesaSel.id.replace('M', '') }}</h2>
+        <span class="modal-pax">{{ mesaSel.capacidad || 4 }} Pax</span>
+
+        <hr class="divider">
+
+        <div class="modal-actions">
+          <button class="action-btn"
+                  [disabled]="mesaSel.estado === 'libre'"
+                  (click)="verCuenta(mesaSel)">
+            Ver Cuenta
+          </button>
+
+          <button class="action-btn"
+                  [disabled]="mesaSel.estado === 'libre'"
+                  (click)="hacerPedido(mesaSel.id)">
+            Hacer Pedido
+          </button>
+
+          <button class="action-btn" (click)="mostrarContrasena(mesaSel.id)">
+            Contraseña
+          </button>
+        </div>
+
+        <hr class="divider">
+
+        <button class="main-action-btn"
+                [disabled]="mesaSel.estado !== 'libre' || accionMesaId() === mesaSel.id"
+                (click)="ocuparMesa(mesaSel.id)">
+          {{ accionMesaId() === mesaSel.id ? 'OCUPANDO...' : 'OCUPAR MESA' }}
+        </button>
+      </div>
+    </div>
+  }
+</div>
