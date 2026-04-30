@@ -31,7 +31,6 @@ export const routes: Routes = [
   { path: 'camarero/cuenta/:id', component: PedidoCamarero },
   { path: 'camarero/bebidas', component: BebidasCamarero },
   { path: 'camarero/platos', component: PlatosCamarero },
-  { path: 'camarero/pedido/:id', component: PedidoCamarero },
   { path: 'camarero/login', component: LoginCamarero },
   { path: 'camarero/mesas', component: MesasCamarero },
 ];
