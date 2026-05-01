@@ -134,7 +134,6 @@ public class CocinaPrioridadService {
             motivos.add("-20 porque aún quedan principales pendientes");
             return -20;
         }
-
         return 0;
     }
 

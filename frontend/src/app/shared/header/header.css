@@ -15,7 +15,7 @@
 
 .header-bar {
   position: relative;
-  height: 92px;
+  height: 110px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -44,7 +44,7 @@
 
 .logo {
   height: 80px;
-  width: 80px;
+  width: auto;
   object-fit: contain;
 }
 

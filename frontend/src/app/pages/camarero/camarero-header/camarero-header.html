@@ -1,19 +1,100 @@
-<div class="header">
-  <button class="hamburger" (click)="toggleMenu()">☰</button>
+<header class="header">
+  <button type="button" class="hamburger" (click)="toggleMenu()" aria-label="Abrir menú">
+    ☰
+  </button>
 
   <div class="header-center">
-    <img src="logo.png" alt="Logo" class="header-logo">
+    <img src="logo.png" alt="Logo" class="header-logo" />
   </div>
 
-  <!-- The right side is empty to balance the hamburger menu -->
-  <div class="header-right-spacer"></div>
-</div>
+  <div class="notifications-area">
+    <button
+      type="button"
+      class="mode-button"
+      (click)="cambiarModoAviso()"
+      [attr.aria-label]="textoModoAvisoLargo()"
+    >
+      {{ textoModoAviso() }}
+    </button>
 
-<div class="sidebar" [class.open]="menuAbierto">
+    <div class="bell-wrapper">
+      <button
+        type="button"
+        class="bell-button"
+        aria-label="Abrir notificaciones"
+        (click)="togglePanelNotificaciones()"
+      >
+        🔔
+
+        @if (totalNotificaciones() > 0) {
+          <span class="notification-badge">
+            {{ totalNotificaciones() }}
+          </span>
+        }
+      </button>
+
+      @if (panelNotificacionesAbierto()) {
+        <section class="notification-panel">
+          <div class="notification-panel-header">
+            <div>
+              <strong>Pedidos listos</strong>
+              <span>{{ totalNotificaciones() }} pendientes</span>
+            </div>
+
+            <button type="button" class="close-panel" (click)="cerrarPanelNotificaciones()">
+              ✕
+            </button>
+          </div>
+
+          @if (totalNotificaciones() === 0) {
+            <div class="empty-notifications">
+              No hay pedidos listos pendientes.
+            </div>
+          } @else {
+            <div class="notification-list">
+              @for (notificacion of notificacionesRecoger(); track notificacion.id) {
+                <article class="notification-item">
+                  <div class="notification-info">
+                    <strong>{{ mesaTexto(notificacion) }}</strong>
+                    <p>Pedido listo para recoger</p>
+                    <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="mark-read"
+                    (click)="marcarComoLeida(notificacion)"
+                  >
+                    Vista
+                  </button>
+                </article>
+              }
+            </div>
+
+            <button type="button" class="mark-all" (click)="marcarTodasComoLeidas()">
+              Marcar todas como vistas
+            </button>
+          }
+        </section>
+      }
+    </div>
+  </div>
+</header>
+
+@if (errorNotificaciones()) {
+  <div class="notification-error">
+    {{ errorNotificaciones() }}
+  </div>
+}
+
+<nav class="sidebar" [class.open]="menuAbierto">
   <a routerLink="/camarero/mesas" (click)="toggleMenu()">Mesas</a>
   <a routerLink="/camarero/platos" (click)="toggleMenu()">Platos</a>
   <a routerLink="/camarero/bebidas" (click)="toggleMenu()">Bebidas</a>
-  <button class="logout">Cerrar sesión</button>
-</div>
+
+  <button type="button" class="logout">
+    Cerrar sesión
+  </button>
+</nav>
 
 <div class="overlay" [class.show]="menuAbierto" (click)="toggleMenu()"></div>

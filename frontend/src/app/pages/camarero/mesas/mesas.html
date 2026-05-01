@@ -21,11 +21,11 @@
   <div class="mesas-scroll-area">
     <div class="mesas-grid">
       @for(mesa of mesasFiltradas(); track mesa.id) {
-      <div class="mesa-card-wrapper" (click)="abrirMesa(mesa)">
-        <div class="mesa-card" [ngClass]="mesa.estado.toLowerCase()">
-          <span class="mesa-id">M{{ mesa.id }}</span>
-          <span class="mesa-pax">{{ mesa.capacidad || 4 }} Pax</span>
-        </div>
+        <div class="mesa-card-wrapper" (click)="abrirMesa(mesa)">
+          <div class="mesa-card" [ngClass]="mesa.estado.toLowerCase()">
+            <span class="mesa-id">M{{ mesa.id }}</span>
+            <span class="mesa-pax">{{ mesa.capacidad || 4 }} Pax</span>
+          </div>
         </div>
       }
     </div>
@@ -54,9 +54,23 @@
             Hacer Pedido
           </button>
 
-          <button class="action-btn" (click)="mostrarContrasena(mesaSel.id)">
+          <button class="action-btn"
+                  [disabled]="mesaSel.estado === 'libre'"
+                  (click)="toggleContrasena()">
             Contraseña
           </button>
+
+          @if (mostrarContrasenaModal() && mesaSel.cuentaActiva) {
+            <div class="contrasena-dropdown">
+              <span class="contrasena-label">Contraseña</span>
+              <span class="contrasena-value">{{ mesaSel.cuentaActiva.password }}</span>
+            </div>
+          }
+          @if (mostrarContrasenaModal() && !mesaSel.cuentaActiva) {
+            <div class="contrasena-dropdown">
+              <span class="contrasena-label">Sin cuenta activa</span>
+            </div>
+          }
         </div>
 
         <hr class="divider">
