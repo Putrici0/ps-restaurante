@@ -35,7 +35,12 @@
         </a>
       </nav>
     </div>
+
+  <div
+    class="menu-overlay"
+    [class.show]="menuAbierto()"
+    (click)="cerrarMenu()"
+  ></div>
   }
-
-
 </header>
+
