@@ -20,6 +20,8 @@ interface ItemCuentaAgrupado {
   cantidad: number;
   estados: string[];
   subtotal: number;
+  ordenesIds: string[];
+  pagado: boolean;
 }
 
 @Component({
@@ -51,10 +53,14 @@ export class PedidoCamarero implements OnInit, OnDestroy {
     return !this.cargando() && this.cuentaActiva() === null;
   });
 
-  readonly itemsAgrupados = computed<ItemCuentaAgrupado[]>(() => {
+  readonly itemsPendientes = computed(() => {
     const mapa = new Map<string, ItemCuentaAgrupado>();
 
     for (const orden of this.ordenes()) {
+      if (orden.pagada || orden.ordenEstado === 'Cancelado') {
+        continue;
+      }
+
       const plato = orden.plato;
       const key = plato.id;
 
@@ -69,6 +75,8 @@ export class PedidoCamarero implements OnInit, OnDestroy {
           cantidad: 0,
           estados: [],
           subtotal: 0,
+          ordenesIds: [],
+          pagado: false,
         });
       }
 
@@ -76,12 +84,63 @@ export class PedidoCamarero implements OnInit, OnDestroy {
       item.cantidad += 1;
       item.estados.push(orden.ordenEstado);
       item.subtotal += Number(orden.precio);
+
+      if (orden.id) {
+        item.ordenesIds.push(orden.id);
+      }
     }
 
     return Array.from(mapa.values()).sort((a, b) =>
       a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }),
     );
   });
+
+  readonly itemsPagados = computed(() => {
+    const mapa = new Map<string, ItemCuentaAgrupado>();
+
+    for (const orden of this.ordenes()) {
+      if (!orden.pagada || orden.ordenEstado === 'Cancelado') {
+        continue;
+      }
+
+      const plato = orden.plato;
+      const key = plato.id;
+
+      if (!mapa.has(key)) {
+        mapa.set(key, {
+          platoId: plato.id,
+          nombre: plato.nombre,
+          categoria: plato.categoria,
+          descripcion: plato.descripcion,
+          imagen: plato.imagen,
+          precioUnitario: Number(orden.precio),
+          cantidad: 0,
+          estados: [],
+          subtotal: 0,
+          ordenesIds: [],
+          pagado: true,
+        });
+      }
+
+      const item = mapa.get(key)!;
+      item.cantidad += 1;
+      item.estados.push(orden.ordenEstado);
+      item.subtotal += Number(orden.precio);
+
+      if (orden.id) {
+        item.ordenesIds.push(orden.id);
+      }
+    }
+
+    return Array.from(mapa.values()).sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }),
+    );
+  });
+
+  readonly itemsAgrupados = computed(() => [
+    ...this.itemsPendientes(),
+    ...this.itemsPagados(),
+  ]);
 
   readonly totalItems = computed(() =>
     this.itemsAgrupados().reduce((acc, item) => acc + item.cantidad, 0),

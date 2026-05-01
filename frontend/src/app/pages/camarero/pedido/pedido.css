@@ -289,3 +289,28 @@
     padding: 0.75rem 1rem;
   }
 }
+
+.bill-item-card--paid {
+  opacity: 0.7;
+  background: rgba(240, 240, 240, 0.8);
+  border-color: rgba(180, 180, 180, 0.2);
+  box-shadow: none;
+  filter: grayscale(0.4);
+}
+
+.bill-item-card--paid .bill-item-card__subtotal {
+  color: #7a6454;
+  text-decoration: line-through;
+  opacity: 0.8;
+}
+
+.bill-item-card--paid .bill-badge {
+  background: #e5e5e5;
+  color: #7a6454;
+}
+
+.status-pagado {
+  color: #2d8a3e;
+  font-weight: 800;
+  text-transform: uppercase;
+}

@@ -57,8 +57,8 @@
     </section>
     } @else {
     <section class="bill-list">
-      @for (item of itemsAgrupados(); track item.platoId) {
-      <article class="bill-item-card">
+      @for (item of itemsAgrupados(); track item.platoId + (item.pagado ? '-paid' : '-pending')) {
+      <article class="bill-item-card" [class.bill-item-card--paid]="item.pagado">
         <div class="bill-item-card__image-wrap">
           <img
             class="bill-item-card__image"
@@ -81,13 +81,12 @@
             </strong>
           </div>
 
-          <p class="bill-item-card__description">
-            {{ item.descripcion }}
-          </p>
+          <p class="bill-item-card__description">{{ item.descripcion }}</p>
 
           <div class="bill-item-card__meta">
                   <span class="bill-badge">
-                    {{ item.cantidad }} {{ item.cantidad === 1 ? 'unidad' : 'unidades' }}
+                    {{ item.cantidad }}
+                    {{ item.cantidad === 1 ? 'unidad' : 'unidades' }}
                   </span>
 
             <span class="bill-badge bill-badge--light">
@@ -96,7 +95,11 @@
           </div>
 
           <p class="bill-item-card__status">
+            @if (item.pagado) {
+            Estado: <span class="status-pagado">Pagado</span>
+            } @else {
             Estado: {{ obtenerResumenEstado(item) }}
+            }
           </p>
         </div>
       </article>
