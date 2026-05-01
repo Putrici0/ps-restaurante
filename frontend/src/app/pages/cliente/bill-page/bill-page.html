@@ -89,8 +89,8 @@
         </section>
       } @else {
         <section class="bill-list">
-          @for (item of itemsAgrupados(); track item.platoId) {
-            <article class="bill-item-card">
+          @for (item of itemsAgrupados(); track item.platoId + (item.pagado ? '-paid' : '-pending')) {
+          <article class="bill-item-card" [class.bill-item-card--paid]="item.pagado">
               <div class="bill-item-card__image-wrap">
                 <img
                   class="bill-item-card__image"
@@ -126,7 +126,11 @@
                 </div>
 
                 <p class="bill-item-card__status">
+                  @if (item.pagado) {
+                  Estado: <span class="status-pagado">Pagado</span>
+                  } @else {
                   Estado: {{ obtenerResumenEstado(item) }}
+                  }
                 </p>
               </div>
             </article>
@@ -170,7 +174,7 @@
             <span>PRECIO</span>
           </div>
 
-          @for (item of itemsAgrupados(); track item.platoId) {
+          @for (item of itemsPendientes(); track item.platoId) {
             <label class="payment-row">
               <span class="payment-row__name">
                 <input

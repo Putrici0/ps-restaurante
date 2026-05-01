@@ -22,6 +22,7 @@ interface ItemCuentaAgrupado {
   estados: string[];
   subtotal: number;
   ordenesIds: string[];
+  pagado: boolean;
 }
 
 @Component({
@@ -65,7 +66,7 @@ export class BillPage implements OnInit, OnDestroy {
     return !this.cargando() && this.cuentaActiva() === null;
   });
 
-  readonly itemsAgrupados = computed(() => {
+  readonly itemsPendientes = computed(() => {
     const mapa = new Map<string, ItemCuentaAgrupado>();
 
     for (const orden of this.ordenes()) {
@@ -88,6 +89,7 @@ export class BillPage implements OnInit, OnDestroy {
           estados: [],
           subtotal: 0,
           ordenesIds: [],
+          pagado: false,
         });
       }
 
@@ -106,6 +108,53 @@ export class BillPage implements OnInit, OnDestroy {
     );
   });
 
+  readonly itemsPagados = computed(() => {
+    const mapa = new Map<string, ItemCuentaAgrupado>();
+
+    for (const orden of this.ordenes()) {
+      if (!orden.pagada || orden.ordenEstado === 'Cancelado') {
+        continue;
+      }
+
+      const plato = orden.plato;
+      const key = plato.id;
+
+      if (!mapa.has(key)) {
+        mapa.set(key, {
+          platoId: plato.id,
+          nombre: plato.nombre,
+          categoria: plato.categoria,
+          descripcion: plato.descripcion,
+          imagen: plato.imagen,
+          precioUnitario: Number(orden.precio),
+          cantidad: 0,
+          estados: [],
+          subtotal: 0,
+          ordenesIds: [],
+          pagado: true,
+        });
+      }
+
+      const item = mapa.get(key)!;
+      item.cantidad += 1;
+      item.estados.push(orden.ordenEstado);
+      item.subtotal += Number(orden.precio);
+
+      if (orden.id) {
+        item.ordenesIds.push(orden.id);
+      }
+    }
+
+    return Array.from(mapa.values()).sort((a, b) =>
+      a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }),
+    );
+  });
+
+  readonly itemsAgrupados = computed(() => [
+    ...this.itemsPendientes(),
+    ...this.itemsPagados(),
+  ]);
+
   readonly totalItems = computed(() =>
     this.itemsAgrupados().reduce((acc, item) => acc + item.cantidad, 0),
   );
@@ -113,7 +162,7 @@ export class BillPage implements OnInit, OnDestroy {
   readonly totalSeleccionado = computed(() => {
     const seleccionadas = new Set(this.ordenesSeleccionadas());
 
-    const total = this.itemsAgrupados().reduce((acc, item) => {
+    const total = this.itemsPendientes().reduce((acc, item) => {
       const cantidadSeleccionada = item.ordenesIds.filter((id) =>
         seleccionadas.has(id),
       ).length;
@@ -130,7 +179,7 @@ export class BillPage implements OnInit, OnDestroy {
       !this.procesandoPago() &&
       !!this.cuentaActiva() &&
       !this.cuentaCerrada() &&
-      this.itemsAgrupados().length > 0
+      this.itemsPendientes().length > 0
     );
   });
 
@@ -155,7 +204,7 @@ export class BillPage implements OnInit, OnDestroy {
   }
 
   abrirPagoParcial(): void {
-    const ids = this.itemsAgrupados().flatMap((item) => item.ordenesIds);
+    const ids = this.itemsPendientes().flatMap((item) => item.ordenesIds);
     this.ordenesSeleccionadas.set(ids);
     this.vistaPago.set('seleccion');
   }
@@ -222,7 +271,7 @@ export class BillPage implements OnInit, OnDestroy {
     const cuenta = this.cuentaActiva();
     const ordenesSeleccionadas = this.ordenesSeleccionadas();
 
-    const totalOrdenesPendientes = this.itemsAgrupados().reduce(
+    const totalOrdenesPendientes = this.itemsPendientes().reduce(
       (acc, item) => acc + item.ordenesIds.length,
       0,
     );
