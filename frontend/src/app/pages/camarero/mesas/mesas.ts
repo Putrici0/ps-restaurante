@@ -52,6 +52,7 @@ export class MesasCamarero {
   readonly mostrarConfirmacionEliminar = signal(false);
   readonly itemPendienteEliminar = signal<ItemCobroAgrupado | null>(null);
   readonly ordenesSeleccionadas = signal<string[]>([]);
+  readonly mostrarContrasenaModal = signal(false);
 
   readonly mesasFiltradas = computed(() =>
     this.mesas()
@@ -109,14 +110,15 @@ export class MesasCamarero {
 
   cerrarModal(): void {
     this.mesaSeleccionada.set(null);
+    this.mostrarContrasenaModal.set(false);
   }
 
   hacerPedido(mesaId: string): void {
     this.router.navigate(['/camarero/menu', mesaId]);
   }
 
-  mostrarContrasena(mesaId: string): void {
-    alert(`Contraseña de la mesa M${mesaId}: 1234 (Simulado)`);
+  toggleContrasena(): void {
+    this.mostrarContrasenaModal.update(v => !v);
   }
 
   verCuenta(mesa: Mesa): void {

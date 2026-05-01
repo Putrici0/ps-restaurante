@@ -192,7 +192,41 @@
   cursor: pointer;
 }
 
+
 .action-btn:disabled, .main-action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* --- CONTRASEÑA DROPDOWN --- */
+.contrasena-dropdown {
+  background-color: #b89a78;
+  border-radius: 10px;
+  padding: 10px 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  animation: fadeIn 0.15s ease;
+}
+
+.contrasena-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #2f2118;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.contrasena-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #2f2118;
+  letter-spacing: 2px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
