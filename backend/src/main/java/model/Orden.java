@@ -12,6 +12,7 @@ public record Orden(
         OrdenEstado ordenEstado,
         Instant fecha,
         String detalles,
+        boolean urgente,
         boolean pagada,
         Optional<Instant> fechaPago,
         Optional<MetodoPago> metodoPago
@@ -40,6 +41,7 @@ public record Orden(
                 ordenEstado,
                 fecha,
                 detalles,
+                false,
                 false,
                 Optional.empty(),
                 Optional.empty()

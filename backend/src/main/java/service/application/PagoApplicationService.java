@@ -94,6 +94,7 @@ public class PagoApplicationService {
                     orden.ordenEstado(),
                     orden.fecha(),
                     orden.detalles(),
+                    orden.urgente(),
                     true,
                     Optional.of(ahora),
                     Optional.of(metodoPago)
@@ -152,6 +153,7 @@ public class PagoApplicationService {
                     orden.ordenEstado(),
                     orden.fecha(),
                     orden.detalles(),
+                    orden.urgente(),
                     true,
                     Optional.of(ahora),
                     Optional.of(metodoPago)
@@ -235,6 +237,7 @@ public class PagoApplicationService {
                 OrdenEstado.Cancelado,
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 orden.fechaPago(),
                 orden.metodoPago()

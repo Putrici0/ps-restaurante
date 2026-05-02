@@ -43,6 +43,7 @@ export interface OrdenCuentaResponse {
   fechaPago?: string | null;
   metodoPago?: 'EFECTIVO' | 'TARJETA' | null;
   detalles: string;
+  urgente?: boolean;
   pedido: {
     id: string;
   };
@@ -162,6 +163,20 @@ export class CuentaApiService {
   eliminarOrdenDeCuenta(cuentaId: string, ordenId: string): Observable<void> {
     return this.http.delete<void>(
       `${this.apiUrl}/cuentas/${cuentaId}/ordenes/${ordenId}`,
+    );
+  }
+
+  marcarOrdenUrgente(ordenId: string): Observable<OrdenCuentaResponse> {
+    return this.http.post<OrdenCuentaResponse>(
+      `${this.apiUrl}/ordenes/${ordenId}/urgente`,
+      {},
+    );
+  }
+
+  desmarcarOrdenUrgente(ordenId: string): Observable<OrdenCuentaResponse> {
+    return this.http.post<OrdenCuentaResponse>(
+      `${this.apiUrl}/ordenes/${ordenId}/no-urgente`,
+      {},
     );
   }
 }

@@ -15,6 +15,7 @@ public record CocinaOrden(
         OrdenEstado ordenEstado,
         Instant fecha,
         String detalles,
+        boolean urgente,
         boolean pagada,
         CocinaPrioridad prioridad
 ) {

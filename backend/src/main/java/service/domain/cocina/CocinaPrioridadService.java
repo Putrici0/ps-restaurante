@@ -186,6 +186,11 @@ public class CocinaPrioridadService {
     }
 
     private int puntosUrgencia(Orden orden, List<String> motivos) {
+        if (orden != null && orden.urgente()) {
+            motivos.add("+80 por marca urgente");
+            return 80;
+        }
+
         String detalles = orden != null && orden.detalles() != null
                 ? orden.detalles().toLowerCase()
                 : "";

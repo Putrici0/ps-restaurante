@@ -196,6 +196,22 @@ public class OrdenController {
                             ctx.json(orden);
                         });
                     });
+
+                    path("urgente", () -> {
+                        post(ctx -> {
+                            String id = ctx.pathParam("id");
+                            Orden orden = applicationService.marcarOrdenUrgente(id);
+                            ctx.json(orden);
+                        });
+                    });
+
+                    path("no-urgente", () -> {
+                        post(ctx -> {
+                            String id = ctx.pathParam("id");
+                            Orden orden = applicationService.desmarcarOrdenUrgente(id);
+                            ctx.json(orden);
+                        });
+                    });
                 });
             });
         };

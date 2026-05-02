@@ -182,6 +182,35 @@ export class PedidoCamarero implements OnInit, OnDestroy {
     return unicos.join(' · ');
   }
 
+  hayOrdenUrgente(item: ItemCuentaAgrupado): boolean {
+    const ids = new Set(item.ordenesIds);
+    return this.ordenes().some((orden) => ids.has(orden.id) && !!orden.urgente);
+  }
+
+  toggleUrgenteItem(item: ItemCuentaAgrupado): void {
+    const cuentaId = this.cuentaActiva()?.id;
+    if (!cuentaId || item.pagado || item.ordenesIds.length === 0) {
+      return;
+    }
+
+    const marcarComoUrgente = !this.hayOrdenUrgente(item);
+
+    const llamadas = item.ordenesIds.map((ordenId) =>
+      marcarComoUrgente
+        ? this.cuentaApiService.marcarOrdenUrgente(ordenId)
+        : this.cuentaApiService.desmarcarOrdenUrgente(ordenId),
+    );
+
+    forkJoin(llamadas)
+      .pipe(take(1))
+      .subscribe({
+        next: () => this.cargarCuentaCompleta(false),
+        error: () => {
+          this.error.set('No se ha podido actualizar la urgencia de la orden.');
+        },
+      });
+  }
+
   private cargarCuentaCompleta(mostrarLoading: boolean): void {
     if (!this.mesaId) {
       this.error.set('No se ha podido identificar la mesa.');

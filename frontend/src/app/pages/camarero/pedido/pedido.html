@@ -101,6 +101,12 @@
             Estado: {{ obtenerResumenEstado(item) }}
             }
           </p>
+
+          @if (!item.pagado) {
+            <button type="button" class="bill-retry-btn" (click)="toggleUrgenteItem(item)">
+              {{ hayOrdenUrgente(item) ? 'Quitar urgente' : 'Marcar urgente' }}
+            </button>
+          }
         </div>
       </article>
       }

@@ -2,15 +2,21 @@ package service.application;
 
 import dto.cocina.CocinaOrden;
 import dto.cocina.CocinaTablero;
-import service.domain.cocina.CocinaContextoCuenta;
-import service.domain.cocina.CocinaContextoService;
-import service.domain.cocina.CocinaOrdenMapper;
-import service.domain.cocina.CocinaPrioridadService;
-import model.*;
+import model.Categoria;
+import model.Cuenta;
+import model.Mesa;
+import model.Orden;
+import model.OrdenEstado;
+import model.Pedido;
+import model.Plato;
 import repository.interfaces.CuentaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 import repository.interfaces.PlatoRepository;
+import service.domain.cocina.CocinaContextoCuenta;
+import service.domain.cocina.CocinaContextoService;
+import service.domain.cocina.CocinaOrdenMapper;
+import service.domain.cocina.CocinaPrioridadService;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -30,6 +36,9 @@ public class OrdenApplicationService {
     private final CocinaContextoService cocinaContextoService = new CocinaContextoService();
     private final CocinaPrioridadService cocinaPrioridadService = new CocinaPrioridadService();
     private final CocinaOrdenMapper cocinaOrdenMapper = new CocinaOrdenMapper();
+    private static final long TABLERO_CACHE_TTL_MS = 3000;
+    private volatile CocinaTablero cacheTablero;
+    private volatile Instant cacheTableroGeneradoEn;
 
     public OrdenApplicationService(
             OrdenRepository ordenRepository,
@@ -59,41 +68,34 @@ public class OrdenApplicationService {
             return List.of();
         }
 
-        List<Cuenta> cuentasActivas = cuentaRepository.findByEstaPagada(false);
+        java.util.Set<String> cuentasActivasIds = cuentaRepository.findByEstaPagada(false).stream()
+                .map(Cuenta::id)
+                .filter(id -> id != null && !id.isBlank())
+                .collect(java.util.stream.Collectors.toSet());
 
-        List<Pedido> pedidosActivos = cuentasActivas.parallelStream()
-                .flatMap(cuenta -> pedidoRepository.findByCuenta(cuenta).stream()
-                        .map(p -> new Pedido(p.id(), cuenta, p.pedidoEstado(), p.fechaPedido()))
-                )
-                .toList();
+        if (cuentasActivasIds.isEmpty()) {
+            return List.of();
+        }
 
-        java.util.Map<String, Pedido> pedidoMap = pedidosActivos.stream()
-                .filter(p -> p.id() != null)
-                .collect(java.util.stream.Collectors.toMap(Pedido::id, p -> p));
-
-        return pedidosActivos.parallelStream()
-                .flatMap(pedido -> ordenRepository.findByPedido(pedido).stream())
-                .map(orden -> {
-                    String pedidoId = (orden.pedido() != null) ? orden.pedido().id() : null;
-                    Pedido pedidoHidratado = pedidoMap.getOrDefault(pedidoId, orden.pedido());
-
-                    return new Orden(
-                            orden.id(),
-                            pedidoHidratado,
-                            orden.plato(),
-                            orden.precio(),
-                            orden.ordenEstado(),
-                            orden.fecha(),
-                            orden.detalles(),
-                            orden.pagada(),
-                            orden.fechaPago(),
-                            orden.metodoPago()
-                    );
+        return ordenRepository.findAll().stream()
+                .filter(orden -> orden.ordenEstado() != OrdenEstado.Cancelado)
+                .filter(orden -> !orden.pagada())
+                .filter(orden -> {
+                    if (orden.pedido() == null || orden.pedido().cuenta() == null) {
+                        return false;
+                    }
+                    String cuentaId = orden.pedido().cuenta().id();
+                    return cuentaId != null && cuentasActivasIds.contains(cuentaId);
                 })
                 .toList();
     }
 
     public CocinaTablero obtenerTableroCocinaPriorizado() {
+        CocinaTablero tableroCacheado = cacheTableroVigente();
+        if (tableroCacheado != null) {
+            return tableroCacheado;
+        }
+
         Instant ahora = Instant.now();
 
         List<Orden> ordenesCocina = obtenerTodasLasOrdenesActivas().stream()
@@ -127,12 +129,14 @@ public class OrdenApplicationService {
                 )
                 .toList();
 
-        return new CocinaTablero(
+        CocinaTablero tablero = new CocinaTablero(
                 mapearConPrioridad(pendientes, contexto, ahora),
                 mapearConPrioridad(enPreparacion, contexto, ahora),
                 mapearConPrioridad(listas, contexto, ahora),
                 ahora
         );
+        cachearTablero(tablero, ahora);
+        return tablero;
     }
 
     private List<CocinaOrden> mapearConPrioridad(
@@ -276,12 +280,15 @@ public class OrdenApplicationService {
                 OrdenEstado.Pendiente,
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 orden.fechaPago(),
                 orden.metodoPago()
         );
 
-        return ordenRepository.update(id, actualizada);
+        Orden resultado = ordenRepository.update(id, actualizada);
+        invalidarCacheTablero();
+        return resultado;
     }
 
     public Orden marcarOrdenEnPreparacion(String id) {
@@ -296,12 +303,15 @@ public class OrdenApplicationService {
                 OrdenEstado.Preparación,
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 orden.fechaPago(),
                 orden.metodoPago()
         );
 
-        return ordenRepository.update(id, actualizada);
+        Orden resultado = ordenRepository.update(id, actualizada);
+        invalidarCacheTablero();
+        return resultado;
     }
 
     public Orden marcarOrdenLista(String id) {
@@ -316,12 +326,14 @@ public class OrdenApplicationService {
                 OrdenEstado.Listo,
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 orden.fechaPago(),
                 orden.metodoPago()
         );
 
         Orden resultado = ordenRepository.update(id, actualizada);
+        invalidarCacheTablero();
 
         if (pedidoApplicationService != null && orden.pedido() != null && orden.pedido().id() != null) {
             pedidoApplicationService.recalcularEstadoPedido(orden.pedido().id());
@@ -342,12 +354,15 @@ public class OrdenApplicationService {
                 OrdenEstado.Entregado,
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 orden.fechaPago(),
                 orden.metodoPago()
         );
 
-        return ordenRepository.update(id, actualizada);
+        Orden resultado = ordenRepository.update(id, actualizada);
+        invalidarCacheTablero();
+        return resultado;
     }
 
     public Orden marcarOrdenComoListoNuevamente(String id) {
@@ -362,12 +377,61 @@ public class OrdenApplicationService {
                 OrdenEstado.Listo,
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 orden.fechaPago(),
                 orden.metodoPago()
         );
 
-        return ordenRepository.update(id, actualizada);
+        Orden resultado = ordenRepository.update(id, actualizada);
+        invalidarCacheTablero();
+        return resultado;
+    }
+
+    public Orden marcarOrdenUrgente(String id) {
+        Orden orden = ordenRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La orden no existe"));
+
+        Orden actualizada = new Orden(
+                orden.id(),
+                orden.pedido(),
+                orden.plato(),
+                orden.precio(),
+                orden.ordenEstado(),
+                orden.fecha(),
+                orden.detalles(),
+                true,
+                orden.pagada(),
+                orden.fechaPago(),
+                orden.metodoPago()
+        );
+
+        Orden resultado = ordenRepository.update(id, actualizada);
+        invalidarCacheTablero();
+        return resultado;
+    }
+
+    public Orden desmarcarOrdenUrgente(String id) {
+        Orden orden = ordenRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("La orden no existe"));
+
+        Orden actualizada = new Orden(
+                orden.id(),
+                orden.pedido(),
+                orden.plato(),
+                orden.precio(),
+                orden.ordenEstado(),
+                orden.fecha(),
+                orden.detalles(),
+                false,
+                orden.pagada(),
+                orden.fechaPago(),
+                orden.metodoPago()
+        );
+
+        Orden resultado = ordenRepository.update(id, actualizada);
+        invalidarCacheTablero();
+        return resultado;
     }
 
     private Orden hidratarOrdenCompleta(Orden orden) {
@@ -383,6 +447,7 @@ public class OrdenApplicationService {
                 orden.ordenEstado(),
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 orden.fechaPago(),
                 orden.metodoPago()
@@ -449,7 +514,32 @@ public class OrdenApplicationService {
                 cocinaOrden.precio(),
                 cocinaOrden.ordenEstado(),
                 cocinaOrden.fecha(),
-                cocinaOrden.detalles()
+                cocinaOrden.detalles(),
+                cocinaOrden.urgente(),
+                cocinaOrden.pagada(),
+                Optional.empty(),
+                Optional.empty()
         );
+    }
+
+    private synchronized void cachearTablero(CocinaTablero tablero, Instant generadoEn) {
+        this.cacheTablero = tablero;
+        this.cacheTableroGeneradoEn = generadoEn;
+    }
+
+    private CocinaTablero cacheTableroVigente() {
+        CocinaTablero actual = this.cacheTablero;
+        Instant generadoEn = this.cacheTableroGeneradoEn;
+        if (actual == null || generadoEn == null) {
+            return null;
+        }
+
+        long edadMs = Instant.now().toEpochMilli() - generadoEn.toEpochMilli();
+        return edadMs <= TABLERO_CACHE_TTL_MS ? actual : null;
+    }
+
+    private synchronized void invalidarCacheTablero() {
+        this.cacheTablero = null;
+        this.cacheTableroGeneradoEn = null;
     }
 }

@@ -103,7 +103,11 @@ public class PedidoApplicationService {
                             plato.precio(),
                             OrdenEstado.Pendiente,
                             Instant.now(),
-                            detalles
+                            detalles,
+                            false,
+                            false,
+                            java.util.Optional.empty(),
+                            java.util.Optional.empty()
                     );
 
                     Orden ordenGuardada = ordenRepository.save(orden);

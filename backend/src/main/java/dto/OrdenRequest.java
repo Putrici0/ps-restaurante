@@ -6,4 +6,5 @@ public class OrdenRequest {
     public String precio;
     public String estado;
     public String detalles;
+    public Boolean urgente;
 }

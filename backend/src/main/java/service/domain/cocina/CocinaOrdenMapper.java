@@ -15,6 +15,7 @@ public class CocinaOrdenMapper {
                 orden.ordenEstado(),
                 orden.fecha(),
                 orden.detalles(),
+                orden.urgente(),
                 orden.pagada(),
                 prioridad
         );

@@ -32,6 +32,7 @@ export interface OrdenCocinaResponse {
   ordenEstado: EstadoOrdenBackend;
   fecha: string;
   detalles: string;
+  urgente?: boolean;
   pagada?: boolean;
 
   prioridad?: CocinaPrioridadResponse;
@@ -141,5 +142,13 @@ export class OrdenesApiService {
 
   deshacerEntregaPlato(ordenId: string): Observable<OrdenCocinaResponse> {
     return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/listo`);
+  }
+
+  marcarUrgente(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/urgente`);
+  }
+
+  desmarcarUrgente(ordenId: string): Observable<OrdenCocinaResponse> {
+    return this.post<OrdenCocinaResponse>(`${this.apiUrl}/ordenes/${ordenId}/no-urgente`);
   }
 }
