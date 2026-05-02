@@ -41,6 +41,7 @@ export class MenuPage implements OnInit, OnDestroy {
   readonly showToast = signal(false);
   readonly toastMessage = signal('');
   readonly toastTipo = signal<'ok' | 'error'>('ok');
+  readonly imagenAmpliada = signal<{ src: string; nombre: string } | null>(null);
   readonly cuentaActiva = signal<CuentaActivaResponse | null>(null);
 
   readonly categorias: ReadonlyArray<CategoriaPlato> = [
@@ -222,6 +223,17 @@ export class MenuPage implements OnInit, OnDestroy {
     const img = event.target as HTMLImageElement;
     img.src =
       'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop';
+  }
+
+  abrirImagen(plato: PlatoMenu): void {
+    this.imagenAmpliada.set({
+      src: plato.imagen,
+      nombre: plato.nombre,
+    });
+  }
+
+  cerrarImagen(): void {
+    this.imagenAmpliada.set(null);
   }
 
   trackByPlato(_: number, plato: PlatoMenu): string {

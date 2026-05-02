@@ -65,13 +65,16 @@
     <section class="menu-grid">
       @for (plato of platosFiltrados(); track trackByPlato($index, plato)) {
         <article class="dish-card">
-          <div class="dish-image-wrapper">
+          <div class="dish-image-wrapper" (click)="abrirImagen(plato)">
             <img
               class="dish-image"
               [src]="plato.imagen"
               [alt]="plato.nombre"
               (error)="onImageError($event)"
             />
+            <span class="dish-zoom-hint" aria-hidden="true">
+              <span class="dish-zoom-hint__lens">+</span>
+            </span>
             <span class="dish-category">{{ plato.categoria }}</span>
           </div>
 
@@ -189,6 +192,16 @@
           {{ toastTipo() === 'ok' ? '✓' : '!' }}
         </span>
         <span class="mobile-toast__text">{{ toastMessage() }}</span>
+      </div>
+    </div>
+  }
+
+  @if (imagenAmpliada(); as imagen) {
+    <div class="image-viewer" (click)="cerrarImagen()">
+      <div class="image-viewer__card" (click)="$event.stopPropagation()">
+        <button class="image-viewer__close" type="button" (click)="cerrarImagen()">×</button>
+        <img class="image-viewer__img" [src]="imagen.src" [alt]="imagen.nombre" />
+        <p class="image-viewer__caption">{{ imagen.nombre }}</p>
       </div>
     </div>
   }
