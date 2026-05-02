@@ -117,19 +117,39 @@
                     @for (item of resumenCobro(); track item.platoId) {
                       <div class="modal-resumen-item modal-resumen-item--seleccionable">
                         <div class="modal-resumen-item__check">
-                          <input
-                            type="checkbox"
-                            [checked]="itemSeleccionado(item)"
-                            (change)="toggleSeleccionItem(item)"
-                            [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()" />
+                          <button
+                            type="button"
+                            class="btn-seleccion-item"
+                            [class.active]="itemSeleccionado(item)"
+                            (click)="toggleSeleccionItem(item)"
+                            [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                            {{ itemSeleccionado(item) ? '✓' : '' }}
+                          </button>
                         </div>
 
                         <div class="modal-resumen-item__info">
                           <strong>{{ item.nombre || 'Producto' }}</strong>
 
                           <div class="modal-resumen-item__meta">
-                            {{ item.cantidad }} x
+                            {{ cantidadSeleccionada(item) }} / {{ item.cantidad }} x
                             {{ item.precioUnitario | currency:'EUR':'symbol':'1.2-2' }}
+                          </div>
+
+                          <div class="modal-resumen-item__qty">
+                            <button
+                              type="button"
+                              class="btn-cantidad"
+                              (click)="decrementarSeleccion(item)"
+                              [disabled]="cantidadSeleccionada(item) <= 0 || procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                              -
+                            </button>
+                            <button
+                              type="button"
+                              class="btn-cantidad"
+                              (click)="incrementarSeleccion(item)"
+                              [disabled]="cantidadSeleccionada(item) >= item.cantidad || procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
+                              +
+                            </button>
                           </div>
 
                           <small class="modal-resumen-item__estado">
@@ -151,7 +171,7 @@
                         </div>
 
                         <div class="modal-resumen-item__subtotal">
-                          {{ item.subtotal | currency:'EUR':'symbol':'1.2-2' }}
+                          {{ (cantidadSeleccionada(item) * item.precioUnitario) | currency:'EUR':'symbol':'1.2-2' }}
                         </div>
                       </div>
                     }

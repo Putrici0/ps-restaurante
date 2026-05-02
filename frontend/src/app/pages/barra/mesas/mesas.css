@@ -650,6 +650,50 @@
   cursor: pointer;
 }
 
+.btn-seleccion-item {
+  width: 18px;
+  height: 18px;
+  border: 1px solid #bdbdbd;
+  border-radius: 4px;
+  background: #fff;
+  color: #2f7f2f;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-seleccion-item.active {
+  border-color: #2f7f2f;
+  background: #eef9ee;
+}
+
+.modal-resumen-item__qty {
+  display: inline-flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-cantidad {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 8px;
+  background: #efe1d1;
+  color: #2f2118;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-cantidad:disabled,
+.btn-seleccion-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 
 /* EFECTO SELECCIÓN */
 .modal-resumen-item--seleccionable:hover {

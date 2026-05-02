@@ -51,7 +51,7 @@ export class BillPage implements OnInit, OnDestroy {
   readonly ultimoPagoImporte = signal(0);
 
   readonly vistaPago = signal<'ninguna' | 'seleccion' | 'tarjeta'>('ninguna');
-  readonly ordenesSeleccionadas = signal<string[]>([]);
+  readonly seleccionCantidadPorPlato = signal<Record<string, number>>({});
 
   numeroTarjeta = '';
   nombreCompleto = '';
@@ -159,15 +159,30 @@ export class BillPage implements OnInit, OnDestroy {
     this.itemsAgrupados().reduce((acc, item) => acc + item.cantidad, 0),
   );
 
+  readonly ordenesSeleccionadas = computed(() => {
+    const seleccion = this.seleccionCantidadPorPlato();
+    const ids: string[] = [];
+
+    for (const item of this.itemsPendientes()) {
+      const cantidad = Math.max(
+        0,
+        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+      );
+      ids.push(...item.ordenesIds.slice(0, cantidad));
+    }
+
+    return ids;
+  });
+
   readonly totalSeleccionado = computed(() => {
-    const seleccionadas = new Set(this.ordenesSeleccionadas());
+    const seleccion = this.seleccionCantidadPorPlato();
 
     const total = this.itemsPendientes().reduce((acc, item) => {
-      const cantidadSeleccionada = item.ordenesIds.filter((id) =>
-        seleccionadas.has(id),
-      ).length;
-
-      return acc + cantidadSeleccionada * item.precioUnitario;
+      const cantidad = Math.max(
+        0,
+        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+      );
+      return acc + cantidad * item.precioUnitario;
     }, 0);
 
     return Number(total.toFixed(2));
@@ -204,8 +219,11 @@ export class BillPage implements OnInit, OnDestroy {
   }
 
   abrirPagoParcial(): void {
-    const ids = this.itemsPendientes().flatMap((item) => item.ordenesIds);
-    this.ordenesSeleccionadas.set(ids);
+    const seleccionInicial: Record<string, number> = {};
+    for (const item of this.itemsPendientes()) {
+      seleccionInicial[item.platoId] = 0;
+    }
+    this.seleccionCantidadPorPlato.set(seleccionInicial);
     this.vistaPago.set('seleccion');
   }
 
@@ -217,29 +235,32 @@ export class BillPage implements OnInit, OnDestroy {
     this.vistaPago.set('seleccion');
   }
 
-  itemSeleccionado(item: ItemCuentaAgrupado): boolean {
-    if (!item.ordenesIds.length) {
-      return false;
-    }
-
-    const seleccionadas = new Set(this.ordenesSeleccionadas());
-    return item.ordenesIds.every((id) => seleccionadas.has(id));
+  cantidadSeleccionada(item: ItemCuentaAgrupado): number {
+    const seleccion = this.seleccionCantidadPorPlato();
+    const cantidad = seleccion[item.platoId] ?? 0;
+    return Math.max(0, Math.min(cantidad, item.ordenesIds.length));
   }
 
-  toggleSeleccionItem(item: ItemCuentaAgrupado): void {
-    const seleccionadas = new Set(this.ordenesSeleccionadas());
-
-    const todasSeleccionadas = item.ordenesIds.every((id) =>
-      seleccionadas.has(id),
-    );
-
-    if (todasSeleccionadas) {
-      item.ordenesIds.forEach((id) => seleccionadas.delete(id));
-    } else {
-      item.ordenesIds.forEach((id) => seleccionadas.add(id));
+  incrementarSeleccion(item: ItemCuentaAgrupado): void {
+    const actual = this.cantidadSeleccionada(item);
+    if (actual >= item.ordenesIds.length) {
+      return;
     }
+    this.seleccionCantidadPorPlato.update((prev) => ({
+      ...prev,
+      [item.platoId]: actual + 1,
+    }));
+  }
 
-    this.ordenesSeleccionadas.set(Array.from(seleccionadas));
+  decrementarSeleccion(item: ItemCuentaAgrupado): void {
+    const actual = this.cantidadSeleccionada(item);
+    if (actual <= 0) {
+      return;
+    }
+    this.seleccionCantidadPorPlato.update((prev) => ({
+      ...prev,
+      [item.platoId]: actual - 1,
+    }));
   }
 
   irATarjeta(): void {
@@ -248,6 +269,22 @@ export class BillPage implements OnInit, OnDestroy {
     }
 
     this.vistaPago.set('tarjeta');
+  }
+
+  seleccionarTodoPago(): void {
+    const seleccion: Record<string, number> = {};
+    for (const item of this.itemsPendientes()) {
+      seleccion[item.platoId] = item.cantidad;
+    }
+    this.seleccionCantidadPorPlato.set(seleccion);
+  }
+
+  limpiarSeleccionPago(): void {
+    const seleccion: Record<string, number> = {};
+    for (const item of this.itemsPendientes()) {
+      seleccion[item.platoId] = 0;
+    }
+    this.seleccionCantidadPorPlato.set(seleccion);
   }
 
   datosTarjetaValidos(): boolean {
@@ -313,7 +350,7 @@ export class BillPage implements OnInit, OnDestroy {
         this.fechaCaducidad = '';
         this.cvc = '';
 
-        this.ordenesSeleccionadas.set([]);
+        this.seleccionCantidadPorPlato.set({});
         this.vistaPago.set('ninguna');
 
         this.cargarCuentaCompleta(false);
@@ -367,7 +404,7 @@ export class BillPage implements OnInit, OnDestroy {
             this.ordenes.set([]);
             this.importePendiente.set(0);
             this.estadoSaldada.set(null);
-            this.ordenesSeleccionadas.set([]);
+            this.seleccionCantidadPorPlato.set({});
             this.cargando.set(false);
             return;
           }

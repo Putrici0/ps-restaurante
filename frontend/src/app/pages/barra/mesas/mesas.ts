@@ -52,7 +52,7 @@ export class Mesas {
   readonly mostrarConfirmacionEliminar = signal(false);
   readonly itemPendienteEliminar = signal<ItemCobroAgrupado | null>(null);
 
-  readonly ordenesSeleccionadas = signal<string[]>([]);
+  readonly seleccionCantidadPorPlato = signal<Record<string, number>>({});
 
   readonly mesasActuales = computed(() =>
     this.mesas()
@@ -61,14 +61,32 @@ export class Mesas {
   );
 
   readonly totalCobro = computed(() => {
-    const seleccionadas = new Set(this.ordenesSeleccionadas());
+    const seleccion = this.seleccionCantidadPorPlato();
 
     const total = this.resumenCobro().reduce((acc, item) => {
-      const cantidadSeleccionada = item.ordenesIds.filter((id) => seleccionadas.has(id)).length;
-      return acc + cantidadSeleccionada * item.precioUnitario;
+      const cantidad = Math.max(
+        0,
+        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+      );
+      return acc + cantidad * item.precioUnitario;
     }, 0);
 
     return Number(total.toFixed(2));
+  });
+
+  readonly ordenesSeleccionadas = computed(() => {
+    const seleccion = this.seleccionCantidadPorPlato();
+    const ids: string[] = [];
+
+    for (const item of this.resumenCobro()) {
+      const cantidad = Math.max(
+        0,
+        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+      );
+      ids.push(...item.ordenesIds.slice(0, cantidad));
+    }
+
+    return ids;
   });
 
   readonly cambioCobro = computed(() => {
@@ -160,7 +178,7 @@ export class Mesas {
     this.cuentaCobroId.set(payload.cuentaId);
     this.totalCuentaCobro.set(null);
     this.resumenCobro.set([]);
-    this.ordenesSeleccionadas.set([]);
+    this.seleccionCantidadPorPlato.set({});
     this.metodoPago.set('EFECTIVO');
     this.importeRecibido.set(null);
     this.eliminandoOrdenId.set(null);
@@ -273,7 +291,7 @@ export class Mesas {
     this.mesaCobroId.set(null);
     this.totalCuentaCobro.set(null);
     this.resumenCobro.set([]);
-    this.ordenesSeleccionadas.set([]);
+    this.seleccionCantidadPorPlato.set({});
     this.metodoPago.set('EFECTIVO');
     this.importeRecibido.set(null);
     this.eliminandoOrdenId.set(null);
@@ -311,26 +329,44 @@ export class Mesas {
     return unicos.join(' · ');
   }
 
-  itemSeleccionado(item: ItemCobroAgrupado): boolean {
-    if (!item.ordenesIds.length) {
-      return false;
-    }
+  cantidadSeleccionada(item: ItemCobroAgrupado): number {
+    const seleccion = this.seleccionCantidadPorPlato();
+    const cantidad = seleccion[item.platoId] ?? 0;
+    return Math.max(0, Math.min(cantidad, item.ordenesIds.length));
+  }
 
-    const seleccionadas = new Set(this.ordenesSeleccionadas());
-    return item.ordenesIds.every((id) => seleccionadas.has(id));
+  incrementarSeleccion(item: ItemCobroAgrupado): void {
+    const actual = this.cantidadSeleccionada(item);
+    if (actual >= item.ordenesIds.length) {
+      return;
+    }
+    this.seleccionCantidadPorPlato.update((prev) => ({
+      ...prev,
+      [item.platoId]: actual + 1,
+    }));
+  }
+
+  decrementarSeleccion(item: ItemCobroAgrupado): void {
+    const actual = this.cantidadSeleccionada(item);
+    if (actual <= 0) {
+      return;
+    }
+    this.seleccionCantidadPorPlato.update((prev) => ({
+      ...prev,
+      [item.platoId]: actual - 1,
+    }));
+  }
+
+  itemSeleccionado(item: ItemCobroAgrupado): boolean {
+    return this.cantidadSeleccionada(item) === item.cantidad;
   }
 
   toggleSeleccionItem(item: ItemCobroAgrupado): void {
-    const seleccionadas = new Set(this.ordenesSeleccionadas());
-    const todasSeleccionadas = item.ordenesIds.every((id) => seleccionadas.has(id));
-
-    if (todasSeleccionadas) {
-      item.ordenesIds.forEach((id) => seleccionadas.delete(id));
-    } else {
-      item.ordenesIds.forEach((id) => seleccionadas.add(id));
-    }
-
-    this.ordenesSeleccionadas.set(Array.from(seleccionadas));
+    const actual = this.cantidadSeleccionada(item);
+    this.seleccionCantidadPorPlato.update((prev) => ({
+      ...prev,
+      [item.platoId]: actual === item.cantidad ? 0 : item.cantidad,
+    }));
 
     if (this.metodoPago() === 'EFECTIVO') {
       const recibido = this.importeRecibido();
@@ -341,12 +377,19 @@ export class Mesas {
   }
 
   seleccionarTodoCobro(): void {
-    const ids = this.resumenCobro().flatMap((item) => item.ordenesIds);
-    this.ordenesSeleccionadas.set(ids);
+    const seleccion: Record<string, number> = {};
+    for (const item of this.resumenCobro()) {
+      seleccion[item.platoId] = item.cantidad;
+    }
+    this.seleccionCantidadPorPlato.set(seleccion);
   }
 
   limpiarSeleccionCobro(): void {
-    this.ordenesSeleccionadas.set([]);
+    const seleccion: Record<string, number> = {};
+    for (const item of this.resumenCobro()) {
+      seleccion[item.platoId] = 0;
+    }
+    this.seleccionCantidadPorPlato.set(seleccion);
     if (this.metodoPago() === 'EFECTIVO') {
       this.importeRecibido.set(null);
     }
@@ -371,12 +414,13 @@ export class Mesas {
         );
 
         this.totalCuentaCobro.set(Number(total.importe));
-        this.resumenCobro.set(this.agruparOrdenes(ordenesPendientes));
-        this.ordenesSeleccionadas.set(
-          ordenesPendientes
-            .map((orden) => orden.id)
-            .filter((id): id is string => !!id),
-        );
+        const resumen = this.agruparOrdenes(ordenesPendientes);
+        this.resumenCobro.set(resumen);
+        const seleccionInicial: Record<string, number> = {};
+        for (const item of resumen) {
+          seleccionInicial[item.platoId] = 0;
+        }
+        this.seleccionCantidadPorPlato.set(seleccionInicial);
         this.cargandoCobro.set(false);
       },
       error: (err) => {

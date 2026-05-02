@@ -7,7 +7,7 @@
         <p class="bill-hero__eyebrow">Tu mesa</p>
         <h1 class="bill-hero__title">Resumen de la cuenta</h1>
         <p class="bill-hero__subtitle">
-          Aquí puedes consultar el estado de tu cuenta y los productos añadidos a tu mesa.
+          Aqui puedes consultar el estado de tu cuenta y los productos anadidos a tu mesa.
         </p>
       </div>
 
@@ -33,7 +33,7 @@
     } @else if (sinCuentaActiva()) {
       <section class="bill-state-card">
         <h2>No hay una cuenta activa para esta mesa</h2>
-        <p>Cuando central o sala abra una cuenta, esta pantalla se actualizará sola.</p>
+        <p>Cuando central o sala abra una cuenta, esta pantalla se actualizara sola.</p>
       </section>
     } @else {
       <section class="bill-summary-grid">
@@ -50,47 +50,47 @@
         </article>
       </section>
 
-    @if (mostrarConfirmacionPago()) {
-    <div class="payment-overlay">
-      <section class="payment-panel payment-panel--confirmacion">
-        <div class="confirmacion-icono">✓</div>
-        <h2 class="confirmacion-titulo">Pago realizado</h2>
-        <p class="confirmacion-importe">
-          Se han pagado <strong>{{ ultimoPagoImporte() | number:'1.2-2' }} €</strong>
-        </p>
+      @if (mostrarConfirmacionPago()) {
+        <div class="payment-overlay">
+          <section class="payment-panel payment-panel--confirmacion">
+            <div class="confirmacion-icono">✓</div>
+            <h2 class="confirmacion-titulo">Pago realizado</h2>
+            <p class="confirmacion-importe">
+              Se han pagado <strong>{{ ultimoPagoImporte() | number:'1.2-2' }} €</strong>
+            </p>
 
-        @if (importePendiente() > 0) {
-        <div class="confirmacion-pendiente">
-          <p class="confirmacion-pendiente__label">Resta por pagar</p>
-          <p class="confirmacion-pendiente__importe">
-            {{ importePendiente() | number:'1.2-2' }} €
-          </p>
+            @if (importePendiente() > 0) {
+              <div class="confirmacion-pendiente">
+                <p class="confirmacion-pendiente__label">Resta por pagar</p>
+                <p class="confirmacion-pendiente__importe">
+                  {{ importePendiente() | number:'1.2-2' }} €
+                </p>
+              </div>
+            } @else {
+              <p class="confirmacion-cuenta-cerrada">
+                La cuenta esta completamente pagada.
+              </p>
+            }
+
+            <button
+              type="button"
+              class="payment-submit-btn"
+              (click)="mostrarConfirmacionPago.set(false)">
+              Aceptar
+            </button>
+          </section>
         </div>
-        } @else {
-        <p class="confirmacion-cuenta-cerrada">
-          La cuenta está completamente pagada.
-        </p>
-        }
-
-        <button
-          type="button"
-          class="payment-submit-btn"
-          (click)="mostrarConfirmacionPago.set(false)">
-          Aceptar
-        </button>
-      </section>
-    </div>
       }
 
       @if (itemsAgrupados().length === 0) {
         <section class="bill-state-card">
-          <h2>Aún no hay pedidos en la cuenta</h2>
-          <p>Cuando envíes platos desde la carta aparecerán aquí automáticamente.</p>
+          <h2>Aun no hay pedidos en la cuenta</h2>
+          <p>Cuando envies platos desde la carta apareceran aqui automaticamente.</p>
         </section>
       } @else {
         <section class="bill-list">
           @for (item of itemsAgrupados(); track item.platoId + (item.pagado ? '-paid' : '-pending')) {
-          <article class="bill-item-card" [class.bill-item-card--paid]="item.pagado">
+            <article class="bill-item-card" [class.bill-item-card--paid]="item.pagado">
               <div class="bill-item-card__image-wrap">
                 <img
                   class="bill-item-card__image"
@@ -127,9 +127,9 @@
 
                 <p class="bill-item-card__status">
                   @if (item.pagado) {
-                  Estado: <span class="status-pagado">Pagado</span>
+                    Estado: <span class="status-pagado">Pagado</span>
                   } @else {
-                  Estado: {{ obtenerResumenEstado(item) }}
+                    Estado: {{ obtenerResumenEstado(item) }}
                   }
                 </p>
               </div>
@@ -167,33 +167,57 @@
           ← Volver
         </button>
 
+        <div class="payment-select-actions">
+          <button type="button" class="payment-select-btn" (click)="seleccionarTodoPago()">
+            Seleccionar todo
+          </button>
+          <button type="button" class="payment-select-btn" (click)="limpiarSeleccionPago()">
+            Limpiar
+          </button>
+        </div>
+
         <div class="payment-table">
           <div class="payment-table__head">
-            <span>DESCRIPCIÓN</span>
-            <span>CANTIDAD</span>
+            <span>DESCRIPCION</span>
+            <span>UNIDADES</span>
             <span>PRECIO</span>
           </div>
 
           @for (item of itemsPendientes(); track item.platoId) {
-            <label class="payment-row">
-              <span class="payment-row__name">
-                <input
-                  type="checkbox"
-                  [checked]="itemSeleccionado(item)"
-                  (change)="toggleSeleccionItem(item)"
-                />
-                {{ item.nombre }}
-              </span>
+            <div class="payment-row">
+              <span class="payment-row__name">{{ item.nombre }}</span>
 
-              <span>x{{ item.cantidad }}</span>
-              <span>{{ item.subtotal | number:'1.0-2' }}</span>
-            </label>
+              <div class="payment-qty">
+                <button
+                  type="button"
+                  class="payment-qty__btn"
+                  (click)="decrementarSeleccion(item)"
+                  [disabled]="cantidadSeleccionada(item) <= 0"
+                >
+                  -
+                </button>
+                <span class="payment-qty__value">
+                  {{ cantidadSeleccionada(item) }} / {{ item.cantidad }}
+                </span>
+                <button
+                  type="button"
+                  class="payment-qty__btn"
+                  (click)="incrementarSeleccion(item)"
+                  [disabled]="cantidadSeleccionada(item) >= item.cantidad"
+                >
+                  +
+                </button>
+              </div>
+
+              <span>
+                {{ (cantidadSeleccionada(item) * item.precioUnitario) | number:'1.2-2' }} €
+              </span>
+            </div>
           }
         </div>
 
         <footer class="payment-panel__footer">
           <span>TOTAL A PAGAR:</span>
-
           <strong>{{ totalSeleccionado() | number:'1.2-2' }} €</strong>
 
           <button
