@@ -18,7 +18,7 @@
   width: 100%;
   max-width: 980px;
   margin: 0 auto;
-  padding: 1rem 1rem 2rem;
+  padding: 1rem 1rem calc(11rem + env(safe-area-inset-bottom, 0px));
 }
 
 .bill-hero {
