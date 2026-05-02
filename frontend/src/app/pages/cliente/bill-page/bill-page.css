@@ -346,7 +346,7 @@
 .payment-overlay {
   position: fixed;
   inset: 0;
-  z-index: 90;
+  z-index: 2000;
   background: rgba(0, 0, 0, 0.45);
   backdrop-filter: blur(4px);
   display: flex;
@@ -371,6 +371,7 @@
 
 .payment-panel--list {
   gap: 0;
+  max-height: 92vh;
 }
 
 .payment-back-btn {
@@ -383,12 +384,20 @@
   font-size: 0.9rem;
   cursor: pointer;
   color: #2f2118;
+  position: sticky;
+  top: 0;
+  z-index: 3;
 }
 
 .payment-select-actions {
   display: flex;
   gap: 10px;
   margin-top: 10px;
+  position: sticky;
+  top: 46px;
+  z-index: 2;
+  background: #fffaf3;
+  padding: 8px 0;
 }
 
 .payment-select-btn {
@@ -405,7 +414,7 @@
   display: flex;
   flex-direction: column;
   gap: 0;
-  max-height: 50vh;
+  max-height: calc(92vh - 220px);
   overflow-y: auto;
   margin-top: 14px;
 }
