@@ -114,6 +114,18 @@
   transform: translateY(0);
 }
 
+.error-msg {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.btn-entrar:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 @media (max-height: 600px) {
   .logo-container { margin-bottom: 1rem; }
   .logo { max-height: 15vh; }

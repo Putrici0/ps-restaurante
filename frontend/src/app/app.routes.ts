@@ -18,6 +18,9 @@ import {PlatosCamarero} from './pages/camarero/platos/platos';
 import {BebidasCamarero} from './pages/camarero/bebidas/bebidas';
 import {PedidoCamarero} from './pages/camarero/pedido/pedido';
 import {MenuCamarero} from './pages/camarero/menu/menu';
+import { LoginCamarero } from './pages/camarero/login/login';
+import { RegistroCamarero } from './pages/camarero/registro/registro';
+import { camareroAuthGuard } from './guards/camarero-auth.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: 'mesas', pathMatch: 'full' },
@@ -34,11 +37,14 @@ export const routes: Routes = [
 
   { path: 'cocina', component: TableroPedidos },
 
-  { path: 'camarero/notificaciones', component: NotificacionesCamarero },
-  { path: 'camarero/mesas', component: MesasCamarero },
-  { path: 'camarero/platos', component: PlatosCamarero },
-  { path: 'camarero/bebidas', component: BebidasCamarero },
-  { path: 'camarero/cuenta/:id', component: PedidoCamarero },
-  { path: 'camarero/menu/:id', component: MenuCamarero},
+  { path: 'camarero', redirectTo: 'camarero/mesas', pathMatch: 'full' },
+  { path: 'camarero/login', component: LoginCamarero },
+  { path: 'camarero/registro', component: RegistroCamarero },
+  { path: 'camarero/notificaciones', component: NotificacionesCamarero, canActivate: [camareroAuthGuard] },
+  { path: 'camarero/mesas', component: MesasCamarero, canActivate: [camareroAuthGuard] },
+  { path: 'camarero/platos', component: PlatosCamarero, canActivate: [camareroAuthGuard] },
+  { path: 'camarero/bebidas', component: BebidasCamarero, canActivate: [camareroAuthGuard] },
+  { path: 'camarero/cuenta/:id', component: PedidoCamarero, canActivate: [camareroAuthGuard] },
+  { path: 'camarero/menu/:id', component: MenuCamarero, canActivate: [camareroAuthGuard] },
 
 ];

@@ -1,31 +1,39 @@
 <div class="login-wrapper">
   <div class="logo-container">
-    <img src="logo.png" alt="Logo Restaurante" class="logo">
+    <img src="logo.png" alt="Logo Restaurante" class="logo" />
   </div>
 
   <div class="login-card">
-    <form class="login-form">
+    <form class="login-form" novalidate>
       <div class="input-group">
-        <label for="usuario">Usuario</label>
+        <label for="correo">Correo</label>
         <input
-          type="text"
-          id="usuario"
-          name="usuario"
-          placeholder="Introducir usuario..."
-        >
+          type="email"
+          id="correo"
+          name="correo"
+          [(ngModel)]="correo"
+          placeholder="Introducir correo..."
+          required
+        />
       </div>
 
       <div class="input-group">
-        <label for="contrasena">Contraseña</label>
+        <label for="contrasena">Contrasena</label>
         <input
           type="password"
           id="contrasena"
           name="contrasena"
-          placeholder="Introducir contraseña..."
-        >
+          [(ngModel)]="password"
+          placeholder="Introducir contrasena..."
+          required
+        />
       </div>
 
-      <button type="button" (click)="iniciarSesion()" class="btn-entrar">ENTRAR</button>
+      <p *ngIf="error" class="error-msg">{{ error }}</p>
+
+      <button type="button" (click)="iniciarSesion()" [disabled]="cargando" class="btn-entrar">
+        {{ cargando ? 'ENTRANDO...' : 'ENTRAR' }}
+      </button>
     </form>
   </div>
 </div>

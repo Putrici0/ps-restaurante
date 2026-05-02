@@ -1,0 +1,61 @@
+<div class="registro-wrapper">
+  <div class="registro-card">
+    <h1>Registro de camarero</h1>
+
+    <form class="registro-form" (ngSubmit)="registrar()">
+      <div class="input-group">
+        <label for="nombre">Nombre</label>
+        <input
+          id="nombre"
+          name="nombre"
+          [(ngModel)]="nombre"
+          placeholder="Nombre"
+          required
+        />
+      </div>
+
+      <div class="input-group">
+        <label for="apellido">Apellido</label>
+        <input
+          id="apellido"
+          name="apellido"
+          [(ngModel)]="apellido"
+          placeholder="Apellido"
+          required
+        />
+      </div>
+
+      <div class="input-group">
+        <label for="correo">Correo</label>
+        <input
+          type="email"
+          id="correo"
+          name="correo"
+          [(ngModel)]="correo"
+          placeholder="Correo"
+          required
+        />
+      </div>
+
+      <div class="input-group">
+        <label for="password">Contrasena</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          [(ngModel)]="password"
+          placeholder="Contrasena"
+          minlength="6"
+          required
+        />
+      </div>
+
+      <p *ngIf="error" class="error-msg">{{ error }}</p>
+      <p *ngIf="exito" class="ok-msg">{{ exito }}</p>
+
+      <button type="submit" [disabled]="cargando" class="btn-crear">
+        {{ cargando ? 'CREANDO...' : 'CREAR CUENTA' }}
+      </button>
+    </form>
+  </div>
+</div>

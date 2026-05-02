@@ -1,0 +1,83 @@
+:host {
+  display: block;
+  min-height: 100dvh;
+  background: #f4ede3;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.registro-wrapper {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+.registro-card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e7ddd0;
+  padding: 24px;
+  box-sizing: border-box;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 1.35rem;
+  color: #33261b;
+}
+
+.registro-form {
+  display: grid;
+  gap: 12px;
+}
+
+.input-group {
+  display: grid;
+  gap: 6px;
+}
+
+.input-group label {
+  font-size: 0.9rem;
+  color: #3f3327;
+  font-weight: 600;
+}
+
+.input-group input {
+  border: 1px solid #d6c9ba;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.btn-crear {
+  margin-top: 8px;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-weight: 700;
+  background: #1f8f2f;
+  color: #fff;
+  cursor: pointer;
+}
+
+.btn-crear:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.error-msg {
+  margin: 0;
+  color: #b42318;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.ok-msg {
+  margin: 0;
+  color: #086f3b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
