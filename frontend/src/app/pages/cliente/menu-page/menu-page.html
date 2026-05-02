@@ -181,4 +181,15 @@
       </div>
     </div>
   }
+
+  @if (showToast()) {
+    <div class="mobile-toast" role="status" aria-live="polite">
+      <div class="mobile-toast__card" [class.mobile-toast__card--error]="toastTipo() === 'error'">
+        <span class="mobile-toast__icon" [class.mobile-toast__icon--error]="toastTipo() === 'error'">
+          {{ toastTipo() === 'ok' ? '✓' : '!' }}
+        </span>
+        <span class="mobile-toast__text">{{ toastMessage() }}</span>
+      </div>
+    </div>
+  }
 </div>
