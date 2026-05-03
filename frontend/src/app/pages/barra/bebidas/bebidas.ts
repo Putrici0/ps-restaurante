@@ -24,12 +24,17 @@ export class Bebidas implements OnInit, OnDestroy {
   readonly ahora = signal(Date.now());
 
   readonly pendientesCount = computed(() =>
-    this.ordenes().filter(o => o.ordenEstado === 'Pendiente' || o.ordenEstado === 'Preparación').length
+    this.ordenes().filter(
+      o =>
+        o.ordenEstado === 'Pendiente' ||
+        o.ordenEstado === 'Preparación' ||
+        o.ordenEstado === 'Listo',
+    ).length
   );
 
   readonly ordenesVisuales = computed(() => {
     this.ahora();
-    // Clonamos para evitar errores de mutación en el sort
+
     return [...this.ordenes()]
       .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
       .map(o => ({
@@ -42,7 +47,9 @@ export class Bebidas implements OnInit, OnDestroy {
         tiempo: this.calcularTiempo(o.fecha),
         esListo: o.ordenEstado === 'Listo',
         esPendiente: o.ordenEstado === 'Pendiente',
-        procesando: this.procesandoOrdenId() === o.id
+        esPreparacion: o.ordenEstado === 'Preparación',
+        esEntregado: o.ordenEstado === 'Entregado',
+        procesando: this.procesandoOrdenId() === o.id,
       }));
   });
 
@@ -55,60 +62,84 @@ export class Bebidas implements OnInit, OnDestroy {
   }
 
   iniciarPolling() {
-    // timer(0, 8000) respeta tu intervalo original de 8 segundos
-    this.pollingSub = timer(0, 8000).pipe(
-      filter(() => !this.procesandoOrdenId()),
-      switchMap(() => this.ordenesApi.obtenerBebidasActivasBarra().pipe(
-        catchError(() => {
-          this.error.set('Error de conexión con el servidor');
+    this.pollingSub = timer(0, 8000)
+      .pipe(
+        filter(() => !this.procesandoOrdenId()),
+        switchMap(() =>
+          this.ordenesApi.obtenerBebidasActivasBarra().pipe(
+            catchError(() => {
+              this.error.set('Error de conexión con el servidor');
+              this.cargando.set(false);
+              return of(null);
+            }),
+          ),
+        ),
+      )
+      .subscribe((data) => {
+        if (data) {
+          this.ordenes.set(data);
           this.cargando.set(false);
-          return of(null);
-        })
-      ))
-    ).subscribe((data) => {
-      if (data) {
-        this.ordenes.set(data);
-        this.cargando.set(false);
-        this.error.set(null);
-      }
-    });
+          this.error.set(null);
+        }
+      });
   }
 
   avanzarEstado(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
-    this.procesandoOrdenId.set(orden.id);
-    this.error.set(null); // Limpiamos errores previos
 
-    const peticion = orden.ordenEstado === 'Pendiente'
-      ? this.ordenesApi.marcarEnPreparacion(orden.id)
-      : this.ordenesApi.marcarLista(orden.id);
+    this.procesandoOrdenId.set(orden.id);
+    this.error.set(null);
+
+    let peticion;
+
+    if (orden.ordenEstado === 'Pendiente') {
+      peticion = this.ordenesApi.marcarEnPreparacion(orden.id);
+    } else if (orden.ordenEstado === 'Preparación') {
+      peticion = this.ordenesApi.marcarLista(orden.id);
+    } else if (orden.ordenEstado === 'Listo') {
+      peticion = this.ordenesApi.marcarEntregada(orden.id);
+    } else {
+      this.procesandoOrdenId.set(null);
+      return;
+    }
 
     peticion.pipe(take(1)).subscribe({
       next: (ordenActualizada) => {
-        this.ordenes.update(list => list.map(o => o.id === ordenActualizada.id ? ordenActualizada : o));
+        this.ordenes.update(list =>
+          list.map(o => o.id === ordenActualizada.id ? ordenActualizada : o)
+        );
+
         this.procesandoOrdenId.set(null);
       },
       error: () => {
         this.procesandoOrdenId.set(null);
         this.error.set('No se pudo actualizar el estado. Revisa la conexión.');
-      }
+      },
     });
   }
 
   retrocederEstado(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
-    this.procesandoOrdenId.set(orden.id);
-    this.error.set(null); // Limpiamos errores previos
 
-    this.ordenesApi.marcarPendiente(orden.id).pipe(take(1)).subscribe({
+    this.procesandoOrdenId.set(orden.id);
+    this.error.set(null);
+
+    const peticion = orden.ordenEstado === 'Entregado'
+      ? this.ordenesApi.marcarLista(orden.id)
+      : this.ordenesApi.marcarPendiente(orden.id);
+
+    peticion.pipe(take(1)).subscribe({
       next: (ordenActualizada) => {
-        this.ordenes.update(list => list.map(o => o.id === ordenActualizada.id ? ordenActualizada : o));
+        this.ordenes.update(list =>
+          list.map(o => o.id === ordenActualizada.id ? ordenActualizada : o)
+        );
+
         this.procesandoOrdenId.set(null);
       },
       error: () => {
         this.procesandoOrdenId.set(null);
         this.error.set('No se pudo actualizar el estado. Revisa la conexión.');
-      }
+      },
     });
   }
 

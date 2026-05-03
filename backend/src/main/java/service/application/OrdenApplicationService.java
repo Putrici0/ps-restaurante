@@ -155,7 +155,7 @@ public class OrdenApplicationService {
     public List<Orden> obtenerBebidasActivasBarra() {
         return obtenerTodasLasOrdenesActivas().stream()
                 .filter(o -> o.plato() != null && o.plato().categoria() == Categoria.Bebida)
-                .filter(o -> o.ordenEstado() != OrdenEstado.Entregado && o.ordenEstado() != OrdenEstado.Cancelado)
+                .filter(o -> o.ordenEstado() != OrdenEstado.Cancelado)
                 .toList();
     }
 

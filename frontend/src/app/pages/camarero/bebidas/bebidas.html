@@ -4,6 +4,7 @@
   <div class="page-shell">
     <header class="page-header">
       <h1>Bebidas</h1>
+
       <div class="summary-badge">
         <span class="dot"></span>
         <span class="count">{{ pendientesCount() }}</span>
@@ -24,14 +25,16 @@
         [numeroMesa]="item.mesa"
         [estadoVisual]="item.estado"
         [etiquetaEstado]="item.etiqueta"
-        [esOpaco]="item.esListo"
+        [esOpaco]="item.esEntregado"
         [tiempo]="item.tiempo"
-        [textoBotonPrincipal]="item.esListo ? 'LISTO' : (item.esPendiente ? 'PREPARAR' : 'TERMINAR')"
-        [claseBotonPrincipal]="item.esListo ? 'gris' : 'verde'"
-        [disablePrincipal]="item.esListo || item.procesando"
+
+        [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : (item.esListo ? 'ENTREGAR' : (item.esPendiente ? 'PREPARAR' : 'TERMINAR'))"
+        [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
+        [disablePrincipal]="item.esEntregado || item.procesando"
         (principal)="avanzarEstado(item.original)"
+
         [mostrarBotonSecundario]="!item.esPendiente"
-        [textoBotonSecundario]="'VOLVER'"
+        [textoBotonSecundario]="item.esEntregado ? 'DESHACER' : 'VOLVER'"
         [claseBotonSecundario]="'rojo'"
         [disableSecundario]="item.procesando"
         (secundario)="retrocederEstado(item.original)"

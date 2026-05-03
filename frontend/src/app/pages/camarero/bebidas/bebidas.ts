@@ -23,26 +23,32 @@ export class BebidasCamarero implements OnInit, OnDestroy {
   readonly procesandoOrdenId = signal<string | null>(null);
   readonly ahora = signal(Date.now());
 
-  readonly pendientesCount = computed(
-    () =>
-      this.ordenes().filter((o) => o.ordenEstado === 'Pendiente' || o.ordenEstado === 'Preparación')
-        .length,
+  readonly pendientesCount = computed(() =>
+    this.ordenes().filter(
+      o =>
+        o.ordenEstado === 'Pendiente' ||
+        o.ordenEstado === 'Preparación' ||
+        o.ordenEstado === 'Listo',
+    ).length
   );
 
   readonly ordenesVisuales = computed(() => {
     this.ahora();
+
     return [...this.ordenes()]
       .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
-      .map((o) => ({
+      .map(o => ({
         original: o,
         id: o.id,
         nombre: o.plato.nombre,
-        mesa: o.pedido?.cuenta?.mesas?.map((m) => m.id).join(', ') || '?',
+        mesa: o.pedido?.cuenta?.mesas?.map(m => m.id).join(', ') || '?',
         estado: o.ordenEstado,
         etiqueta: this.procesandoOrdenId() === o.id ? '...' : o.ordenEstado.toUpperCase(),
         tiempo: this.calcularTiempo(o.fecha),
         esListo: o.ordenEstado === 'Listo',
         esPendiente: o.ordenEstado === 'Pendiente',
+        esPreparacion: o.ordenEstado === 'Preparación',
+        esEntregado: o.ordenEstado === 'Entregado',
         procesando: this.procesandoOrdenId() === o.id,
       }));
   });
@@ -80,19 +86,29 @@ export class BebidasCamarero implements OnInit, OnDestroy {
 
   avanzarEstado(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
+
     this.procesandoOrdenId.set(orden.id);
     this.error.set(null);
 
-    const peticion =
-      orden.ordenEstado === 'Pendiente'
-        ? this.ordenesApi.marcarEnPreparacion(orden.id)
-        : this.ordenesApi.marcarLista(orden.id);
+    let peticion;
+
+    if (orden.ordenEstado === 'Pendiente') {
+      peticion = this.ordenesApi.marcarEnPreparacion(orden.id);
+    } else if (orden.ordenEstado === 'Preparación') {
+      peticion = this.ordenesApi.marcarLista(orden.id);
+    } else if (orden.ordenEstado === 'Listo') {
+      peticion = this.ordenesApi.marcarEntregada(orden.id);
+    } else {
+      this.procesandoOrdenId.set(null);
+      return;
+    }
 
     peticion.pipe(take(1)).subscribe({
       next: (ordenActualizada) => {
-        this.ordenes.update((list) =>
-          list.map((o) => (o.id === ordenActualizada.id ? ordenActualizada : o)),
+        this.ordenes.update(list =>
+          list.map(o => o.id === ordenActualizada.id ? ordenActualizada : o)
         );
+
         this.procesandoOrdenId.set(null);
       },
       error: () => {
@@ -104,24 +120,27 @@ export class BebidasCamarero implements OnInit, OnDestroy {
 
   retrocederEstado(orden: OrdenCocinaResponse) {
     if (this.procesandoOrdenId()) return;
+
     this.procesandoOrdenId.set(orden.id);
     this.error.set(null);
 
-    this.ordenesApi
-      .marcarPendiente(orden.id)
-      .pipe(take(1))
-      .subscribe({
-        next: (ordenActualizada) => {
-          this.ordenes.update((list) =>
-            list.map((o) => (o.id === ordenActualizada.id ? ordenActualizada : o)),
-          );
-          this.procesandoOrdenId.set(null);
-        },
-        error: () => {
-          this.procesandoOrdenId.set(null);
-          this.error.set('Error al retroceder');
-        },
-      });
+    const peticion = orden.ordenEstado === 'Entregado'
+      ? this.ordenesApi.marcarLista(orden.id)
+      : this.ordenesApi.marcarPendiente(orden.id);
+
+    peticion.pipe(take(1)).subscribe({
+      next: (ordenActualizada) => {
+        this.ordenes.update(list =>
+          list.map(o => o.id === ordenActualizada.id ? ordenActualizada : o)
+        );
+
+        this.procesandoOrdenId.set(null);
+      },
+      error: () => {
+        this.procesandoOrdenId.set(null);
+        this.error.set('Error al retroceder');
+      },
+    });
   }
 
   private calcularTiempo(fecha: string) {
