@@ -50,16 +50,6 @@
         {{ textoSilencio() }}
       </span>
 
-      @if (totalPendientes() > 0) {
-      <button
-        type="button"
-        class="link-button"
-        [disabled]="actualizando()"
-        (click)="marcarTodasEnCurso()"
-      >
-        Poner todas en curso
-      </button>
-      }
     </div>
   </section>
 
@@ -132,8 +122,13 @@
             {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Marcar en curso' }}
           </button>
           } @else {
-          <button type="button" class="primary-button" disabled>
-            Asignado
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
+            (click)="desasignarYReenviar(notificacion)"
+          >
+            {{ asignandoNotificacionId() === notificacion.id ? 'Cancelando...' : 'Desasignar y reenviar' }}
           </button>
           }
         </div>

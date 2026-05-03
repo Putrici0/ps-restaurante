@@ -35,4 +35,10 @@ export class NotificacionesApiService {
       .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/leida`, {})
       .pipe(timeout(this.requestTimeoutMs));
   }
+
+  desasignarYReenviar(id: string): Observable<Notificacion> {
+    return this.http
+      .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/desasignar`, {})
+      .pipe(timeout(this.requestTimeoutMs));
+  }
 }

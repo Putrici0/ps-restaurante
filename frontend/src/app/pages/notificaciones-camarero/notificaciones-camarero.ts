@@ -31,11 +31,21 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
   readonly ahora = signal(Date.now());
   readonly avisosActivados = signal(false);
   readonly silenciadoHasta = signal(0);
+  readonly camareroUidActual = signal<string | null>(null);
 
   readonly notificacionesRecoger = computed(() =>
     this.notificaciones()
       .filter((notificacion) => notificacion.tipo === 'Recoger')
-      .sort((a, b) => this.fechaMs(b.fecha) - this.fechaMs(a.fecha)),
+      .sort((a, b) => {
+        const prioridadA = this.esAsignadaAlCamareroActual(a) ? 1 : 0;
+        const prioridadB = this.esAsignadaAlCamareroActual(b) ? 1 : 0;
+
+        if (prioridadA !== prioridadB) {
+          return prioridadB - prioridadA;
+        }
+
+        return this.fechaMs(b.fecha) - this.fechaMs(a.fecha);
+      }),
   );
 
   readonly totalPendientes = computed(() => this.notificacionesRecoger().length);
@@ -56,6 +66,7 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restaurarPreferencias();
+    this.cargarPerfilCamareroActual();
     this.cargarNotificaciones(true, false);
 
     this.intervaloRefresco = window.setInterval(() => {
@@ -142,14 +153,39 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
     }
   }
 
-  marcarTodasEnCurso(): void {
-    const pendientes = this.notificacionesRecoger().filter((notificacion) => !notificacion.enCurso);
-
-    if (pendientes.length === 0 || this.actualizando()) {
+  desasignarYReenviar(notificacion: Notificacion): void {
+    if (this.actualizando() || this.asignandoNotificacionId()) {
       return;
     }
 
-    pendientes.forEach((notificacion) => this.marcarEnCurso(notificacion));
+    this.actualizando.set(true);
+    this.asignandoNotificacionId.set(notificacion.id);
+    this.error.set(null);
+
+    this.notificacionesApi
+      .desasignarYReenviar(notificacion.id)
+      .pipe(take(1))
+      .subscribe({
+        next: (actualizada) => {
+          this.notificacionesConAviso.delete(actualizada.id);
+          this.notificaciones.update((actuales) =>
+            actuales.map((item) => item.id === actualizada.id ? actualizada : item),
+          );
+
+          if (this.toast()?.id === actualizada.id) {
+            this.toast.set(actualizada);
+          }
+
+          this.asignandoNotificacionId.set(null);
+          this.actualizando.set(false);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set('No se ha podido desasignar la notificación.');
+          this.asignandoNotificacionId.set(null);
+          this.actualizando.set(false);
+        },
+      });
   }
 
   mesaTexto(notificacion: Notificacion): string {
@@ -361,6 +397,21 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
       this.silenciadoHasta.set(0);
       localStorage.removeItem(this.silencioStorageKey);
     }
+  }
+
+  private async cargarPerfilCamareroActual(): Promise<void> {
+    try {
+      const perfil = await this.camareroAuth.obtenerPerfilCamareroActual();
+      this.camareroUidActual.set(perfil.uid);
+    } catch (err) {
+      console.warn('No se ha podido cargar el perfil del camarero actual.', err);
+      this.camareroUidActual.set(null);
+    }
+  }
+
+  private esAsignadaAlCamareroActual(notificacion: Notificacion): boolean {
+    const uidActual = this.camareroUidActual();
+    return !!uidActual && !!notificacion.enCurso && notificacion.camareroUid === uidActual;
   }
 
   private fechaMs(fechaIso: string | null | undefined): number {

@@ -114,8 +114,10 @@
                   </div>
 
                   <div class="modal-resumen-lista">
-                    @for (item of resumenCobro(); track item.platoId) {
-                      <div class="modal-resumen-item modal-resumen-item--seleccionable">
+                    @for (item of resumenCobro(); track item.key) {
+                      <div
+                        class="modal-resumen-item modal-resumen-item--seleccionable"
+                        [class.modal-resumen-item--bloqueado]="!puedeCobrarItem(item)">
                         <div class="modal-resumen-item__check">
                           <button
                             type="button"
@@ -288,7 +290,7 @@
         <h4>Eliminar producto</h4>
 
         <p>
-          Vas a eliminar 1 unidad de
+          Vas a eliminar {{ ordenesPendientesEliminar().length }} unidad{{ ordenesPendientesEliminar().length === 1 ? '' : 'es' }} de
           <strong>"{{ itemPendienteEliminar()?.nombre }}"</strong>
           del recibo.
         </p>

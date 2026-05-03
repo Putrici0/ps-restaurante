@@ -183,6 +183,10 @@
           </button>
         </div>
 
+        @if (avisoPago()) {
+          <p class="payment-warning">{{ avisoPago() }}</p>
+        }
+
         <div class="payment-table">
           <div class="payment-table__head">
             <span>DESCRIPCION</span>
@@ -190,8 +194,11 @@
             <span>PRECIO</span>
           </div>
 
-          @for (item of itemsPendientes(); track item.platoId) {
-            <div class="payment-row">
+          @for (item of itemsPendientes(); track item.key) {
+            <div
+              class="payment-row"
+              [class.payment-row--disabled]="!puedePagarItem(item)"
+              (click)="onIntentarSeleccionarItemNoEntregado(item)">
               <span class="payment-row__name">{{ item.nombre }}</span>
 
               <div class="payment-qty">
@@ -199,7 +206,7 @@
                   type="button"
                   class="payment-qty__btn"
                   (click)="decrementarSeleccion(item)"
-                  [disabled]="cantidadSeleccionada(item) <= 0"
+                  [disabled]="puedePagarItem(item) && cantidadSeleccionada(item) <= 0"
                 >
                   -
                 </button>
@@ -210,7 +217,7 @@
                   type="button"
                   class="payment-qty__btn"
                   (click)="incrementarSeleccion(item)"
-                  [disabled]="cantidadSeleccionada(item) >= item.cantidad"
+                  [disabled]="puedePagarItem(item) && cantidadSeleccionada(item) >= item.cantidad"
                 >
                   +
                 </button>

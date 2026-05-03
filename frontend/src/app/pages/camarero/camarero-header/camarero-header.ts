@@ -36,11 +36,21 @@ export class CamareroHeader implements OnInit, OnDestroy {
   readonly modoAviso = signal<ModoAviso>('sonido');
   readonly ahora = signal(Date.now());
   readonly asignandoNotificacionId = signal<string | null>(null);
+  readonly camareroUidActual = signal<string | null>(null);
 
   readonly notificacionesRecoger = computed(() =>
     this.notificaciones()
       .filter((notificacion) => !notificacion.leida && notificacion.tipo === 'Recoger')
-      .sort((a, b) => this.fechaMs(b.fecha) - this.fechaMs(a.fecha)),
+      .sort((a, b) => {
+        const prioridadA = this.esAsignadaAlCamareroActual(a) ? 1 : 0;
+        const prioridadB = this.esAsignadaAlCamareroActual(b) ? 1 : 0;
+
+        if (prioridadA !== prioridadB) {
+          return prioridadB - prioridadA;
+        }
+
+        return this.fechaMs(b.fecha) - this.fechaMs(a.fecha);
+      }),
   );
 
   readonly totalNotificaciones = computed(() => this.notificacionesRecoger().length);
@@ -69,6 +79,7 @@ export class CamareroHeader implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.restaurarPreferencias();
+    this.cargarPerfilCamareroActual();
     this.cargarNotificaciones(false);
 
     this.intervaloNotificaciones = window.setInterval(() => {
@@ -163,12 +174,31 @@ export class CamareroHeader implements OnInit, OnDestroy {
     }
   }
 
-  marcarTodasEnCurso(): void {
-    const pendientes = this.notificacionesRecoger().filter((notificacion) => !notificacion.enCurso);
+  desasignarYReenviar(notificacion: Notificacion): void {
+    if (this.asignandoNotificacionId()) {
+      return;
+    }
 
-    pendientes.forEach((notificacion) => {
-      this.marcarEnCurso(notificacion);
-    });
+    this.asignandoNotificacionId.set(notificacion.id);
+    this.errorNotificaciones.set(null);
+
+    this.notificacionesApi
+      .desasignarYReenviar(notificacion.id)
+      .pipe(take(1))
+      .subscribe({
+        next: (actualizada) => {
+          this.notificacionesYaAvisadas.delete(actualizada.id);
+          this.notificaciones.update((actuales) =>
+            actuales.map((item) => item.id === actualizada.id ? actualizada : item),
+          );
+          this.asignandoNotificacionId.set(null);
+        },
+        error: (err) => {
+          console.error(err);
+          this.errorNotificaciones.set('No se ha podido desasignar la notificación.');
+          this.asignandoNotificacionId.set(null);
+        },
+      });
   }
 
   mesaTexto(notificacion: Notificacion): string {
@@ -344,6 +374,21 @@ export class CamareroHeader implements OnInit, OnDestroy {
       this.modoAviso.set('sonido');
       localStorage.setItem(this.modoAvisoStorageKey, 'sonido');
     }
+  }
+
+  private async cargarPerfilCamareroActual(): Promise<void> {
+    try {
+      const perfil = await this.camareroAuth.obtenerPerfilCamareroActual();
+      this.camareroUidActual.set(perfil.uid);
+    } catch (err) {
+      console.warn('No se ha podido cargar el perfil del camarero actual.', err);
+      this.camareroUidActual.set(null);
+    }
+  }
+
+  private esAsignadaAlCamareroActual(notificacion: Notificacion): boolean {
+    const uidActual = this.camareroUidActual();
+    return !!uidActual && !!notificacion.enCurso && notificacion.camareroUid === uidActual;
   }
 
   private fechaMs(fechaIso: string | null | undefined): number {

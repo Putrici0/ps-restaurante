@@ -28,6 +28,7 @@ export class MenuCamarero implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
   private intervaloRefresco?: number;
+  private toastTimeoutRef?: number;
   private readonly mesaId = this.route.snapshot.paramMap.get('id') ?? '';
 
   readonly cargando = signal(true);
@@ -37,6 +38,9 @@ export class MenuCamarero implements OnInit, OnDestroy {
   readonly categoriaSeleccionada = signal<CategoriaPlato | 'Todos'>('Todos');
   readonly platos = signal<PlatoMenu[]>([]);
   readonly showConfirmPopup = signal(false);
+  readonly showToast = signal(false);
+  readonly toastMessage = signal('');
+  readonly toastTipo = signal<'ok' | 'error'>('ok');
   readonly cuentaActiva = signal<CuentaActivaResponse | null>(null);
 
   readonly categorias: ReadonlyArray<CategoriaPlato> = [
@@ -102,6 +106,9 @@ export class MenuCamarero implements OnInit, OnDestroy {
     if (this.intervaloRefresco) {
       window.clearInterval(this.intervaloRefresco);
     }
+    if (this.toastTimeoutRef) {
+      window.clearTimeout(this.toastTimeoutRef);
+    }
   }
 
   seleccionarCategoria(categoria: CategoriaPlato | 'Todos'): void {
@@ -158,8 +165,7 @@ export class MenuCamarero implements OnInit, OnDestroy {
     }
 
     if (!this.mesaId) {
-      this.error.set('No se ha podido identificar la mesa.');
-      alert('No se ha podido identificar la mesa.');
+      this.mostrarToast('No se ha podido identificar la mesa.', 'error');
       return;
     }
 
@@ -193,7 +199,7 @@ export class MenuCamarero implements OnInit, OnDestroy {
           this.enviando.set(false);
           this.showConfirmPopup.set(false);
 
-          alert('¡Pedido enviado correctamente!');
+          this.mostrarToast('Pedido enviado correctamente', 'ok');
         },
         error: (err) => {
           const mensaje =
@@ -203,6 +209,7 @@ export class MenuCamarero implements OnInit, OnDestroy {
 
           this.error.set(mensaje);
           this.enviando.set(false);
+          this.mostrarToast(mensaje, 'error');
         },
       });
   }
@@ -220,6 +227,20 @@ export class MenuCamarero implements OnInit, OnDestroy {
 
   trackByPlato(_: number, plato: PlatoMenu): string {
     return plato.id;
+  }
+
+  private mostrarToast(mensaje: string, tipo: 'ok' | 'error'): void {
+    this.toastMessage.set(mensaje);
+    this.toastTipo.set(tipo);
+    this.showToast.set(true);
+
+    if (this.toastTimeoutRef) {
+      window.clearTimeout(this.toastTimeoutRef);
+    }
+
+    this.toastTimeoutRef = window.setTimeout(() => {
+      this.showToast.set(false);
+    }, 2600);
   }
 
   private cargarEstadoMesa(mostrarLoading: boolean): void {

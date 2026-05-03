@@ -13,6 +13,7 @@ import {
 import { CocinaTableroResponse, OrdenesApiService } from '../../../services/ordenes-api.service';
 
 interface ItemCuentaAgrupado {
+  key: string;
   platoId: string;
   nombre: string;
   categoria: string;
@@ -39,6 +40,7 @@ export class BillPage implements OnInit, OnDestroy {
   private readonly route = inject(ActivatedRoute);
 
   private intervaloRefresco?: number;
+  private avisoPagoTimeoutRef?: number;
   private readonly mesaId = this.route.snapshot.paramMap.get('id') ?? '';
 
   readonly cargando = signal(true);
@@ -56,6 +58,7 @@ export class BillPage implements OnInit, OnDestroy {
 
   readonly vistaPago = signal<'ninguna' | 'seleccion' | 'tarjeta'>('ninguna');
   readonly seleccionCantidadPorPlato = signal<Record<string, number>>({});
+  readonly avisoPago = signal<string | null>(null);
 
   numeroTarjeta = '';
   nombreCompleto = '';
@@ -79,10 +82,12 @@ export class BillPage implements OnInit, OnDestroy {
       }
 
       const plato = orden.plato;
-      const key = plato.id;
+      const estado = orden.ordenEstado;
+      const key = `${plato.id}::${estado}`;
 
       if (!mapa.has(key)) {
         mapa.set(key, {
+          key,
           platoId: plato.id,
           nombre: plato.nombre,
           categoria: plato.categoria,
@@ -107,9 +112,16 @@ export class BillPage implements OnInit, OnDestroy {
       }
     }
 
-    return Array.from(mapa.values()).sort((a, b) =>
-      a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }),
-    );
+    return Array.from(mapa.values()).sort((a, b) => {
+      const prioridadA = this.puedePagarItem(a) ? 1 : 0;
+      const prioridadB = this.puedePagarItem(b) ? 1 : 0;
+
+      if (prioridadA !== prioridadB) {
+        return prioridadB - prioridadA;
+      }
+
+      return a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+    });
   });
 
   readonly itemsPagados = computed(() => {
@@ -121,10 +133,12 @@ export class BillPage implements OnInit, OnDestroy {
       }
 
       const plato = orden.plato;
-      const key = plato.id;
+      const estado = orden.ordenEstado;
+      const key = `${plato.id}::${estado}`;
 
       if (!mapa.has(key)) {
         mapa.set(key, {
+          key,
           platoId: plato.id,
           nombre: plato.nombre,
           categoria: plato.categoria,
@@ -168,9 +182,13 @@ export class BillPage implements OnInit, OnDestroy {
     const ids: string[] = [];
 
     for (const item of this.itemsPendientes()) {
+      if (!this.puedePagarItem(item)) {
+        continue;
+      }
+
       const cantidad = Math.max(
         0,
-        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+        Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length),
       );
       ids.push(...item.ordenesIds.slice(0, cantidad));
     }
@@ -182,9 +200,13 @@ export class BillPage implements OnInit, OnDestroy {
     const seleccion = this.seleccionCantidadPorPlato();
 
     const total = this.itemsPendientes().reduce((acc, item) => {
+      if (!this.puedePagarItem(item)) {
+        return acc;
+      }
+
       const cantidad = Math.max(
         0,
-        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+        Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length),
       );
       return acc + cantidad * item.precioUnitario;
     }, 0);
@@ -216,6 +238,9 @@ export class BillPage implements OnInit, OnDestroy {
     if (this.intervaloRefresco) {
       window.clearInterval(this.intervaloRefresco);
     }
+    if (this.avisoPagoTimeoutRef) {
+      window.clearTimeout(this.avisoPagoTimeoutRef);
+    }
   }
 
   recargar(): void {
@@ -225,7 +250,7 @@ export class BillPage implements OnInit, OnDestroy {
   abrirPagoParcial(): void {
     const seleccionInicial: Record<string, number> = {};
     for (const item of this.itemsPendientes()) {
-      seleccionInicial[item.platoId] = 0;
+      seleccionInicial[item.key] = 0;
     }
     this.seleccionCantidadPorPlato.set(seleccionInicial);
     this.vistaPago.set('seleccion');
@@ -241,29 +266,39 @@ export class BillPage implements OnInit, OnDestroy {
 
   cantidadSeleccionada(item: ItemCuentaAgrupado): number {
     const seleccion = this.seleccionCantidadPorPlato();
-    const cantidad = seleccion[item.platoId] ?? 0;
+    const cantidad = seleccion[item.key] ?? 0;
     return Math.max(0, Math.min(cantidad, item.ordenesIds.length));
   }
 
   incrementarSeleccion(item: ItemCuentaAgrupado): void {
+    if (!this.puedePagarItem(item)) {
+      this.mostrarAvisoPagoNoEntregado();
+      return;
+    }
+
     const actual = this.cantidadSeleccionada(item);
     if (actual >= item.ordenesIds.length) {
       return;
     }
     this.seleccionCantidadPorPlato.update((prev) => ({
       ...prev,
-      [item.platoId]: actual + 1,
+      [item.key]: actual + 1,
     }));
   }
 
   decrementarSeleccion(item: ItemCuentaAgrupado): void {
+    if (!this.puedePagarItem(item)) {
+      this.mostrarAvisoPagoNoEntregado();
+      return;
+    }
+
     const actual = this.cantidadSeleccionada(item);
     if (actual <= 0) {
       return;
     }
     this.seleccionCantidadPorPlato.update((prev) => ({
       ...prev,
-      [item.platoId]: actual - 1,
+      [item.key]: actual - 1,
     }));
   }
 
@@ -278,7 +313,7 @@ export class BillPage implements OnInit, OnDestroy {
   seleccionarTodoPago(): void {
     const seleccion: Record<string, number> = {};
     for (const item of this.itemsPendientes()) {
-      seleccion[item.platoId] = item.cantidad;
+      seleccion[item.key] = this.puedePagarItem(item) ? item.cantidad : 0;
     }
     this.seleccionCantidadPorPlato.set(seleccion);
   }
@@ -286,7 +321,7 @@ export class BillPage implements OnInit, OnDestroy {
   limpiarSeleccionPago(): void {
     const seleccion: Record<string, number> = {};
     for (const item of this.itemsPendientes()) {
-      seleccion[item.platoId] = 0;
+      seleccion[item.key] = 0;
     }
     this.seleccionCantidadPorPlato.set(seleccion);
   }
@@ -373,7 +408,18 @@ export class BillPage implements OnInit, OnDestroy {
   }
 
   trackByItemAgrupado(_: number, item: ItemCuentaAgrupado): string {
-    return `${item.platoId}-${item.pagado ? 'paid' : 'pending'}`;
+    return `${item.key}-${item.pagado ? 'paid' : 'pending'}`;
+  }
+
+  puedePagarItem(item: ItemCuentaAgrupado): boolean {
+    const estado = this.normalizarEstado(item.estados[0] ?? '');
+    return estado === 'Entregado';
+  }
+
+  onIntentarSeleccionarItemNoEntregado(item: ItemCuentaAgrupado): void {
+    if (!this.puedePagarItem(item)) {
+      this.mostrarAvisoPagoNoEntregado();
+    }
   }
 
   obtenerResumenEstado(item: ItemCuentaAgrupado): string {
@@ -581,5 +627,17 @@ export class BillPage implements OnInit, OnDestroy {
       hour: '2-digit',
       minute: '2-digit',
     }).format(fecha);
+  }
+
+  private mostrarAvisoPagoNoEntregado(): void {
+    this.avisoPago.set('No se puede pagar un producto que todavía no ha sido entregado.');
+
+    if (this.avisoPagoTimeoutRef) {
+      window.clearTimeout(this.avisoPagoTimeoutRef);
+    }
+
+    this.avisoPagoTimeoutRef = window.setTimeout(() => {
+      this.avisoPago.set(null);
+    }, 2600);
   }
 }

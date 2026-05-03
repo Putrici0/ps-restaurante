@@ -150,6 +150,32 @@ public class NotificacionApplicationService {
         return notificacionRepository.update(notificacion.id(), actualizada);
     }
 
+    public Notificacion desasignarYReenviarNotificacion(String notificacionId) {
+        Notificacion notificacion = notificacionRepository.findById(notificacionId)
+                .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
+
+        if (notificacion.leida()) {
+            return notificacion;
+        }
+
+        Notificacion actualizada = new Notificacion(
+                notificacion.id(),
+                notificacion.cuenta(),
+                notificacion.tipo(),
+                false,
+                Instant.now(),
+                notificacion.ordenId(),
+                notificacion.nombreItem(),
+                notificacion.categoriaItem(),
+                false,
+                null,
+                null,
+                null
+        );
+
+        return notificacionRepository.update(notificacion.id(), actualizada);
+    }
+
     public void eliminarNotificacionesRecogerDeOrden(String ordenId) {
         if (ordenId == null || ordenId.isBlank()) {
             return;

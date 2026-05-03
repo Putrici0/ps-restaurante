@@ -71,17 +71,18 @@
               {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'En curso' }}
             </button>
             } @else {
-            <button type="button" class="mark-read" disabled>
-              Asignada
+            <button
+              type="button"
+              class="mark-read"
+              [disabled]="asignandoNotificacionId() === notificacion.id"
+              (click)="desasignarYReenviar(notificacion)"
+            >
+              {{ asignandoNotificacionId() === notificacion.id ? 'Cancelando...' : 'Desasignar y reenviar' }}
             </button>
             }
           </article>
           }
         </div>
-
-        <button type="button" class="mark-all" (click)="marcarTodasEnCurso()">
-          Poner todas en curso
-        </button>
         }
       </section>
       }

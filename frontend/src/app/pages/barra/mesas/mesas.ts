@@ -10,6 +10,7 @@ import { CuentaApiService, OrdenCuentaResponse } from '../../../services/cuenta-
 import { MesasApiService } from '../../../services/mesas-api.service';
 
 interface ItemCobroAgrupado {
+  key: string;
   platoId: string;
   nombre: string;
   categoria: string;
@@ -51,6 +52,7 @@ export class Mesas {
 
   readonly mostrarConfirmacionEliminar = signal(false);
   readonly itemPendienteEliminar = signal<ItemCobroAgrupado | null>(null);
+  readonly ordenesPendientesEliminar = signal<string[]>([]);
 
   readonly seleccionCantidadPorPlato = signal<Record<string, number>>({});
 
@@ -64,9 +66,13 @@ export class Mesas {
     const seleccion = this.seleccionCantidadPorPlato();
 
     const total = this.resumenCobro().reduce((acc, item) => {
+      if (!this.puedeCobrarItem(item)) {
+        return acc;
+      }
+
       const cantidad = Math.max(
         0,
-        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+        Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length),
       );
       return acc + cantidad * item.precioUnitario;
     }, 0);
@@ -79,9 +85,13 @@ export class Mesas {
     const ids: string[] = [];
 
     for (const item of this.resumenCobro()) {
+      if (!this.puedeCobrarItem(item)) {
+        continue;
+      }
+
       const cantidad = Math.max(
         0,
-        Math.min(seleccion[item.platoId] ?? 0, item.ordenesIds.length),
+        Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length),
       );
       ids.push(...item.ordenesIds.slice(0, cantidad));
     }
@@ -237,29 +247,39 @@ export class Mesas {
       return;
     }
 
+    const cantidadSolicitada = this.cantidadSeleccionada(item);
+    const cantidadAEliminar = Math.max(
+      1,
+      Math.min(cantidadSolicitada > 0 ? cantidadSolicitada : 1, item.ordenesIds.length),
+    );
+
     this.itemPendienteEliminar.set(item);
+    this.ordenesPendientesEliminar.set(item.ordenesIds.slice(0, cantidadAEliminar));
     this.mostrarConfirmacionEliminar.set(true);
   }
 
   cancelarConfirmacionEliminar(): void {
     this.mostrarConfirmacionEliminar.set(false);
     this.itemPendienteEliminar.set(null);
+    this.ordenesPendientesEliminar.set([]);
   }
 
   confirmarEliminarUnidad(): void {
     const cuentaId = this.cuentaCobroId();
-    const item = this.itemPendienteEliminar();
-    const ordenId = item?.ordenesIds?.[0];
+    const ordenesIds = this.ordenesPendientesEliminar();
+    const primeraOrdenId = ordenesIds[0];
 
-    if (!cuentaId || !item || !ordenId || this.eliminandoOrdenId() !== null) {
+    if (!cuentaId || ordenesIds.length === 0 || !primeraOrdenId || this.eliminandoOrdenId() !== null) {
       this.cancelarConfirmacionEliminar();
       return;
     }
 
     this.error.set(null);
-    this.eliminandoOrdenId.set(ordenId);
+    this.eliminandoOrdenId.set(primeraOrdenId);
 
-    this.cuentaApi.eliminarOrdenDeCuenta(cuentaId, ordenId).subscribe({
+    forkJoin(
+      ordenesIds.map((ordenId) => this.cuentaApi.eliminarOrdenDeCuenta(cuentaId, ordenId)),
+    ).subscribe({
       next: () => {
         this.eliminandoOrdenId.set(null);
         this.cancelarConfirmacionEliminar();
@@ -297,6 +317,7 @@ export class Mesas {
     this.eliminandoOrdenId.set(null);
     this.mostrarConfirmacionEliminar.set(false);
     this.itemPendienteEliminar.set(null);
+    this.ordenesPendientesEliminar.set([]);
   }
 
   cambiarMetodoPago(metodo: 'EFECTIVO' | 'TARJETA'): void {
@@ -331,7 +352,7 @@ export class Mesas {
 
   cantidadSeleccionada(item: ItemCobroAgrupado): number {
     const seleccion = this.seleccionCantidadPorPlato();
-    const cantidad = seleccion[item.platoId] ?? 0;
+    const cantidad = seleccion[item.key] ?? 0;
     return Math.max(0, Math.min(cantidad, item.ordenesIds.length));
   }
 
@@ -342,7 +363,7 @@ export class Mesas {
     }
     this.seleccionCantidadPorPlato.update((prev) => ({
       ...prev,
-      [item.platoId]: actual + 1,
+      [item.key]: actual + 1,
     }));
   }
 
@@ -353,7 +374,7 @@ export class Mesas {
     }
     this.seleccionCantidadPorPlato.update((prev) => ({
       ...prev,
-      [item.platoId]: actual - 1,
+      [item.key]: actual - 1,
     }));
   }
 
@@ -365,7 +386,7 @@ export class Mesas {
     const actual = this.cantidadSeleccionada(item);
     this.seleccionCantidadPorPlato.update((prev) => ({
       ...prev,
-      [item.platoId]: actual === item.cantidad ? 0 : item.cantidad,
+      [item.key]: actual === item.cantidad ? 0 : item.cantidad,
     }));
 
     if (this.metodoPago() === 'EFECTIVO') {
@@ -379,7 +400,7 @@ export class Mesas {
   seleccionarTodoCobro(): void {
     const seleccion: Record<string, number> = {};
     for (const item of this.resumenCobro()) {
-      seleccion[item.platoId] = item.cantidad;
+      seleccion[item.key] = this.puedeCobrarItem(item) ? item.cantidad : 0;
     }
     this.seleccionCantidadPorPlato.set(seleccion);
   }
@@ -387,7 +408,7 @@ export class Mesas {
   limpiarSeleccionCobro(): void {
     const seleccion: Record<string, number> = {};
     for (const item of this.resumenCobro()) {
-      seleccion[item.platoId] = 0;
+      seleccion[item.key] = 0;
     }
     this.seleccionCantidadPorPlato.set(seleccion);
     if (this.metodoPago() === 'EFECTIVO') {
@@ -418,7 +439,7 @@ export class Mesas {
         this.resumenCobro.set(resumen);
         const seleccionInicial: Record<string, number> = {};
         for (const item of resumen) {
-          seleccionInicial[item.platoId] = 0;
+          seleccionInicial[item.key] = 0;
         }
         this.seleccionCantidadPorPlato.set(seleccionInicial);
         this.cargandoCobro.set(false);
@@ -440,10 +461,13 @@ export class Mesas {
       const platoId = plato?.id ?? `sin-id-${Math.random()}`;
       const nombre = plato?.nombre?.trim() || 'Producto';
       const categoria = plato?.categoria?.trim() || '';
+      const estado = orden.ordenEstado?.trim() || 'Sin estado';
+      const key = `${platoId}::${estado}`;
       const precioUnitario = Number(orden.precio ?? 0);
 
-      if (!mapa.has(platoId)) {
-        mapa.set(platoId, {
+      if (!mapa.has(key)) {
+        mapa.set(key, {
+          key,
           platoId,
           nombre,
           categoria,
@@ -455,7 +479,7 @@ export class Mesas {
         });
       }
 
-      const item = mapa.get(platoId)!;
+      const item = mapa.get(key)!;
       item.cantidad += 1;
       item.subtotal += precioUnitario;
 
@@ -468,9 +492,30 @@ export class Mesas {
       }
     }
 
-    return Array.from(mapa.values()).sort((a, b) =>
-      a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }),
-    );
+    return Array.from(mapa.values()).sort((a, b) => {
+      const entregaA = this.puedeCobrarItem(a) ? 1 : 0;
+      const entregaB = this.puedeCobrarItem(b) ? 1 : 0;
+
+      if (entregaA !== entregaB) {
+        return entregaB - entregaA;
+      }
+
+      const nombre = a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
+      if (nombre !== 0) {
+        return nombre;
+      }
+
+      return this.obtenerResumenEstado(a.estados).localeCompare(
+        this.obtenerResumenEstado(b.estados),
+        'es',
+        { sensitivity: 'base' },
+      );
+    });
+  }
+
+  puedeCobrarItem(item: ItemCobroAgrupado): boolean {
+    const estado = (item.estados[0] ?? '').trim().toLowerCase();
+    return estado === 'entregado';
   }
 
   private recargarMesas(mesaAReseleccionar?: string): void {

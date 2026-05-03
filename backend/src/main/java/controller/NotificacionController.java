@@ -144,6 +144,14 @@ public class NotificacionController {
                             ctx.json(notificacion);
                         });
                     });
+
+                    path("desasignar", () -> {
+                        post(ctx -> {
+                            String id = ctx.pathParam("id");
+                            Notificacion notificacion = applicationService.desasignarYReenviarNotificacion(id);
+                            ctx.json(notificacion);
+                        });
+                    });
                 });
             });
         };

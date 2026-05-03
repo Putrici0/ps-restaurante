@@ -711,6 +711,11 @@
   padding-right: 10px;
 }
 
+.modal-resumen-item--bloqueado {
+  opacity: 0.55;
+  background: #f3f3f3;
+}
+
 
 /* TOTAL (DESTACADO CUANDO ES PARCIAL) */
 .modal-total {
