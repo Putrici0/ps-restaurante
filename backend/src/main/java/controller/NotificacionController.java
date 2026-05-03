@@ -122,6 +122,21 @@ public class NotificacionController {
                         ctx.status(204);
                     });
 
+                    path("en-curso", () -> {
+                        post(ctx -> {
+                            String id = ctx.pathParam("id");
+                            MarcarEnCursoBody body = ctx.bodyAsClass(MarcarEnCursoBody.class);
+
+                            Notificacion notificacion = applicationService.marcarNotificacionEnCurso(
+                                    id,
+                                    body.camareroUid,
+                                    body.camareroNombre
+                            );
+
+                            ctx.json(notificacion);
+                        });
+                    });
+
                     path("leida", () -> {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
@@ -132,5 +147,10 @@ public class NotificacionController {
                 });
             });
         };
+    }
+
+    public static class MarcarEnCursoBody {
+        public String camareroUid;
+        public String camareroNombre;
     }
 }

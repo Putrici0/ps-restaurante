@@ -21,4 +21,8 @@ export interface Notificacion {
   ordenId?: string | null;
   nombreItem?: string | null;
   categoriaItem?: string | null;
+  enCurso?: boolean;
+  camareroUid?: string | null;
+  camareroNombre?: string | null;
+  fechaEnCurso?: string | null;
 }

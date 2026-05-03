@@ -3,6 +3,7 @@ import { Component, Input, OnDestroy, OnInit, computed, inject, signal } from '@
 import { RouterModule } from '@angular/router';
 import { catchError, of, take } from 'rxjs';
 import { Notificacion } from '../../../models/notificacion.model';
+import { CamareroAuthService } from '../../../services/camarero-auth.service';
 import { NotificacionesApiService } from '../../../services/notificaciones-api.service';
 
 type ModoAviso = 'sonido' | 'vibracion' | 'silencio';
@@ -19,6 +20,7 @@ export class CamareroHeader implements OnInit, OnDestroy {
   @Input() pendientesCount = 0;
 
   private readonly notificacionesApi = inject(NotificacionesApiService);
+  private readonly camareroAuth = inject(CamareroAuthService);
   private readonly pollingMs = 4000;
   private readonly modoAvisoStorageKey = 'camarero-notificaciones-modo-aviso';
   private readonly notificacionesYaAvisadas = new Set<string>();
@@ -33,6 +35,7 @@ export class CamareroHeader implements OnInit, OnDestroy {
   readonly errorNotificaciones = signal<string | null>(null);
   readonly modoAviso = signal<ModoAviso>('sonido');
   readonly ahora = signal(Date.now());
+  readonly asignandoNotificacionId = signal<string | null>(null);
 
   readonly notificacionesRecoger = computed(() =>
     this.notificaciones()
@@ -126,32 +129,45 @@ export class CamareroHeader implements OnInit, OnDestroy {
     }
   }
 
-  marcarComoLeida(notificacion: Notificacion): void {
-    this.notificacionesApi
-      .marcarComoLeida(notificacion.id)
-      .pipe(take(1))
-      .subscribe({
-        next: () => {
-          this.notificaciones.update((actuales) =>
-            actuales.filter((item) => item.id !== notificacion.id),
-          );
+  async marcarEnCurso(notificacion: Notificacion): Promise<void> {
+    if (this.asignandoNotificacionId()) {
+      return;
+    }
 
-          if (this.totalNotificaciones() === 0) {
-            this.panelNotificacionesAbierto.set(false);
-          }
-        },
-        error: (err) => {
-          console.error(err);
-          this.errorNotificaciones.set('No se ha podido marcar la notificación como vista.');
-        },
-      });
+    this.asignandoNotificacionId.set(notificacion.id);
+    this.errorNotificaciones.set(null);
+
+    try {
+      const perfil = await this.camareroAuth.obtenerPerfilCamareroActual();
+
+      this.notificacionesApi
+        .marcarEnCurso(notificacion.id, perfil.uid, perfil.nombreCompleto)
+        .pipe(take(1))
+        .subscribe({
+          next: (actualizada) => {
+            this.notificaciones.update((actuales) =>
+              actuales.map((item) => item.id === actualizada.id ? actualizada : item),
+            );
+            this.asignandoNotificacionId.set(null);
+          },
+          error: (err) => {
+            console.error(err);
+            this.errorNotificaciones.set('No se ha podido marcar la notificación en curso.');
+            this.asignandoNotificacionId.set(null);
+          },
+        });
+    } catch (err) {
+      console.error(err);
+      this.errorNotificaciones.set('No se ha podido identificar al camarero.');
+      this.asignandoNotificacionId.set(null);
+    }
   }
 
-  marcarTodasComoLeidas(): void {
-    const pendientes = [...this.notificacionesRecoger()];
+  marcarTodasEnCurso(): void {
+    const pendientes = this.notificacionesRecoger().filter((notificacion) => !notificacion.enCurso);
 
     pendientes.forEach((notificacion) => {
-      this.marcarComoLeida(notificacion);
+      this.marcarEnCurso(notificacion);
     });
   }
 
@@ -172,12 +188,21 @@ export class CamareroHeader implements OnInit, OnDestroy {
 
     return 'Mesa sin identificar';
   }
+
   descripcionNotificacion(notificacion: Notificacion): string {
     const item = this.itemTexto(notificacion);
 
     return item
       ? `Listo para recoger: ${item}.`
       : 'Pedido listo para recoger';
+  }
+
+  textoAsignacion(notificacion: Notificacion): string {
+    if (!notificacion.enCurso) {
+      return 'Pendiente de asignar';
+    }
+
+    return `En curso por ${notificacion.camareroNombre || 'camarero'}`;
   }
 
   itemTexto(notificacion: Notificacion): string {
@@ -321,7 +346,11 @@ export class CamareroHeader implements OnInit, OnDestroy {
     }
   }
 
-  private fechaMs(fechaIso: string): number {
+  private fechaMs(fechaIso: string | null | undefined): number {
+    if (!fechaIso) {
+      return 0;
+    }
+
     const fecha = new Date(fechaIso).getTime();
     return Number.isNaN(fecha) ? 0 : fecha;
   }

@@ -10,6 +10,10 @@ public record Notificacion(
         Instant fecha,
         String ordenId,
         String nombreItem,
-        String categoriaItem
+        String categoriaItem,
+        boolean enCurso,
+        String camareroUid,
+        String camareroNombre,
+        Instant fechaEnCurso
 ) {
 }

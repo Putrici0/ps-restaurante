@@ -27,64 +27,72 @@
         🔔
 
         @if (totalNotificaciones() > 0) {
-          <span class="notification-badge">
+        <span class="notification-badge">
             {{ totalNotificaciones() }}
           </span>
         }
       </button>
 
       @if (panelNotificacionesAbierto()) {
-        <section class="notification-panel">
-          <div class="notification-panel-header">
-            <div>
-              <strong>Pedidos listos</strong>
-              <span>{{ totalNotificaciones() }} pendientes</span>
-            </div>
-
-            <button type="button" class="close-panel" (click)="cerrarPanelNotificaciones()">
-              ✕
-            </button>
+      <section class="notification-panel">
+        <div class="notification-panel-header">
+          <div>
+            <strong>Pedidos listos</strong>
+            <span>{{ totalNotificaciones() }} pendientes</span>
           </div>
 
-          @if (totalNotificaciones() === 0) {
-            <div class="empty-notifications">
-              No hay pedidos listos pendientes.
-            </div>
-          } @else {
-            <div class="notification-list">
-              @for (notificacion of notificacionesRecoger(); track notificacion.id) {
-                <article class="notification-item">
-                  <div class="notification-info">
-                    <strong>{{ mesaTexto(notificacion) }}</strong>
-                    <p>{{ descripcionNotificacion(notificacion) }}</p>
-                    <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
-                  </div>
+          <button type="button" class="close-panel" (click)="cerrarPanelNotificaciones()">
+            ✕
+          </button>
+        </div>
 
-                  <button
-                    type="button"
-                    class="mark-read"
-                    (click)="marcarComoLeida(notificacion)"
-                  >
-                    Vista
-                  </button>
-                </article>
-              }
+        @if (totalNotificaciones() === 0) {
+        <div class="empty-notifications">
+          No hay pedidos listos pendientes.
+        </div>
+        } @else {
+        <div class="notification-list">
+          @for (notificacion of notificacionesRecoger(); track notificacion.id) {
+          <article class="notification-item">
+            <div class="notification-info">
+              <strong>{{ mesaTexto(notificacion) }}</strong>
+              <p>{{ descripcionNotificacion(notificacion) }}</p>
+              <span>{{ textoAsignacion(notificacion) }}</span>
+              <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
             </div>
 
-            <button type="button" class="mark-all" (click)="marcarTodasComoLeidas()">
-              Marcar todas como vistas
+            @if (!notificacion.enCurso) {
+            <button
+              type="button"
+              class="mark-read"
+              [disabled]="asignandoNotificacionId() === notificacion.id"
+              (click)="marcarEnCurso(notificacion)"
+            >
+              {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'En curso' }}
             </button>
+            } @else {
+            <button type="button" class="mark-read" disabled>
+              Asignada
+            </button>
+            }
+          </article>
           }
-        </section>
+        </div>
+
+        <button type="button" class="mark-all" (click)="marcarTodasEnCurso()">
+          Poner todas en curso
+        </button>
+        }
+      </section>
       }
     </div>
   </div>
 </header>
 
 @if (errorNotificaciones()) {
-  <div class="notification-error">
-    {{ errorNotificaciones() }}
-  </div>
+<div class="notification-error">
+  {{ errorNotificaciones() }}
+</div>
 }
 
 <nav class="sidebar" [class.open]="menuAbierto">

@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { catchError, of, take } from 'rxjs';
 import { Notificacion } from '../../models/notificacion.model';
+import { CamareroAuthService } from '../../services/camarero-auth.service';
 import { NotificacionesApiService } from '../../services/notificaciones-api.service';
 
 @Component({
@@ -13,6 +14,7 @@ import { NotificacionesApiService } from '../../services/notificaciones-api.serv
 })
 export class NotificacionesCamarero implements OnInit, OnDestroy {
   private readonly notificacionesApi = inject(NotificacionesApiService);
+  private readonly camareroAuth = inject(CamareroAuthService);
   private intervaloRefresco?: number;
   private intervaloReloj?: number;
   private readonly pollingMs = 4000;
@@ -22,6 +24,7 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
 
   readonly cargando = signal(true);
   readonly actualizando = signal(false);
+  readonly asignandoNotificacionId = signal<string | null>(null);
   readonly error = signal<string | null>(null);
   readonly notificaciones = signal<Notificacion[]>([]);
   readonly toast = signal<Notificacion | null>(null);
@@ -96,45 +99,57 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
     this.cargarNotificaciones(true, false);
   }
 
-  marcarComoLeida(notificacion: Notificacion): void {
-    if (this.actualizando()) {
+  async marcarEnCurso(notificacion: Notificacion): Promise<void> {
+    if (this.actualizando() || this.asignandoNotificacionId()) {
       return;
     }
 
     this.actualizando.set(true);
+    this.asignandoNotificacionId.set(notificacion.id);
     this.error.set(null);
 
-    this.notificacionesApi
-      .marcarComoLeida(notificacion.id)
-      .pipe(take(1))
-      .subscribe({
-        next: () => {
-          this.notificaciones.update((actuales) =>
-            actuales.filter((item) => item.id !== notificacion.id),
-          );
+    try {
+      const perfil = await this.camareroAuth.obtenerPerfilCamareroActual();
 
-          if (this.toast()?.id === notificacion.id) {
-            this.toast.set(null);
-          }
+      this.notificacionesApi
+        .marcarEnCurso(notificacion.id, perfil.uid, perfil.nombreCompleto)
+        .pipe(take(1))
+        .subscribe({
+          next: (actualizada) => {
+            this.notificaciones.update((actuales) =>
+              actuales.map((item) => item.id === actualizada.id ? actualizada : item),
+            );
 
-          this.actualizando.set(false);
-        },
-        error: (err) => {
-          console.error(err);
-          this.error.set('No se ha podido marcar la notificación como leída.');
-          this.actualizando.set(false);
-        },
-      });
+            if (this.toast()?.id === actualizada.id) {
+              this.toast.set(actualizada);
+            }
+
+            this.asignandoNotificacionId.set(null);
+            this.actualizando.set(false);
+          },
+          error: (err) => {
+            console.error(err);
+            this.error.set('No se ha podido marcar la notificación en curso.');
+            this.asignandoNotificacionId.set(null);
+            this.actualizando.set(false);
+          },
+        });
+    } catch (err) {
+      console.error(err);
+      this.error.set('No se ha podido identificar al camarero.');
+      this.asignandoNotificacionId.set(null);
+      this.actualizando.set(false);
+    }
   }
 
-  marcarTodasComoLeidas(): void {
-    const pendientes = this.notificacionesRecoger();
+  marcarTodasEnCurso(): void {
+    const pendientes = this.notificacionesRecoger().filter((notificacion) => !notificacion.enCurso);
 
     if (pendientes.length === 0 || this.actualizando()) {
       return;
     }
 
-    pendientes.forEach((notificacion) => this.marcarComoLeida(notificacion));
+    pendientes.forEach((notificacion) => this.marcarEnCurso(notificacion));
   }
 
   mesaTexto(notificacion: Notificacion): string {
@@ -157,7 +172,7 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
 
   tituloNotificacion(notificacion: Notificacion): string {
     if (notificacion.tipo === 'Recoger') {
-      return 'Pedido listo para recoger';
+      return notificacion.enCurso ? 'Pedido en curso' : 'Pedido listo para recoger';
     }
 
     return 'Solicitud de atención';
@@ -172,6 +187,14 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
     }
 
     return `${this.mesaTexto(notificacion)} solicita atención.`;
+  }
+
+  textoAsignacion(notificacion: Notificacion): string {
+    if (!notificacion.enCurso) {
+      return 'Pendiente de asignar';
+    }
+
+    return `En curso por ${notificacion.camareroNombre || 'camarero'}`;
   }
 
   itemTexto(notificacion: Notificacion): string {
@@ -340,7 +363,11 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
     }
   }
 
-  private fechaMs(fechaIso: string): number {
+  private fechaMs(fechaIso: string | null | undefined): number {
+    if (!fechaIso) {
+      return 0;
+    }
+
     const fecha = new Date(fechaIso).getTime();
     return Number.isNaN(fecha) ? 0 : fecha;
   }

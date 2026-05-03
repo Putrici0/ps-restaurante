@@ -33,6 +33,10 @@ public class NotificacionApplicationService {
                 Instant.now(),
                 null,
                 null,
+                null,
+                false,
+                null,
+                null,
                 null
         );
 
@@ -56,7 +60,11 @@ public class NotificacionApplicationService {
                 Instant.now(),
                 ordenId,
                 nombreItem,
-                categoriaItem
+                categoriaItem,
+                false,
+                null,
+                null,
+                null
         );
 
         return notificacionRepository.save(notificacion);
@@ -82,6 +90,40 @@ public class NotificacionApplicationService {
                 .toList();
     }
 
+    public Notificacion marcarNotificacionEnCurso(
+            String notificacionId,
+            String camareroUid,
+            String camareroNombre
+    ) {
+        Notificacion notificacion = notificacionRepository.findById(notificacionId)
+                .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
+
+        if (notificacion.leida()) {
+            return notificacion;
+        }
+
+        String nombreLimpio = camareroNombre == null || camareroNombre.isBlank()
+                ? "Camarero"
+                : camareroNombre.trim();
+
+        Notificacion actualizada = new Notificacion(
+                notificacion.id(),
+                notificacion.cuenta(),
+                notificacion.tipo(),
+                false,
+                notificacion.fecha(),
+                notificacion.ordenId(),
+                notificacion.nombreItem(),
+                notificacion.categoriaItem(),
+                true,
+                camareroUid,
+                nombreLimpio,
+                Instant.now()
+        );
+
+        return notificacionRepository.update(notificacion.id(), actualizada);
+    }
+
     public Notificacion marcarNotificacionLeida(String notificacionId) {
         Notificacion notificacion = notificacionRepository.findById(notificacionId)
                 .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
@@ -98,10 +140,25 @@ public class NotificacionApplicationService {
                 notificacion.fecha(),
                 notificacion.ordenId(),
                 notificacion.nombreItem(),
-                notificacion.categoriaItem()
+                notificacion.categoriaItem(),
+                notificacion.enCurso(),
+                notificacion.camareroUid(),
+                notificacion.camareroNombre(),
+                notificacion.fechaEnCurso()
         );
 
         return notificacionRepository.update(notificacion.id(), actualizada);
+    }
+
+    public void eliminarNotificacionesRecogerDeOrden(String ordenId) {
+        if (ordenId == null || ordenId.isBlank()) {
+            return;
+        }
+
+        notificacionRepository.findAll().stream()
+                .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
+                .filter(notificacion -> ordenId.equals(notificacion.ordenId()))
+                .forEach(notificacion -> notificacionRepository.deleteById(notificacion.id()));
     }
 
     public void marcarNotificacionesRecogerComoLeidasDeCuenta(String cuentaId) {
@@ -123,7 +180,11 @@ public class NotificacionApplicationService {
                             notificacion.fecha(),
                             notificacion.ordenId(),
                             notificacion.nombreItem(),
-                            notificacion.categoriaItem()
+                            notificacion.categoriaItem(),
+                            notificacion.enCurso(),
+                            notificacion.camareroUid(),
+                            notificacion.camareroNombre(),
+                            notificacion.fechaEnCurso()
                     );
 
                     notificacionRepository.update(notificacion.id(), actualizada);

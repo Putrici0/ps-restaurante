@@ -46,7 +46,11 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
                 toInstant(data.get("fecha")),
                 data.get("ordenId") != null ? String.valueOf(data.get("ordenId")) : null,
                 data.get("nombreItem") != null ? String.valueOf(data.get("nombreItem")) : null,
-                data.get("categoriaItem") != null ? String.valueOf(data.get("categoriaItem")) : null
+                data.get("categoriaItem") != null ? String.valueOf(data.get("categoriaItem")) : null,
+                get(data, "enCurso", false),
+                data.get("camareroUid") != null ? String.valueOf(data.get("camareroUid")) : null,
+                data.get("camareroNombre") != null ? String.valueOf(data.get("camareroNombre")) : null,
+                toInstant(data.get("fechaEnCurso"))
         );
     }
 
@@ -69,6 +73,10 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
         map.put("ordenId", notificacion.ordenId());
         map.put("nombreItem", notificacion.nombreItem());
         map.put("categoriaItem", notificacion.categoriaItem());
+        map.put("enCurso", notificacion.enCurso());
+        map.put("camareroUid", notificacion.camareroUid());
+        map.put("camareroNombre", notificacion.camareroNombre());
+        map.put("fechaEnCurso", toTimestamp(notificacion.fechaEnCurso()));
 
         return map;
     }
@@ -88,7 +96,11 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
                 notificacion.fecha(),
                 notificacion.ordenId(),
                 notificacion.nombreItem(),
-                notificacion.categoriaItem()
+                notificacion.categoriaItem(),
+                notificacion.enCurso(),
+                notificacion.camareroUid(),
+                notificacion.camareroNombre(),
+                notificacion.fechaEnCurso()
         );
     }
 

@@ -17,6 +17,19 @@ export class NotificacionesApiService {
       .pipe(timeout(this.requestTimeoutMs));
   }
 
+  marcarEnCurso(
+    id: string,
+    camareroUid: string | null,
+    camareroNombre: string,
+  ): Observable<Notificacion> {
+    return this.http
+      .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/en-curso`, {
+        camareroUid,
+        camareroNombre,
+      })
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
   marcarComoLeida(id: string): Observable<Notificacion> {
     return this.http
       .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/leida`, {})

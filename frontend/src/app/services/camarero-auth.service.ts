@@ -11,6 +11,12 @@ interface RegistroCamareroInput {
   password: string;
 }
 
+export interface CamareroPerfilActual {
+  uid: string | null;
+  nombreCompleto: string;
+  correo: string | null;
+}
+
 const FIREBASE_TIMEOUT_MS = 12000;
 
 @Injectable({ providedIn: 'root' })
@@ -57,6 +63,42 @@ export class CamareroAuthService {
         resolve(user);
       });
     });
+  }
+
+  async obtenerPerfilCamareroActual(): Promise<CamareroPerfilActual> {
+    const user = firebaseAuth.currentUser ?? await this.esperarEstadoAuth();
+
+    if (!user) {
+      return {
+        uid: null,
+        nombreCompleto: 'Camarero',
+        correo: null,
+      };
+    }
+
+    const snapshot = await this.withTimeout(getDoc(doc(firebaseDb, 'usuarios', user.uid)));
+
+    if (!snapshot.exists()) {
+      return {
+        uid: user.uid,
+        nombreCompleto: user.email ?? 'Camarero',
+        correo: user.email,
+      };
+    }
+
+    const data = snapshot.data() as {
+      nombre?: string;
+      apellido?: string;
+      correo?: string;
+    };
+
+    const nombreCompleto = `${data.nombre ?? ''} ${data.apellido ?? ''}`.trim();
+
+    return {
+      uid: user.uid,
+      nombreCompleto: nombreCompleto || data.correo || user.email || 'Camarero',
+      correo: data.correo ?? user.email,
+    };
   }
 
   async cerrarSesion(): Promise<void> {

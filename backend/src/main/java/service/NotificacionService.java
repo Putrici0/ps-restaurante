@@ -38,6 +38,10 @@ public class NotificacionService {
                 Instant.now(),
                 null,
                 null,
+                null,
+                false,
+                null,
+                null,
                 null
         );
 
