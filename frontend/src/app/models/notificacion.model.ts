@@ -18,4 +18,7 @@ export interface Notificacion {
   tipo: TipoNotificacion;
   leida: boolean;
   fecha: string;
+  ordenId?: string | null;
+  nombreItem?: string | null;
+  categoriaItem?: string | null;
 }

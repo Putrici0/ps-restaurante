@@ -14,7 +14,6 @@ import java.util.Optional;
 import static io.javalin.apibuilder.ApiBuilder.*;
 
 public class OrdenController {
-
     private final OrdenService service;
     private final OrdenApplicationService applicationService;
     private final NotificacionApplicationService notificacionApplicationService;
@@ -165,12 +164,20 @@ public class OrdenController {
                             Orden orden = applicationService.marcarOrdenLista(id);
 
                             if (
-                                    orden.pedido() != null
-                                            && orden.pedido().cuenta() != null
-                                            && orden.pedido().cuenta().id() != null
+                                    orden.pedido() != null &&
+                                            orden.pedido().cuenta() != null &&
+                                            orden.pedido().cuenta().id() != null
                             ) {
+                                String nombreItem = orden.plato() != null ? orden.plato().nombre() : "Pedido";
+                                String categoriaItem = orden.plato() != null && orden.plato().categoria() != null
+                                        ? orden.plato().categoria().name()
+                                        : null;
+
                                 notificacionApplicationService.crearNotificacionPedidoListo(
-                                        orden.pedido().cuenta().id()
+                                        orden.pedido().cuenta().id(),
+                                        orden.id(),
+                                        nombreItem,
+                                        categoriaItem
                                 );
                             }
 
@@ -184,9 +191,9 @@ public class OrdenController {
                             Orden orden = applicationService.marcarOrdenEntregada(id);
 
                             if (
-                                    orden.pedido() != null
-                                            && orden.pedido().cuenta() != null
-                                            && orden.pedido().cuenta().id() != null
+                                    orden.pedido() != null &&
+                                            orden.pedido().cuenta() != null &&
+                                            orden.pedido().cuenta().id() != null
                             ) {
                                 notificacionApplicationService.marcarNotificacionesRecogerComoLeidasDeCuenta(
                                         orden.pedido().cuenta().id()

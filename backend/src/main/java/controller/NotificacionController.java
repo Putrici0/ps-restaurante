@@ -4,8 +4,8 @@ import dto.NotificacionRequest;
 import io.javalin.apibuilder.EndpointGroup;
 import model.Notificacion;
 import model.TipoNotificacion;
-import service.application.NotificacionApplicationService;
 import service.NotificacionService;
+import service.application.NotificacionApplicationService;
 import util.ApiError;
 
 import java.util.List;
@@ -84,8 +84,15 @@ public class NotificacionController {
                 path("pedido-listo/{cuentaId}", () -> {
                     post(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");
+
                         Notificacion notificacion =
-                                applicationService.crearNotificacionPedidoListo(cuentaId);
+                                applicationService.crearNotificacionPedidoListo(
+                                        cuentaId,
+                                        null,
+                                        null,
+                                        null
+                                );
+
                         ctx.status(201).json(notificacion);
                     });
                 });

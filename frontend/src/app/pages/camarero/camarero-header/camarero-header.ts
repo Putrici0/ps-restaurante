@@ -172,6 +172,31 @@ export class CamareroHeader implements OnInit, OnDestroy {
 
     return 'Mesa sin identificar';
   }
+  descripcionNotificacion(notificacion: Notificacion): string {
+    const item = this.itemTexto(notificacion);
+
+    return item
+      ? `Listo para recoger: ${item}.`
+      : 'Pedido listo para recoger';
+  }
+
+  itemTexto(notificacion: Notificacion): string {
+    const nombre = notificacion.nombreItem?.trim();
+
+    if (!nombre) {
+      return '';
+    }
+
+    const categoria = notificacion.categoriaItem?.trim();
+
+    if (!categoria) {
+      return nombre;
+    }
+
+    const tipo = categoria.toLowerCase() === 'bebida' ? 'Bebida' : 'Plato';
+
+    return `${tipo}: ${nombre}`;
+  }
 
   tiempoTranscurrido(fechaIso: string): string {
     const diffMs = Math.max(0, this.ahora() - this.fechaMs(fechaIso));

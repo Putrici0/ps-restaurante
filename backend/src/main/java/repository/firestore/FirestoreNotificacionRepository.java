@@ -12,9 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-public class FirestoreNotificacionRepository extends AbstractFirestoreRepository<Notificacion>
-        implements NotificacionRepository {
-
+public class FirestoreNotificacionRepository extends AbstractFirestoreRepository<Notificacion> implements NotificacionRepository {
     public FirestoreNotificacionRepository(Firestore db) {
         super(db, "notificaciones");
     }
@@ -45,7 +43,10 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
                 cuenta,
                 toEnum(TipoNotificacion.class, data.get("tipo"), TipoNotificacion.Atencion),
                 get(data, "leida", false),
-                toInstant(data.get("fecha"))
+                toInstant(data.get("fecha")),
+                data.get("ordenId") != null ? String.valueOf(data.get("ordenId")) : null,
+                data.get("nombreItem") != null ? String.valueOf(data.get("nombreItem")) : null,
+                data.get("categoriaItem") != null ? String.valueOf(data.get("categoriaItem")) : null
         );
     }
 
@@ -59,13 +60,15 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
             cMap.put("estaPagada", notificacion.cuenta().payed());
             cMap.put("fechaCreacion", toTimestamp(notificacion.cuenta().fechaCreacion()));
             cMap.put("mesas", mapMesas(notificacion.cuenta().mesas()));
-
             map.put("cuenta", cMap);
         }
 
         map.put("tipo", notificacion.tipo().name());
         map.put("leida", notificacion.leida());
         map.put("fecha", toTimestamp(notificacion.fecha()));
+        map.put("ordenId", notificacion.ordenId());
+        map.put("nombreItem", notificacion.nombreItem());
+        map.put("categoriaItem", notificacion.categoriaItem());
 
         return map;
     }
@@ -82,7 +85,10 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
                 notificacion.cuenta(),
                 notificacion.tipo(),
                 notificacion.leida(),
-                notificacion.fecha()
+                notificacion.fecha(),
+                notificacion.ordenId(),
+                notificacion.nombreItem(),
+                notificacion.categoriaItem()
         );
     }
 
@@ -122,13 +128,13 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
         }
 
         return mesasRaw.stream()
-                .filter(item -> item instanceof Map<?, ?>)
+                .filter(item -> item instanceof Map)
                 .map(item -> {
-                    Map<?, ?> mesaMap = (Map<?, ?>) item;
+                    Map<String, Object> mesaMap = (Map<String, Object>) item;
 
                     String mesaId = String.valueOf(mesaMap.get("id"));
-
                     int capacidad = 0;
+
                     Object capacidadObject = mesaMap.get("capacidad");
 
                     if (capacidadObject instanceof Number number) {

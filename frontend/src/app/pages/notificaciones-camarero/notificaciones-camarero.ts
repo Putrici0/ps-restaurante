@@ -13,7 +13,6 @@ import { NotificacionesApiService } from '../../services/notificaciones-api.serv
 })
 export class NotificacionesCamarero implements OnInit, OnDestroy {
   private readonly notificacionesApi = inject(NotificacionesApiService);
-
   private intervaloRefresco?: number;
   private intervaloReloj?: number;
   private readonly pollingMs = 4000;
@@ -78,7 +77,6 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
   activarAvisos(): void {
     this.avisosActivados.set(true);
     localStorage.setItem(this.avisosActivadosStorageKey, 'true');
-
     this.reproducirSonido();
     this.vibrarSuave();
   }
@@ -167,10 +165,31 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
 
   descripcionNotificacion(notificacion: Notificacion): string {
     if (notificacion.tipo === 'Recoger') {
-      return `${this.mesaTexto(notificacion)} tiene platos listos.`;
+      const item = this.itemTexto(notificacion);
+      return item
+        ? `${this.mesaTexto(notificacion)} tiene listo: ${item}.`
+        : `${this.mesaTexto(notificacion)} tiene pedidos listos.`;
     }
 
     return `${this.mesaTexto(notificacion)} solicita atención.`;
+  }
+
+  itemTexto(notificacion: Notificacion): string {
+    const nombre = notificacion.nombreItem?.trim();
+
+    if (!nombre) {
+      return '';
+    }
+
+    const categoria = notificacion.categoriaItem?.trim();
+
+    if (!categoria) {
+      return nombre;
+    }
+
+    const tipo = categoria.toLowerCase() === 'bebida' ? 'Bebida' : 'Plato';
+
+    return `${tipo}: ${nombre}`;
   }
 
   tiempoTranscurrido(fechaIso: string): string {
@@ -257,6 +276,7 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
     }
 
     const ultima = nuevas[0];
+
     this.toast.set(ultima);
 
     window.setTimeout(() => {
@@ -276,7 +296,8 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
   private reproducirSonido(): void {
     try {
       const AudioContextClass =
-        window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 
       const audioContext = new AudioContextClass();
       const oscillator = audioContext.createOscillator();

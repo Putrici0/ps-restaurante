@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.util.List;
 
 public class NotificacionApplicationService {
-
     private final NotificacionRepository notificacionRepository;
     private final CuentaRepository cuentaRepository;
 
@@ -31,13 +30,21 @@ public class NotificacionApplicationService {
                 cuenta,
                 TipoNotificacion.Atencion,
                 false,
-                Instant.now()
+                Instant.now(),
+                null,
+                null,
+                null
         );
 
         return notificacionRepository.save(notificacion);
     }
 
-    public Notificacion crearNotificacionPedidoListo(String cuentaId) {
+    public Notificacion crearNotificacionPedidoListo(
+            String cuentaId,
+            String ordenId,
+            String nombreItem,
+            String categoriaItem
+    ) {
         Cuenta cuenta = cuentaRepository.findById(cuentaId)
                 .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
 
@@ -46,7 +53,10 @@ public class NotificacionApplicationService {
                 cuenta,
                 TipoNotificacion.Recoger,
                 false,
-                Instant.now()
+                Instant.now(),
+                ordenId,
+                nombreItem,
+                categoriaItem
         );
 
         return notificacionRepository.save(notificacion);
@@ -85,7 +95,10 @@ public class NotificacionApplicationService {
                 notificacion.cuenta(),
                 notificacion.tipo(),
                 true,
-                notificacion.fecha()
+                notificacion.fecha(),
+                notificacion.ordenId(),
+                notificacion.nombreItem(),
+                notificacion.categoriaItem()
         );
 
         return notificacionRepository.update(notificacion.id(), actualizada);
@@ -107,7 +120,10 @@ public class NotificacionApplicationService {
                             notificacion.cuenta(),
                             notificacion.tipo(),
                             true,
-                            notificacion.fecha()
+                            notificacion.fecha(),
+                            notificacion.ordenId(),
+                            notificacion.nombreItem(),
+                            notificacion.categoriaItem()
                     );
 
                     notificacionRepository.update(notificacion.id(), actualizada);

@@ -16,8 +16,10 @@ public class NotificacionService {
     private final FirestoreNotificacionRepository repository;
     private final FirestoreCuentaRepository cuentaRepository;
 
-    public NotificacionService(FirestoreNotificacionRepository repository,
-                               FirestoreCuentaRepository cuentaRepository) {
+    public NotificacionService(
+            FirestoreNotificacionRepository repository,
+            FirestoreCuentaRepository cuentaRepository
+    ) {
         this.repository = repository;
         this.cuentaRepository = cuentaRepository;
     }
@@ -33,7 +35,10 @@ public class NotificacionService {
                 cuenta,
                 TipoNotificacion.valueOf(request.tipo.trim()),
                 request.leida,
-                Instant.now()
+                Instant.now(),
+                null,
+                null,
+                null
         );
 
         return repository.save(notificacion);
@@ -55,12 +60,15 @@ public class NotificacionService {
         if (request == null) {
             throw new IllegalArgumentException("El cuerpo de la petición no puede ser nulo");
         }
+
         if (request.cuentaId == null || request.cuentaId.isBlank()) {
             throw new IllegalArgumentException("La cuenta es obligatoria");
         }
+
         if (request.tipo == null || request.tipo.isBlank()) {
             throw new IllegalArgumentException("El tipo es obligatorio");
         }
+
         if (request.leida == null) {
             throw new IllegalArgumentException("El estado leída es obligatorio");
         }
