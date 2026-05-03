@@ -21,6 +21,14 @@
     <button
       type="button"
       class="accion-secundaria"
+      [disabled]="mesa.estado !== 'ocupada' || !mesa.cuentaActiva || accionEnCurso"
+      (click)="solicitarLiberacion()">
+      Liberar mesa
+    </button>
+
+    <button
+      type="button"
+      class="accion-secundaria"
       [disabled]="mesa.estado !== 'ocupada' || !mesa.cuentaActiva"
       (click)="toggleCuenta()">
       Ver cuenta

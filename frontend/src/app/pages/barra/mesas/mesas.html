@@ -67,6 +67,7 @@
             [mesa]="mesaSel"
             [accionEnCurso]="accionMesaId() === mesaSel.id || procesandoCobro() || eliminandoOrdenId() !== null"
             (ocupar)="ocuparMesa($event)"
+            (liberar)="solicitarLiberarMesa($event)"
             (cobrar)="abrirCobro($event)">
           </app-mesa-detalle>
         </aside>
@@ -314,6 +315,40 @@
             (click)="confirmarEliminarUnidad()"
             [disabled]="eliminandoOrdenId() !== null">
             {{ eliminandoOrdenId() !== null ? 'Eliminando...' : 'Eliminar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (mostrarConfirmacionLiberar()) {
+    <div class="modal-overlay modal-overlay--confirmacion" (click)="cancelarConfirmacionLiberar()">
+      <div class="modal-confirmacion" (click)="$event.stopPropagation()">
+        <h4>Liberar mesa</h4>
+
+        <p>
+          Se cancelaran todos los productos de la cuenta y la mesa quedara libre.
+        </p>
+
+        <p class="modal-confirmacion__texto-secundario">
+          Usa esta accion solo para corregir errores.
+        </p>
+
+        <div class="modal-confirmacion__acciones">
+          <button
+            type="button"
+            class="modal-btn modal-btn--secundario"
+            (click)="cancelarConfirmacionLiberar()"
+            [disabled]="accionMesaId() !== null">
+            Cancelar
+          </button>
+
+          <button
+            type="button"
+            class="modal-btn modal-btn--danger"
+            (click)="confirmarLiberarMesa()"
+            [disabled]="accionMesaId() !== null">
+            {{ accionMesaId() !== null ? 'Liberando...' : 'Confirmar liberacion' }}
           </button>
         </div>
       </div>

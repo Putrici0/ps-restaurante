@@ -53,6 +53,8 @@ export class MesasCamarero {
   readonly itemPendienteEliminar = signal<ItemCobroAgrupado | null>(null);
   readonly ordenesSeleccionadas = signal<string[]>([]);
   readonly mostrarContrasenaModal = signal(false);
+  readonly mostrarConfirmacionLiberar = signal(false);
+  readonly mesaPendienteLiberarId = signal<string | null>(null);
 
   readonly mesasFiltradas = computed(() =>
     this.mesas()
@@ -142,6 +144,43 @@ export class MesasCamarero {
         console.error('Error ocupando mesa:', err);
         this.accionMesaId.set(null);
         this.error.set('Error al ocupar mesa.');
+      },
+    });
+  }
+
+  solicitarLiberarMesa(mesaId: string): void {
+    if (!mesaId || this.accionMesaId() !== null) {
+      return;
+    }
+
+    this.mesaPendienteLiberarId.set(mesaId);
+    this.mostrarConfirmacionLiberar.set(true);
+  }
+
+  cancelarConfirmacionLiberar(): void {
+    this.mostrarConfirmacionLiberar.set(false);
+    this.mesaPendienteLiberarId.set(null);
+  }
+
+  confirmarLiberarMesa(): void {
+    const mesaId = this.mesaPendienteLiberarId();
+    if (!mesaId) {
+      return;
+    }
+
+    this.error.set(null);
+    this.accionMesaId.set(mesaId);
+    this.mesasApi.liberarMesa(mesaId).subscribe({
+      next: () => {
+        this.mostrarConfirmacionLiberar.set(false);
+        this.mesaPendienteLiberarId.set(null);
+        this.recargarMesas(mesaId);
+        this.cerrarModal();
+      },
+      error: (err) => {
+        console.error('Error liberando mesa:', err);
+        this.accionMesaId.set(null);
+        this.error.set('Error al liberar mesa.');
       },
     });
   }

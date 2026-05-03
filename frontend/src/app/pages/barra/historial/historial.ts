@@ -70,11 +70,21 @@ export class HistorialComponent {
   });
 
   readonly detalleAgrupado = computed(() =>
-    this.agruparOrdenes(this.ordenesDetalle()),
+    this.agruparOrdenes(
+      this.ordenesDetalle().filter((orden) => orden.ordenEstado !== 'Cancelado'),
+    ),
   );
 
   readonly pagosDetalle = computed(() =>
-    this.agruparOrdenesPorPago(this.ordenesDetalle()),
+    this.agruparOrdenesPorPago(
+      this.ordenesDetalle().filter((orden) => orden.ordenEstado !== 'Cancelado'),
+    ),
+  );
+
+  readonly canceladosDetalle = computed(() =>
+    this.agruparOrdenes(
+      this.ordenesDetalle().filter((orden) => orden.ordenEstado === 'Cancelado'),
+    ),
   );
 
   constructor() {
@@ -127,7 +137,7 @@ export class HistorialComponent {
 
     forkJoin({
       cuenta: this.cuentaApi.obtenerCuentaPorId(cuentaId),
-      ordenes: this.cuentaApi.obtenerOrdenesDeCuenta(cuentaId),
+      ordenes: this.cuentaApi.obtenerTodasLasOrdenesDeCuenta(cuentaId),
       total: this.cuentaApi.obtenerTotalCuenta(cuentaId),
     }).subscribe({
       next: ({ cuenta, ordenes, total }) => {

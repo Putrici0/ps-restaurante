@@ -55,6 +55,12 @@
           </button>
 
           <button class="action-btn"
+                  [disabled]="mesaSel.estado === 'libre' || accionMesaId() === mesaSel.id"
+                  (click)="solicitarLiberarMesa(mesaSel.id)">
+            {{ accionMesaId() === mesaSel.id ? 'LIBERANDO...' : 'Liberar mesa' }}
+          </button>
+
+          <button class="action-btn"
                   [disabled]="mesaSel.estado === 'libre'"
                   (click)="toggleContrasena()">
             Contraseña
@@ -80,6 +86,25 @@
                 (click)="ocuparMesa(mesaSel.id)">
           {{ accionMesaId() === mesaSel.id ? 'OCUPANDO...' : 'OCUPAR MESA' }}
         </button>
+      </div>
+    </div>
+  }
+
+  @if (mostrarConfirmacionLiberar()) {
+    <div class="modal-overlay" (click)="cancelarConfirmacionLiberar()">
+      <div class="modal-card" (click)="$event.stopPropagation()">
+        <p class="modal-subtitle">CONFIRMACION</p>
+        <h2 class="modal-title">Liberar mesa</h2>
+        <p>Se cancelaran todos los pedidos de la cuenta y la mesa quedara libre.</p>
+
+        <div class="modal-actions">
+          <button class="action-btn" [disabled]="accionMesaId() !== null" (click)="cancelarConfirmacionLiberar()">
+            Cancelar
+          </button>
+          <button class="action-btn" [disabled]="accionMesaId() !== null" (click)="confirmarLiberarMesa()">
+            {{ accionMesaId() !== null ? 'LIBERANDO...' : 'Confirmar liberacion' }}
+          </button>
+        </div>
       </div>
     </div>
   }

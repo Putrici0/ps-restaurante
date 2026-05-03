@@ -113,6 +113,14 @@ public class CuentaController {
                             ctx.json(ordenes);
                         });
 
+                        path("todas", () -> {
+                            get(ctx -> {
+                                String id = ctx.pathParam("id");
+                                List<Orden> ordenes = pagoApplicationService.obtenerTodasLasOrdenesDeCuenta(id);
+                                ctx.json(ordenes);
+                            });
+                        });
+
                         path("{ordenId}", () -> {
                             delete(ctx -> {
                                 String cuentaId = ctx.pathParam("id");

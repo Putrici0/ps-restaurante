@@ -134,6 +134,23 @@
                   }
                 </div>
               </details>
+
+              @if (canceladosDetalle().length > 0) {
+                <details class="pago-acordeon-interno pago-acordeon-interno--cancelados">
+                  <summary class="pago-titulo-interno">
+                    <span>Ver cancelados</span>
+                  </summary>
+
+                  <div class="pago-contenido">
+                    @for (item of canceladosDetalle(); track item.platoId) {
+                      <div class="detalle-item detalle-item--cancelado">
+                        <span>{{ item.cantidad }}x {{ item.nombre }}</span>
+                        <span>{{ item.subtotal | number:'1.2-2' }} €</span>
+                      </div>
+                    }
+                  </div>
+                </details>
+              }
             </div>
           </div>
         }

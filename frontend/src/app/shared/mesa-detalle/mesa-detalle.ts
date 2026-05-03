@@ -15,6 +15,7 @@ export class MesaDetalle implements OnChanges {
 
   @Output() ocupar = new EventEmitter<string>();
   @Output() cobrar = new EventEmitter<{ mesaId: string; cuentaId: string }>();
+  @Output() liberar = new EventEmitter<string>();
 
   mostrarCuenta = false;
   mostrarPassword = false;
@@ -51,5 +52,13 @@ export class MesaDetalle implements OnChanges {
       mesaId: this.mesa.id,
       cuentaId: this.mesa.cuentaActiva.id,
     });
+  }
+
+  solicitarLiberacion(): void {
+    if (this.mesa.estado !== 'ocupada' || !this.mesa.cuentaActiva || this.accionEnCurso) {
+      return;
+    }
+
+    this.liberar.emit(this.mesa.id);
   }
 }

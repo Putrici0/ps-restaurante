@@ -45,6 +45,14 @@ public class PagoApplicationService {
                 .toList();
     }
 
+    public List<Orden> obtenerTodasLasOrdenesDeCuenta(String cuentaId) {
+        List<Pedido> pedidos = obtenerPedidosDeCuenta(cuentaId);
+
+        return pedidos.stream()
+                .flatMap(pedido -> ordenRepository.findByPedido(pedido).stream())
+                .toList();
+    }
+
     public BigDecimal calcularTotalCuenta(String cuentaId) {
         return obtenerOrdenesDeCuenta(cuentaId).stream()
                 .map(Orden::precio)

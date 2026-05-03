@@ -3,6 +3,7 @@ package service;
 import model.Cuenta;
 import model.Mesa;
 import model.Orden;
+import model.OrdenEstado;
 import model.Pedido;
 import repository.interfaces.CuentaRepository;
 import repository.interfaces.MesaRepository;
@@ -57,7 +58,7 @@ public class MesaApplicationService {
         Mesa mesa = obtenerMesa(mesaId);
 
         if (estaOcupada(mesaId)) {
-            throw new IllegalArgumentException("La mesa ya está ocupada");
+            throw new IllegalArgumentException("La mesa ya esta ocupada");
         }
 
         Cuenta nuevaCuenta = new Cuenta(
@@ -76,7 +77,33 @@ public class MesaApplicationService {
 
     public Cuenta liberarMesa(String mesaId) {
         Cuenta cuentaActiva = obtenerCuentaActivaDeMesa(mesaId)
-                .orElseThrow(() -> new IllegalArgumentException("La mesa ya está libre"));
+                .orElseThrow(() -> new IllegalArgumentException("La mesa ya esta libre"));
+
+        List<Pedido> pedidos = pedidoRepository.findByCuenta(cuentaActiva);
+        for (Pedido pedido : pedidos) {
+            List<Orden> ordenes = ordenRepository.findByPedido(pedido);
+            for (Orden orden : ordenes) {
+                if (orden.ordenEstado() == OrdenEstado.Cancelado) {
+                    continue;
+                }
+
+                Orden ordenCancelada = new Orden(
+                        orden.id(),
+                        orden.pedido(),
+                        orden.plato(),
+                        orden.precio(),
+                        OrdenEstado.Cancelado,
+                        orden.fecha(),
+                        orden.detalles(),
+                        orden.urgente(),
+                        orden.pagada(),
+                        orden.fechaPago(),
+                        orden.metodoPago()
+                );
+
+                ordenRepository.update(orden.id(), ordenCancelada);
+            }
+        }
 
         Cuenta cuentaLiberada = new Cuenta(
                 cuentaActiva.id(),
@@ -121,7 +148,7 @@ public class MesaApplicationService {
         String passwordRecibida = password == null ? "" : password.trim();
 
         if (!passwordGuardada.equals(passwordRecibida)) {
-            throw new IllegalArgumentException("La contraseña no es correcta");
+            throw new IllegalArgumentException("La contrasena no es correcta");
         }
 
         return cuentaActiva;

@@ -114,6 +114,12 @@ export class CuentaApiService {
     );
   }
 
+  obtenerTodasLasOrdenesDeCuenta(cuentaId: string): Observable<OrdenCuentaResponse[]> {
+    return this.http.get<OrdenCuentaResponse[]>(
+      `${this.apiUrl}/cuentas/${cuentaId}/ordenes/todas`,
+    );
+  }
+
   obtenerPendienteCuenta(cuentaId: string): Observable<ImporteCuentaResponse> {
     return this.http.get<ImporteCuentaResponse>(
       `${this.apiUrl}/cuentas/${cuentaId}/pendiente`,
