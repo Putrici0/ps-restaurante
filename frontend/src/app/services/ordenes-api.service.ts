@@ -21,6 +21,7 @@ export interface CocinaPrioridadResponse {
   mesa: number;
   flujo: number;
   tiempoEstimado: number;
+  etaMinutos: number;
   sincronizacion: number;
   urgencia: number;
   motivos: string[];

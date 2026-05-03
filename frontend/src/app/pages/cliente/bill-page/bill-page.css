@@ -254,6 +254,13 @@
   font-size: 0.75rem;
 }
 
+.bill-item-card__eta {
+  margin-top: 0.2rem;
+  color: #6f5a4d;
+  font-weight: 600;
+  font-size: 0.72rem;
+}
+
 .spinner {
   width: 42px;
   height: 42px;

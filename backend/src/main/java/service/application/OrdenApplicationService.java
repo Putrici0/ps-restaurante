@@ -120,6 +120,19 @@ public class OrdenApplicationService {
                 ahora
         );
 
+        List<Orden> colaActivaPriorizada = cocinaPrioridadService.ordenarPorPrioridad(
+                ordenesCocina.stream()
+                        .filter(o -> o.ordenEstado() == OrdenEstado.Pendiente || o.ordenEstado() == OrdenEstado.Preparación)
+                        .toList(),
+                contexto,
+                ahora
+        );
+        int capacidadConcurrente = Math.max(1, enPreparacion.size());
+        Map<String, Integer> etaPorOrden = cocinaPrioridadService.calcularEtaMinutosPorOrden(
+                colaActivaPriorizada,
+                capacidadConcurrente
+        );
+
         List<Orden> listas = ordenesCocina.stream()
                 .filter(o -> o.ordenEstado() == OrdenEstado.Listo)
                 .sorted(
@@ -130,9 +143,9 @@ public class OrdenApplicationService {
                 .toList();
 
         CocinaTablero tablero = new CocinaTablero(
-                mapearConPrioridad(pendientes, contexto, ahora),
-                mapearConPrioridad(enPreparacion, contexto, ahora),
-                mapearConPrioridad(listas, contexto, ahora),
+                mapearConPrioridad(pendientes, contexto, ahora, etaPorOrden),
+                mapearConPrioridad(enPreparacion, contexto, ahora, etaPorOrden),
+                mapearConPrioridad(listas, contexto, ahora, etaPorOrden),
                 ahora
         );
         cachearTablero(tablero, ahora);
@@ -142,12 +155,13 @@ public class OrdenApplicationService {
     private List<CocinaOrden> mapearConPrioridad(
             List<Orden> ordenes,
             Map<String, CocinaContextoCuenta> contexto,
-            Instant ahora
+            Instant ahora,
+            Map<String, Integer> etaPorOrden
     ) {
         return ordenes.stream()
                 .map(orden -> cocinaOrdenMapper.toCocinaOrden(
                         orden,
-                        cocinaPrioridadService.calcularPrioridad(orden, contexto, ahora)
+                        cocinaPrioridadService.calcularPrioridad(orden, contexto, ahora, etaPorOrden.get(orden.id()))
                 ))
                 .toList();
     }

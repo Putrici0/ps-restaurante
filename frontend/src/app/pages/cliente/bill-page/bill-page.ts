@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
-import { forkJoin, take } from 'rxjs';
+import { catchError, forkJoin, of, take } from 'rxjs';
 import { Header } from '../../../shared/header/header';
 import {
   CuentaActivaResponse,
@@ -10,6 +10,7 @@ import {
   EstadoCuentaResponse,
   OrdenCuentaResponse,
 } from '../../../services/cuenta-api.service';
+import { CocinaTableroResponse, OrdenesApiService } from '../../../services/ordenes-api.service';
 
 interface ItemCuentaAgrupado {
   platoId: string;
@@ -34,6 +35,7 @@ interface ItemCuentaAgrupado {
 })
 export class BillPage implements OnInit, OnDestroy {
   private readonly cuentaApiService = inject(CuentaApiService);
+  private readonly ordenesApiService = inject(OrdenesApiService);
   private readonly route = inject(ActivatedRoute);
 
   private intervaloRefresco?: number;
@@ -45,6 +47,8 @@ export class BillPage implements OnInit, OnDestroy {
   readonly ordenes = signal<OrdenCuentaResponse[]>([]);
   readonly importePendiente = signal(0);
   readonly estadoSaldada = signal<EstadoCuentaResponse | null>(null);
+  readonly etaPorOrdenId = signal<Record<string, number>>({});
+  readonly etaInicialPorOrdenId = signal<Record<string, number>>({});
 
   readonly procesandoPago = signal(false);
   readonly mostrarConfirmacionPago = signal(false);
@@ -368,6 +372,10 @@ export class BillPage implements OnInit, OnDestroy {
       'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop';
   }
 
+  trackByItemAgrupado(_: number, item: ItemCuentaAgrupado): string {
+    return `${item.platoId}-${item.pagado ? 'paid' : 'pending'}`;
+  }
+
   obtenerResumenEstado(item: ItemCuentaAgrupado): string {
     const estadosNormalizados = item.estados.map((estado) => {
       if (estado === 'Preparación' || estado === 'Preparacion') {
@@ -379,6 +387,63 @@ export class BillPage implements OnInit, OnDestroy {
 
     const unicos = Array.from(new Set(estadosNormalizados));
     return unicos.join(' · ');
+  }
+
+  etaClienteTexto(item: ItemCuentaAgrupado): string {
+    if (item.pagado) return 'Completado';
+
+    const estados = item.estados.map((estado) => this.normalizarEstado(estado));
+
+    if (estados.some((e) => e === 'Listo' || e === 'Entregado')) {
+      return 'Listo para servir';
+    }
+
+    const etasReales = item.ordenesIds
+      .map((id) => ({ id, eta: this.etaPorOrdenId()[id] }))
+      .filter((v): v is { id: string; eta: number } => typeof v.eta === 'number' && v.eta > 0)
+      .sort((a, b) => a.eta - b.eta);
+
+    if (etasReales.length > 0) {
+      const principal = etasReales[0];
+      let minutos = principal.eta;
+      const enPreparacion = estados.some((e) => e === 'Preparacion');
+      if (enPreparacion && minutos <= 3) {
+        minutos = 2;
+      }
+      const etiqueta = this.etiquetaProgresoPorOrden(principal.id) ?? (enPreparacion ? 'En cocina' : 'En cola');
+      const hora = this.horaEstimadaTexto(minutos);
+      return `${minutos} min (${etiqueta.toLowerCase()}) · aprox ${hora}`;
+    }
+
+    const base = this.minutosBaseCategoria(item.categoria);
+    const estimado = estados.some((e) => e === 'Preparacion')
+      ? Math.max(1, Math.round(base * 0.6))
+      : base;
+    const etiqueta = estados.some((e) => e === 'Preparacion') ? 'en cocina' : 'en cola';
+    const minutos = estados.some((e) => e === 'Preparacion') && estimado <= 3 ? 2 : estimado;
+    return `${minutos} min (${etiqueta}) · aprox ${this.horaEstimadaTexto(minutos)}`;
+  }
+
+  private normalizarEstado(estado: string): string {
+    if (estado === 'Preparación' || estado === 'Preparacion') {
+      return 'Preparacion';
+    }
+    return estado;
+  }
+
+  private minutosBaseCategoria(categoria: string): number {
+    switch (categoria) {
+      case 'Entrante':
+        return 10;
+      case 'Principal':
+        return 18;
+      case 'Postre':
+        return 8;
+      case 'Bebida':
+        return 4;
+      default:
+        return 12;
+    }
   }
 
   private cargarCuentaCompleta(mostrarLoading: boolean): void {
@@ -404,6 +469,8 @@ export class BillPage implements OnInit, OnDestroy {
             this.ordenes.set([]);
             this.importePendiente.set(0);
             this.estadoSaldada.set(null);
+            this.etaPorOrdenId.set({});
+            this.etaInicialPorOrdenId.set({});
             this.seleccionCantidadPorPlato.set({});
             this.cargando.set(false);
             return;
@@ -413,13 +480,19 @@ export class BillPage implements OnInit, OnDestroy {
             ordenes: this.cuentaApiService.obtenerOrdenesDeCuenta(cuenta.id),
             pendiente: this.cuentaApiService.obtenerPendienteCuenta(cuenta.id),
             saldada: this.cuentaApiService.obtenerEstadoSaldada(cuenta.id),
+            tablero: this.ordenesApiService.obtenerTableroCocina().pipe(
+              catchError(() => of(null as CocinaTableroResponse | null)),
+            ),
           })
             .pipe(take(1))
             .subscribe({
-              next: ({ ordenes, pendiente, saldada }) => {
+              next: ({ ordenes, pendiente, saldada, tablero }) => {
                 this.ordenes.set(ordenes);
                 this.importePendiente.set(Number(pendiente.importe));
                 this.estadoSaldada.set(saldada);
+                const etaActual = this.extraerEtaPorOrden(tablero);
+                this.etaPorOrdenId.set(etaActual);
+                this.etaInicialPorOrdenId.set(this.reconciliarEtaInicial(etaActual));
                 this.cargando.set(false);
               },
               error: () => {
@@ -447,5 +520,66 @@ export class BillPage implements OnInit, OnDestroy {
     }
 
     this.fechaCaducidad = limpio;
+  }
+
+  private extraerEtaPorOrden(tablero: CocinaTableroResponse | null): Record<string, number> {
+    if (!tablero) return {};
+
+    const mapa: Record<string, number> = {};
+    const ordenes = [...(tablero.pendientes ?? []), ...(tablero.enPreparacion ?? [])];
+
+    for (const orden of ordenes) {
+      const eta = orden.prioridad?.etaMinutos;
+      if (orden.id && typeof eta === 'number' && Number.isFinite(eta) && eta > 0) {
+        mapa[orden.id] = eta;
+      }
+    }
+
+    return mapa;
+  }
+
+  private reconciliarEtaInicial(etaActual: Record<string, number>): Record<string, number> {
+    const previo = this.etaInicialPorOrdenId();
+    const actualizado: Record<string, number> = {};
+
+    for (const [ordenId, eta] of Object.entries(etaActual)) {
+      const anterior = previo[ordenId];
+      if (typeof anterior === 'number' && anterior > 0) {
+        actualizado[ordenId] = Math.max(anterior, eta);
+      } else {
+        actualizado[ordenId] = eta;
+      }
+    }
+
+    return actualizado;
+  }
+
+  private etiquetaProgresoPorOrden(ordenId: string): string | null {
+    const actual = this.etaPorOrdenId()[ordenId];
+    const inicial = this.etaInicialPorOrdenId()[ordenId];
+
+    if (
+      typeof actual !== 'number' ||
+      !Number.isFinite(actual) ||
+      actual <= 0 ||
+      typeof inicial !== 'number' ||
+      !Number.isFinite(inicial) ||
+      inicial <= 0
+    ) {
+      return null;
+    }
+
+    const progreso = Math.max(0, Math.min(1, (inicial - actual) / inicial));
+    if (progreso >= 0.9) return 'Emplatando';
+    if (progreso >= 0.7) return 'Terminando';
+    return 'En cocina';
+  }
+
+  private horaEstimadaTexto(minutos: number): string {
+    const fecha = new Date(Date.now() + minutos * 60000);
+    return new Intl.DateTimeFormat('es-ES', {
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(fecha);
   }
 }

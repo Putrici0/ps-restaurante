@@ -9,6 +9,7 @@ public record CocinaPrioridad(
         int mesa,
         int flujo,
         int tiempoEstimado,
+        int etaMinutos,
         int sincronizacion,
         int urgencia,
         List<String> motivos

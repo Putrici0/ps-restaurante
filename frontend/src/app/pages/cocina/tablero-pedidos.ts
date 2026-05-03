@@ -403,6 +403,11 @@ export class TableroPedidos implements OnInit, OnDestroy {
   }
 
   private tiempoObjetivoMinutos(orden: OrdenCocinaResponse): number {
+    const etaBackend = orden.prioridad?.etaMinutos;
+    if (typeof etaBackend === 'number' && Number.isFinite(etaBackend) && etaBackend > 0) {
+      return etaBackend;
+    }
+
     switch (orden.plato.categoria) {
       case 'Entrante':
         return 10;

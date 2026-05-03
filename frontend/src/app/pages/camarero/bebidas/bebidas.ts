@@ -36,7 +36,12 @@ export class BebidasCamarero implements OnInit, OnDestroy {
     this.ahora();
 
     return [...this.ordenes()]
-      .sort((a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime())
+      .sort((a, b) => {
+        const grupoA = this.grupoOrden(a.ordenEstado);
+        const grupoB = this.grupoOrden(b.ordenEstado);
+        if (grupoA !== grupoB) return grupoA - grupoB;
+        return new Date(a.fecha).getTime() - new Date(b.fecha).getTime();
+      })
       .map(o => ({
         original: o,
         id: o.id,
@@ -146,5 +151,13 @@ export class BebidasCamarero implements OnInit, OnDestroy {
   private calcularTiempo(fecha: string) {
     const min = Math.floor((Date.now() - new Date(fecha).getTime()) / 60000);
     return min < 1 ? '< 1m' : `${min}m`;
+  }
+
+  private grupoOrden(estado: string): number {
+    if (estado === 'Listo') return 0;
+    if (estado === 'Preparación' || estado === 'PreparaciÃ³n' || estado === 'Preparacion') return 1;
+    if (estado === 'Pendiente') return 2;
+    if (estado === 'Entregado') return 3;
+    return 4;
   }
 }

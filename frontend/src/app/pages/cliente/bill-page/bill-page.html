@@ -89,8 +89,10 @@
         </section>
       } @else {
         <section class="bill-list">
-          @for (item of itemsAgrupados(); track item.platoId + (item.pagado ? '-paid' : '-pending')) {
-            <article class="bill-item-card" [class.bill-item-card--paid]="item.pagado">
+          <article
+            class="bill-item-card"
+            *ngFor="let item of itemsAgrupados(); trackBy: trackByItemAgrupado"
+            [class.bill-item-card--paid]="item.pagado">
               <div class="bill-item-card__image-wrap">
                 <img
                   class="bill-item-card__image"
@@ -132,9 +134,14 @@
                     Estado: {{ obtenerResumenEstado(item) }}
                   }
                 </p>
+
+                @if (!item.pagado) {
+                  <p class="bill-item-card__eta">
+                    Tiempo estimado: {{ etaClienteTexto(item) }}
+                  </p>
+                }
               </div>
-            </article>
-          }
+          </article>
         </section>
       }
     }
