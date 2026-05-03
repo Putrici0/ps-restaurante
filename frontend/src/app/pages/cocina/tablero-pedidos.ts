@@ -227,18 +227,6 @@ export class TableroPedidos implements OnInit, OnDestroy {
     return 'Mesa sin asignar';
   }
 
-  origenMesa(orden: OrdenCocinaResponse): string {
-    const mesas = orden.pedido?.cuenta?.mesas ?? [];
-
-    if (mesas.length > 0) return 'pedido.cuenta.mesas';
-
-    const mesaDesdeDetalles = this.extraerMesaDesdeTexto(orden.detalles);
-
-    if (mesaDesdeDetalles) return 'detalles';
-
-    return 'no enviada por la API';
-  }
-
   numeroMesaPlano(orden: OrdenCocinaResponse): string {
     const mesas = orden.pedido?.cuenta?.mesas ?? [];
 
@@ -376,6 +364,14 @@ export class TableroPedidos implements OnInit, OnDestroy {
   detalleTecnico(orden: OrdenCocinaResponse): string {
     const detalles = orden.detalles?.trim();
     return detalles && detalles.length > 0 ? detalles : 'Sin detalles';
+  }
+
+  trackByOrdenId(_: number, orden: OrdenCocinaResponse): string {
+    return orden.id;
+  }
+
+  trackByMotivo(_: number, motivo: string): string {
+    return motivo;
   }
 
   private pausarSincronizacion(ms: number): void {

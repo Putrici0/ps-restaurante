@@ -45,8 +45,7 @@
             @if (ordenesPendientes().length === 0) {
               <div class="empty-card">No hay órdenes pendientes.</div>
             } @else {
-              @for (orden of ordenesPendientes(); track orden.id) {
-                <article class="order-card">
+              <article class="order-card" *ngFor="let orden of ordenesPendientes(); trackBy: trackByOrdenId">
                   <div class="order-card__body">
                     <div class="order-card__top">
                       <div class="order-card__top-left">
@@ -114,11 +113,6 @@
                           </div>
 
                           <div class="detail-item">
-                            <span class="detail-label">Origen mesa</span>
-                            <span class="detail-value">{{ origenMesa(orden) }}</span>
-                          </div>
-
-                          <div class="detail-item">
                             <span class="detail-label">ID orden</span>
                             <span class="detail-value">{{ orden.id }}</span>
                           </div>
@@ -154,9 +148,9 @@
                               @if (motivosPrioridad(orden).length === 0) {
                                 Sin motivos calculados
                               } @else {
-                                @for (motivo of motivosPrioridad(orden); track motivo) {
+                                <ng-container *ngFor="let motivo of motivosPrioridad(orden); trackBy: trackByMotivo">
                                   <span class="priority-reason">• {{ motivo }}</span>
-                                }
+                                </ng-container>
                               }
                             </span>
                           </div>
@@ -170,7 +164,6 @@
                     }
                   </div>
                 </article>
-              }
             }
           </div>
         </article>
@@ -188,8 +181,7 @@
             @if (ordenesPreparacion().length === 0) {
               <div class="empty-card">No hay órdenes en preparación.</div>
             } @else {
-              @for (orden of ordenesPreparacion(); track orden.id) {
-                <article class="order-card">
+              <article class="order-card" *ngFor="let orden of ordenesPreparacion(); trackBy: trackByOrdenId">
                   <div class="order-card__body">
                     <div class="order-card__top">
                       <div class="order-card__top-left">
@@ -274,9 +266,9 @@
                               @if (motivosPrioridad(orden).length === 0) {
                                 Sin motivos calculados
                               } @else {
-                                @for (motivo of motivosPrioridad(orden); track motivo) {
+                                <ng-container *ngFor="let motivo of motivosPrioridad(orden); trackBy: trackByMotivo">
                                   <span class="priority-reason">• {{ motivo }}</span>
-                                }
+                                </ng-container>
                               }
                             </span>
                           </div>
@@ -290,7 +282,6 @@
                     }
                   </div>
                 </article>
-              }
             }
           </div>
         </article>
@@ -308,8 +299,7 @@
             @if (ordenesListas().length === 0) {
               <div class="empty-card">No hay órdenes listas.</div>
             } @else {
-              @for (orden of ordenesListas(); track orden.id) {
-                <article class="order-card order-card--ready">
+              <article class="order-card order-card--ready" *ngFor="let orden of ordenesListas(); trackBy: trackByOrdenId">
                   <div class="order-card__body">
                     <div class="order-card__top">
                       <div class="order-card__top-left">
@@ -382,7 +372,6 @@
                     }
                   </div>
                 </article>
-              }
             }
           </div>
         </article>
