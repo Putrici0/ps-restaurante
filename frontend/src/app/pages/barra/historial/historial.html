@@ -16,6 +16,17 @@
           [value]="fechaFiltro()"
           (input)="actualizarFecha($any($event.target).value)"
         />
+      </div>
+      <label for="mesaFiltro">MESA</label>
+      <div class="historial-filtros__fila">
+        <input
+          id="mesaFiltro"
+          type="text"
+          inputmode="numeric"
+          placeholder="Nº mesa"
+          [value]="mesaFiltro()"
+          (input)="actualizarMesa($any($event.target).value)"
+        />
         <button type="button" (click)="aplicarFiltro()">Filtrar</button>
       </div>
     </div>

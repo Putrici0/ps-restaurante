@@ -43,6 +43,7 @@ export class HistorialComponent {
   readonly error = signal<string | null>(null);
 
   readonly fechaFiltro = signal(this.hoyISO());
+  readonly mesaFiltro = signal('');
   readonly cuentas = signal<CuentaPagadaResumenResponse[]>([]);
 
   readonly paginaActual = signal(1);
@@ -54,17 +55,32 @@ export class HistorialComponent {
   readonly ordenesDetalle = signal<OrdenCuentaResponse[]>([]);
   readonly totalDetalle = signal<number>(0);
 
+  readonly cuentasFiltradas = computed(() => {
+    const filtroMesa = this.mesaFiltro().trim().toLowerCase();
+
+    if (!filtroMesa) {
+      return this.cuentas();
+    }
+
+    return this.cuentas().filter((cuenta) =>
+      cuenta.mesa
+        .split(',')
+        .map((mesa) => mesa.trim().toLowerCase())
+        .some((mesa) => mesa === filtroMesa),
+    );
+  });
+
   readonly cuentasPaginadas = computed(() => {
     const inicio = (this.paginaActual() - 1) * this.pageSize;
-    return this.cuentas().slice(inicio, inicio + this.pageSize);
+    return this.cuentasFiltradas().slice(inicio, inicio + this.pageSize);
   });
 
   readonly totalPaginas = computed(() =>
-    Math.max(1, Math.ceil(this.cuentas().length / this.pageSize)),
+    Math.max(1, Math.ceil(this.cuentasFiltradas().length / this.pageSize)),
   );
 
   readonly textoResumen = computed(() => {
-    const total = this.cuentas().length;
+    const total = this.cuentasFiltradas().length;
     const mostradas = this.cuentasPaginadas().length;
     return `Mostrando ${mostradas} de ${total} transacciones`;
   });
@@ -113,12 +129,18 @@ export class HistorialComponent {
     this.fechaFiltro.set(valor);
   }
 
+  actualizarMesa(valor: string): void {
+    this.mesaFiltro.set(valor);
+  }
+
   limpiarFiltro(): void {
     this.fechaFiltro.set('');
+    this.mesaFiltro.set('');
     this.cargarHistorial();
   }
 
   aplicarFiltro(): void {
+    this.paginaActual.set(1);
     this.cargarHistorial();
   }
 

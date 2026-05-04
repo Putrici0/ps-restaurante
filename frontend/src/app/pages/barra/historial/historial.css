@@ -36,6 +36,10 @@
   font-weight: 700;
 }
 
+.historial-filtros label:not(:first-of-type) {
+  margin-top: 12px;
+}
+
 .historial-filtros__fila {
   display: flex;
   gap: 10px;
