@@ -1,12 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { Subscription, timer } from 'rxjs';
 
 import { Mesa, ZonaMesa } from '../../../models/mesa.model';
 import { CuentaApiService } from '../../../services/cuenta-api.service';
 import { MesasApiService } from '../../../services/mesas-api.service';
 import { CamareroHeader } from '../camarero-header/camarero-header';
-import { MesaCardComponent } from '../../../shared/mesa-card/mesa-card';
 
 interface ItemCobroAgrupado {
   platoId: string;
@@ -26,7 +26,7 @@ interface ItemCobroAgrupado {
   templateUrl: './mesas.html',
   styleUrl: './mesas.css',
 })
-export class MesasCamarero {
+export class MesasCamarero implements OnDestroy {
   private readonly mesasApi = inject(MesasApiService);
   private readonly cuentaApi = inject(CuentaApiService);
   private readonly router = inject(Router);
@@ -55,6 +55,8 @@ export class MesasCamarero {
   readonly mostrarContrasenaModal = signal(false);
   readonly mostrarConfirmacionLiberar = signal(false);
   readonly mesaPendienteLiberarId = signal<string | null>(null);
+  private pollingSub?: Subscription;
+  private readonly pollingMs = 5000;
 
   readonly mesasFiltradas = computed(() =>
     this.mesas()
@@ -99,6 +101,11 @@ export class MesasCamarero {
 
   constructor() {
     this.recargarMesas();
+    this.iniciarPolling();
+  }
+
+  ngOnDestroy(): void {
+    this.pollingSub?.unsubscribe();
   }
 
   cambiarZona(nuevaZona: ZonaMesa): void {
@@ -185,18 +192,36 @@ export class MesasCamarero {
     });
   }
 
-  private recargarMesas(mesaAReseleccionar?: string): void {
-    this.cargando.set(true);
+  private iniciarPolling(): void {
+    this.pollingSub = timer(this.pollingMs, this.pollingMs).subscribe(() => {
+      this.recargarMesas(undefined, false);
+    });
+  }
+
+  private recargarMesas(mesaAReseleccionar?: string, mostrarLoading = true): void {
+    if (mostrarLoading) {
+      this.cargando.set(true);
+    }
     this.error.set(null);
     this.mesasApi.cargarMesasParaVista().subscribe({
       next: (mesas) => {
         this.mesas.set(mesas);
         this.cargando.set(false);
         this.accionMesaId.set(null);
+
         if (mesaAReseleccionar) {
           const nuevaMesa = mesas.find((m) => m.id === mesaAReseleccionar) ?? null;
           this.mesaSeleccionada.set(nuevaMesa);
+          return;
         }
+
+        const seleccionActual = this.mesaSeleccionada();
+        if (!seleccionActual) {
+          return;
+        }
+
+        const mesaRefrescada = mesas.find((m) => m.id === seleccionActual.id) ?? null;
+        this.mesaSeleccionada.set(mesaRefrescada);
       },
       error: (err) => {
         console.error('Error recargando mesas:', err);
