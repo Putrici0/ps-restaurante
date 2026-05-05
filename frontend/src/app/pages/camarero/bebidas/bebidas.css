@@ -49,6 +49,32 @@
   font-weight: 600;
 }
 
+.empty-state {
+  padding: 16px;
+}
+
+.empty-state__card {
+  border-radius: 16px;
+  border: 1px solid #b9ad9d;
+  background: #d7cbbb;
+  padding: 18px 14px;
+  text-align: center;
+}
+
+.empty-state__card h2 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 800;
+  color: #1f1f1f;
+}
+
+.empty-state__card p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: #3b352e;
+}
+
 /* --- CONTENEDOR DE LA LISTA --- */
 .bebidas-grid {
   display: flex;

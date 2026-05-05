@@ -18,6 +18,14 @@
     @if (cargando() && ordenes().length === 0 && !error()) {
     <p>Cargando platos...</p>
     } @else {
+    @if (ordenesVisuales().length === 0) {
+    <section class="empty-state">
+      <article class="empty-state__card">
+        <h2>No hay platos</h2>
+        <p>No hay platos pendientes para entregar.</p>
+      </article>
+    </section>
+    } @else {
     <div class="platos-grid">
       @for (item of ordenesVisuales(); track item.id) {
       <app-pedido-card
@@ -40,6 +48,7 @@
       </app-pedido-card>
       }
     </div>
+    }
     }
   </div>
 </section>

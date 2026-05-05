@@ -19,30 +19,39 @@
     @if (cargando() && ordenes().length === 0 && !error()) {
     <p>Cargando bebidas...</p>
     } @else {
-    <div class="bebidas-grid" style="display: grid; gap: 16px;">
-      @for (item of ordenesVisuales(); track item.id) {
-      <app-pedido-card
-        [numeroMesa]="item.mesa"
-        [estadoVisual]="item.estado"
-        [etiquetaEstado]="item.etiqueta"
-        [esOpaco]="item.esEntregado"
-        [tiempo]="item.tiempo"
+    @if (ordenesVisuales().length === 0) {
+      <section class="empty-state">
+        <article class="empty-state__card">
+          <h2>No hay bebidas</h2>
+          <p>No hay bebidas pendientes para preparar o entregar.</p>
+        </article>
+      </section>
+    } @else {
+      <div class="bebidas-grid" style="display: grid; gap: 16px;">
+        @for (item of ordenesVisuales(); track item.id) {
+        <app-pedido-card
+          [numeroMesa]="item.mesa"
+          [estadoVisual]="item.estado"
+          [etiquetaEstado]="item.etiqueta"
+          [esOpaco]="item.esEntregado"
+          [tiempo]="item.tiempo"
 
-        [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : (item.esListo ? 'ENTREGAR' : (item.esPendiente ? 'PREPARAR' : 'TERMINAR'))"
-        [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
-        [disablePrincipal]="item.esEntregado || item.procesando"
-        (principal)="avanzarEstado(item.original)"
+          [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : (item.esListo ? 'ENTREGAR' : (item.esPendiente ? 'PREPARAR' : 'TERMINAR'))"
+          [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
+          [disablePrincipal]="item.esEntregado || item.procesando"
+          (principal)="avanzarEstado(item.original)"
 
-        [mostrarBotonSecundario]="!item.esPendiente"
-        [textoBotonSecundario]="item.esEntregado ? 'DESHACER' : 'VOLVER'"
-        [claseBotonSecundario]="'rojo'"
-        [disableSecundario]="item.procesando"
-        (secundario)="retrocederEstado(item.original)"
-      >
-        <strong>{{ item.nombre }}</strong>
-      </app-pedido-card>
-      }
-    </div>
+          [mostrarBotonSecundario]="!item.esPendiente"
+          [textoBotonSecundario]="item.esEntregado ? 'DESHACER' : 'VOLVER'"
+          [claseBotonSecundario]="'rojo'"
+          [disableSecundario]="item.procesando"
+          (secundario)="retrocederEstado(item.original)"
+        >
+          <strong>{{ item.nombre }}</strong>
+        </app-pedido-card>
+        }
+      </div>
+    }
     }
   </div>
 </section>

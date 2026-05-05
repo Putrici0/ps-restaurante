@@ -17,30 +17,39 @@
     @if (cargando() && ordenes().length === 0 && !error()) {
       <p>Cargando platos...</p>
     } @else {
-      <div class="platos-grid" style="display: grid; gap: 16px;">
-        @for (item of ordenesVisuales(); track item.id) {
-          <app-pedido-card
-            [numeroMesa]="item.mesa"
-            [estadoVisual]="item.estado"
-            [etiquetaEstado]="item.etiqueta"
-            [esOpaco]="item.esEntregado"
-            [tiempo]="item.tiempo"
+      @if (ordenesVisuales().length === 0) {
+        <section class="empty-state">
+          <article class="empty-state__card">
+            <h2>No hay platos</h2>
+            <p>No hay platos pendientes para entregar.</p>
+          </article>
+        </section>
+      } @else {
+        <div class="platos-grid" style="display: grid; gap: 16px;">
+          @for (item of ordenesVisuales(); track item.id) {
+            <app-pedido-card
+              [numeroMesa]="item.mesa"
+              [estadoVisual]="item.estado"
+              [etiquetaEstado]="item.etiqueta"
+              [esOpaco]="item.esEntregado"
+              [tiempo]="item.tiempo"
 
-            [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : 'ENTREGAR'"
-            [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
-            [disablePrincipal]="item.esEntregado || item.procesando"
-            (principal)="entregarPlato(item.original)"
+              [textoBotonPrincipal]="item.esEntregado ? 'ENTREGADO' : 'ENTREGAR'"
+              [claseBotonPrincipal]="item.esEntregado ? 'gris' : 'verde'"
+              [disablePrincipal]="item.esEntregado || item.procesando"
+              (principal)="entregarPlato(item.original)"
 
-            [mostrarBotonSecundario]="item.esEntregado"
-            [textoBotonSecundario]="'DESHACER'"
-            [claseBotonSecundario]="'rojo'"
-            [disableSecundario]="item.procesando"
-            (secundario)="deshacerEntrega(item.original)">
+              [mostrarBotonSecundario]="item.esEntregado"
+              [textoBotonSecundario]="'DESHACER'"
+              [claseBotonSecundario]="'rojo'"
+              [disableSecundario]="item.procesando"
+              (secundario)="deshacerEntrega(item.original)">
 
-            {{ item.nombre }}
-          </app-pedido-card>
-        }
-      </div>
+              {{ item.nombre }}
+            </app-pedido-card>
+          }
+        </div>
+      }
     }
   </div>
 </section>
