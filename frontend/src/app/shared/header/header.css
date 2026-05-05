@@ -31,8 +31,19 @@
   border: none;
   background: transparent;
   font-size: 32px;
+  color: var(--text-dark, #3a2a1a);
+  -webkit-text-fill-color: var(--text-dark, #3a2a1a);
   cursor: pointer;
   z-index: 200;
+}
+
+.hamburger-btn:visited,
+.hamburger-btn:hover,
+.hamburger-btn:focus,
+.hamburger-btn:active,
+.hamburger-btn:focus-visible {
+  color: var(--text-dark, #3a2a1a);
+  -webkit-text-fill-color: var(--text-dark, #3a2a1a);
 }
 
 /* LOGO CENTRADO COMO EN MOCKUP */
