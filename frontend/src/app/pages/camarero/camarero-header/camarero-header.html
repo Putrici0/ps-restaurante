@@ -64,25 +64,35 @@
                 <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
               </div>
 
-              @if (!notificacion.enCurso) {
-              <button
-                type="button"
-                class="mark-read"
-                [disabled]="asignandoNotificacionId() === notificacion.id"
-                (click)="marcarEnCurso(notificacion)"
-              >
-                {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'En curso' }}
-              </button>
-              } @else {
-              <button
-                type="button"
-                class="mark-read"
-                [disabled]="asignandoNotificacionId() === notificacion.id"
-                (click)="desasignarYReenviar(notificacion)"
-              >
-                {{ asignandoNotificacionId() === notificacion.id ? 'Cancelando...' : 'Desasignar' }}
-              </button>
-              }
+              <div class="notification-actions">
+                @if (!notificacion.enCurso) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarEnCurso(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Atender' }}
+                </button>
+                } @else if (esAsignadaAlCamareroActual(notificacion)) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarCompletada(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Finalizado' }}
+                </button>
+                <button
+                  type="button"
+                  class="mark-read secondary"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="desasignarYReenviar(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Liberando...' : 'Liberar' }}
+                </button>
+                }
+              </div>
             </article>
             }
           }
@@ -98,25 +108,35 @@
                 <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
               </div>
 
-              @if (!notificacion.enCurso) {
-              <button
-                type="button"
-                class="mark-read"
-                [disabled]="asignandoNotificacionId() === notificacion.id"
-                (click)="marcarEnCurso(notificacion)"
-              >
-                {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Voy' }}
-              </button>
-              } @else {
-              <button
-                type="button"
-                class="mark-read"
-                [disabled]="asignandoNotificacionId() === notificacion.id"
-                (click)="marcarCompletada(notificacion)"
-              >
-                {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Ya fui' }}
-              </button>
-              }
+              <div class="notification-actions">
+                @if (!notificacion.enCurso) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarEnCurso(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Atender' }}
+                </button>
+                } @else if (esAsignadaAlCamareroActual(notificacion)) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarCompletada(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Finalizado' }}
+                </button>
+                <button
+                  type="button"
+                  class="mark-read secondary"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="desasignarYReenviar(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Liberando...' : 'Liberar' }}
+                </button>
+                }
+              </div>
             </article>
             }
           }

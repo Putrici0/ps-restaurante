@@ -361,8 +361,6 @@ export class CamareroHeader implements OnInit, OnDestroy {
       return;
     }
 
-    this.panelNotificacionesAbierto.set(true);
-
     if (this.modoAviso() === 'sonido') {
       this.reproducirSonido();
       this.vibrar();
@@ -432,7 +430,7 @@ export class CamareroHeader implements OnInit, OnDestroy {
     }
   }
 
-  private esAsignadaAlCamareroActual(notificacion: Notificacion): boolean {
+  esAsignadaAlCamareroActual(notificacion: Notificacion): boolean {
     const uidActual = this.camareroUidActual();
     return !!uidActual && !!notificacion.enCurso && notificacion.camareroUid === uidActual;
   }
