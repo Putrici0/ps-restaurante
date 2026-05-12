@@ -53,7 +53,24 @@ export class CamareroHeader implements OnInit, OnDestroy {
       }),
   );
 
-  readonly totalNotificaciones = computed(() => this.notificacionesRecoger().length);
+  readonly notificacionesAtencion = computed(() =>
+    this.notificaciones()
+      .filter((notificacion) => !notificacion.leida && notificacion.tipo === 'Atencion')
+      .sort((a, b) => {
+        const prioridadA = this.esAsignadaAlCamareroActual(a) ? 1 : 0;
+        const prioridadB = this.esAsignadaAlCamareroActual(b) ? 1 : 0;
+
+        if (prioridadA !== prioridadB) {
+          return prioridadB - prioridadA;
+        }
+
+        return this.fechaMs(b.fecha) - this.fechaMs(a.fecha);
+      }),
+  );
+
+  readonly totalNotificaciones = computed(() =>
+    this.notificacionesRecoger().length + this.notificacionesAtencion().length
+  );
 
   readonly textoModoAviso = computed(() => {
     switch (this.modoAviso()) {
@@ -174,6 +191,33 @@ export class CamareroHeader implements OnInit, OnDestroy {
     }
   }
 
+  marcarCompletada(notificacion: Notificacion): void {
+    if (this.asignandoNotificacionId()) {
+      return;
+    }
+
+    this.asignandoNotificacionId.set(notificacion.id);
+    this.errorNotificaciones.set(null);
+
+    this.notificacionesApi
+      .marcarComoCompletada(notificacion.id)
+      .pipe(take(1))
+      .subscribe({
+        next: (actualizada) => {
+          this.notificacionesYaAvisadas.delete(actualizada.id);
+          this.notificaciones.update((actuales) =>
+            actuales.filter((item) => item.id !== actualizada.id),
+          );
+          this.asignandoNotificacionId.set(null);
+        },
+        error: (err) => {
+          console.error(err);
+          this.errorNotificaciones.set('No se ha podido completar la notificación.');
+          this.asignandoNotificacionId.set(null);
+        },
+      });
+  }
+
   desasignarYReenviar(notificacion: Notificacion): void {
     if (this.asignandoNotificacionId()) {
       return;
@@ -220,11 +264,13 @@ export class CamareroHeader implements OnInit, OnDestroy {
   }
 
   descripcionNotificacion(notificacion: Notificacion): string {
-    const item = this.itemTexto(notificacion);
-
-    return item
-      ? `Listo para recoger: ${item}.`
-      : 'Pedido listo para recoger';
+    if (notificacion.tipo === 'Recoger') {
+      const item = this.itemTexto(notificacion);
+      return item
+        ? `Listo para recoger: ${item}.`
+        : 'Pedido listo para recoger';
+    }
+    return `${this.mesaTexto(notificacion)} solicita atención.`;
   }
 
   textoAsignacion(notificacion: Notificacion): string {
@@ -281,17 +327,17 @@ export class CamareroHeader implements OnInit, OnDestroy {
         take(1),
       )
       .subscribe((notificaciones) => {
-        const recoger = notificaciones.filter(
-          (notificacion) => !notificacion.leida && notificacion.tipo === 'Recoger',
+        const pendientes = notificaciones.filter(
+          (notificacion) => !notificacion.leida,
         );
 
-        this.notificaciones.set(recoger);
+        this.notificaciones.set(pendientes);
         this.errorNotificaciones.set(null);
 
         if (avisarNuevas) {
-          this.procesarNuevas(recoger);
+          this.procesarNuevas(pendientes);
         } else {
-          recoger.forEach((notificacion) =>
+          pendientes.forEach((notificacion) =>
             this.notificacionesYaAvisadas.add(notificacion.id),
           );
         }
@@ -314,8 +360,6 @@ export class CamareroHeader implements OnInit, OnDestroy {
     if (this.modoAviso() === 'silencio') {
       return;
     }
-
-    this.panelNotificacionesAbierto.set(true);
 
     if (this.modoAviso() === 'sonido') {
       this.reproducirSonido();
@@ -386,7 +430,7 @@ export class CamareroHeader implements OnInit, OnDestroy {
     }
   }
 
-  private esAsignadaAlCamareroActual(notificacion: Notificacion): boolean {
+  esAsignadaAlCamareroActual(notificacion: Notificacion): boolean {
     const uidActual = this.camareroUidActual();
     return !!uidActual && !!notificacion.enCurso && notificacion.camareroUid === uidActual;
   }

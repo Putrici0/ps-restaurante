@@ -8,6 +8,7 @@ import repository.interfaces.NotificacionRepository;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 public class NotificacionApplicationService {
     private final NotificacionRepository notificacionRepository;
@@ -25,6 +26,11 @@ public class NotificacionApplicationService {
         Cuenta cuenta = cuentaRepository.findById(cuentaId)
                 .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
 
+        Optional<Notificacion> activa = notificacionRepository.findActiveAtencionByCuentaId(cuentaId);
+        if (activa.isPresent()) {
+            return activa.get();
+        }
+
         Notificacion notificacion = new Notificacion(
                 null,
                 cuenta,
@@ -40,7 +46,11 @@ public class NotificacionApplicationService {
                 null
         );
 
-        return notificacionRepository.save(notificacion);
+        return notificacionRepository.saveWithDedup(notificacion);
+    }
+
+    public Optional<Notificacion> obtenerNotificacionAtencionActiva(String cuentaId) {
+        return notificacionRepository.findActiveAtencionByCuentaId(cuentaId);
     }
 
     public Notificacion crearNotificacionPedidoListo(
@@ -75,6 +85,7 @@ public class NotificacionApplicationService {
     }
 
     public List<Notificacion> obtenerNotificacionesDeCuenta(String cuentaId) {
+        return notificacionRepository.findByCuentaId(cuentaId);
         Cuenta cuentaRef = new Cuenta(
                 cuentaId,
                 List.of(),
@@ -90,6 +101,22 @@ public class NotificacionApplicationService {
 
     public List<Notificacion> obtenerNotificacionesPorTipo(TipoNotificacion tipo) {
         return notificacionRepository.findByTipoNotificacion(tipo);
+    }
+
+    public List<Notificacion> obtenerTodasLasAtencionesActivas() {
+        return notificacionRepository.findByTipoNotificacion(TipoNotificacion.Atencion).stream()
+                .filter(n -> !n.leida())
+                .toList();
+        return notificacionRepository.findByTipoNotificacion(tipo);
+    }
+
+    public void limpiarNotificacionesEstancadas() {
+        Instant haceCincoMinutos = Instant.now().minusSeconds(5 * 60);
+
+        notificacionRepository.findAll().stream()
+                .filter(n -> !n.leida() && n.enCurso() && n.fechaEnCurso() != null)
+                .filter(n -> n.fechaEnCurso().isBefore(haceCincoMinutos))
+                .forEach(n -> desasignarYReenviarNotificacion(n.id()));
     }
 
     public Notificacion marcarNotificacionEnCurso(
@@ -152,6 +179,32 @@ public class NotificacionApplicationService {
         return notificacionRepository.update(notificacion.id(), actualizada);
     }
 
+    public Notificacion marcarNotificacionCompletada(String notificacionId) {
+        Notificacion notificacion = notificacionRepository.findById(notificacionId)
+                .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
+
+        if (notificacion.leida()) {
+            return notificacion;
+        }
+
+        Notificacion actualizada = new Notificacion(
+                notificacion.id(),
+                notificacion.cuenta(),
+                notificacion.tipo(),
+                true,
+                notificacion.fecha(),
+                notificacion.ordenId(),
+                notificacion.nombreItem(),
+                notificacion.categoriaItem(),
+                notificacion.enCurso(),
+                notificacion.camareroUid(),
+                notificacion.camareroNombre(),
+                notificacion.fechaEnCurso()
+        );
+
+        return notificacionRepository.update(notificacion.id(), actualizada);
+    }
+
     public Notificacion desasignarYReenviarNotificacion(String notificacionId) {
         Notificacion notificacion = notificacionRepository.findById(notificacionId)
                 .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
@@ -183,6 +236,8 @@ public class NotificacionApplicationService {
             return;
         }
 
+        notificacionRepository.findByOrdenId(ordenId).stream()
+                .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
         notificacionRepository.findByTipoNotificacion(TipoNotificacion.Recoger).stream()
                 .filter(notificacion -> ordenId.equals(notificacion.ordenId()))
                 .forEach(notificacion -> notificacionRepository.deleteById(notificacion.id()));
@@ -193,6 +248,8 @@ public class NotificacionApplicationService {
             return;
         }
 
+        notificacionRepository.findByCuentaId(cuentaId).stream()
+                .filter(notificacion -> !notificacion.leida())
         notificacionRepository.findByLeida(false).stream()
                 .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
                 .filter(notificacion -> notificacion.cuenta() != null)

@@ -2,9 +2,9 @@
   <section class="waiter-hero">
     <div>
       <p class="eyebrow">Panel de camarero</p>
-      <h1>Notificaciones de cocina</h1>
+      <h1>Notificaciones</h1>
       <p>
-        Aquí aparecen los pedidos que cocina marca como listos para recoger.
+        Pedidos listos para recoger y solicitudes de atención de los clientes.
       </p>
     </div>
 
@@ -40,7 +40,7 @@
       </div>
 
       <div>
-        <p class="status-label">Pedidos listos pendientes</p>
+        <p class="status-label">Notificaciones pendientes</p>
         <h2>{{ totalPendientes() }}</h2>
       </div>
     </div>
@@ -70,15 +70,18 @@
   <section class="empty-card">
     Cargando notificaciones...
   </section>
-  } @else if (notificacionesRecoger().length === 0) {
+  } @else if (notificacionesRecoger().length === 0 && notificacionesAtencion().length === 0) {
   <section class="empty-card">
-    <h2>No hay pedidos listos pendientes</h2>
+    <h2>No hay notificaciones pendientes</h2>
     <p>
-      Cuando cocina marque un plato o bebida como listo, aparecerá aquí.
+      Cuando cocina marque un plato como listo o un cliente solicite atención, aparecerá aquí.
     </p>
   </section>
   } @else {
+
+  @if (notificacionesRecoger().length > 0) {
   <section class="notifications-list">
+    <h3 class="section-title">Pedidos listos para recoger</h3>
     @for (notificacion of notificacionesRecoger(); track notificacion.id) {
     <article class="notification-card">
       <div class="notification-icon">
@@ -119,16 +122,24 @@
             [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
             (click)="marcarEnCurso(notificacion)"
           >
-            {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Marcar en curso' }}
+            {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Lo recojo' }}
           </button>
           } @else {
+          <button
+            type="button"
+            class="primary-button"
+            [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
+            (click)="marcarCompletada(notificacion)"
+          >
+            {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Ya lo serví' }}
+          </button>
           <button
             type="button"
             class="secondary-button"
             [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
             (click)="desasignarYReenviar(notificacion)"
           >
-            {{ asignandoNotificacionId() === notificacion.id ? 'Cancelando...' : 'Desasignar y reenviar' }}
+            {{ asignandoNotificacionId() === notificacion.id ? 'Cancelando...' : 'Desasignar' }}
           </button>
           }
         </div>
@@ -136,5 +147,82 @@
     </article>
     }
   </section>
+  }
+
+  @if (notificacionesAtencion().length > 0) {
+  <section class="notifications-list">
+    <h3 class="section-title">Solicitudes de atención</h3>
+    @for (notificacion of notificacionesAtencion(); track notificacion.id) {
+    <article class="notification-card">
+      <div class="notification-icon">
+        🙋
+      </div>
+
+      <div class="notification-content">
+        <div class="notification-header">
+          <div>
+            <p class="notification-type">
+              {{ tituloNotificacion(notificacion) }}
+            </p>
+            <h2>{{ mesaTexto(notificacion) }}</h2>
+          </div>
+
+          <span class="time-badge">
+                {{ tiempoTranscurrido(notificacion.fecha) }}
+              </span>
+        </div>
+
+        <p class="notification-description">
+          {{ descripcionNotificacion(notificacion) }}
+        </p>
+
+        <p class="notification-date">
+          {{ fechaLarga(notificacion.fecha) }}
+        </p>
+
+        <div class="notification-state">
+          @if (!notificacion.enCurso) {
+          <span class="state-badge state-pending">Pendiente</span>
+          } @else {
+          <span class="state-badge state-in-progress">En curso</span>
+          }
+          <span>{{ textoAsignacion(notificacion) }}</span>
+        </div>
+
+        <div class="notification-actions">
+          @if (!notificacion.enCurso) {
+          <button
+            type="button"
+            class="primary-button"
+            [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
+            (click)="marcarEnCurso(notificacion)"
+          >
+            {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Voy' }}
+          </button>
+          } @else {
+          <button
+            type="button"
+            class="primary-button"
+            [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
+            (click)="marcarCompletada(notificacion)"
+          >
+            {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Ya fui' }}
+          </button>
+          <button
+            type="button"
+            class="secondary-button"
+            [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
+            (click)="desasignarYReenviar(notificacion)"
+          >
+            {{ asignandoNotificacionId() === notificacion.id ? 'Cancelando...' : 'Desasignar' }}
+          </button>
+          }
+        </div>
+      </div>
+    </article>
+    }
+  </section>
+  }
+
   }
 </main>

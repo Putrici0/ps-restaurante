@@ -5,7 +5,6 @@
   overflow: visible;
 }
 
-/* HEADER */
 .app-header {
   position: relative;
   width: 100%;
@@ -22,7 +21,6 @@
   padding: 0 16px;
 }
 
-/* BOTÓN HAMBURGUESA */
 .hamburger-btn {
   position: absolute;
   left: 16px;
@@ -46,7 +44,6 @@
   -webkit-text-fill-color: var(--text-dark, #3a2a1a);
 }
 
-/* LOGO CENTRADO COMO EN MOCKUP */
 .logo-container {
   position: absolute;
   left: 50%;
@@ -59,7 +56,89 @@
   object-fit: contain;
 }
 
-/* 🔥 MENÚ HAMBURGUESA FIJO (LO IMPORTANTE) */
+.atencion-bar {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 16px 12px;
+  background-color: var(--bg-header, #d4b596);
+}
+
+.atencion-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  background: #2e2118;
+  color: #fff8f0;
+  font: inherit;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.16s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+.atencion-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.atencion-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.atencion-status {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 999px;
+  text-align: center;
+}
+
+.atencion-pendiente {
+  background: #fff2d9;
+  color: #8a5a2e;
+}
+
+.atencion-en-curso {
+  background: #d4edda;
+  color: #155724;
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  z-index: 10001;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease;
+}
+
+.toast-container.success {
+  background-color: #2b8a3e;
+}
+
+.toast-container.error {
+  background-color: #c92a2a;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
 .menu-panel {
   position: fixed;
   top: 0;
@@ -73,7 +152,6 @@
   padding-top: 92px;
 }
 
-/* LINKS */
 .nav-links {
   display: flex;
   flex-direction: column;
@@ -93,11 +171,10 @@
   font-weight: bold;
 }
 
-/* OVERLAY */
 .menu-overlay {
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.4);
   backdrop-filter: blur(2px);
-  z-index: 9997; /* Justo debajo del panel del menú */
+  z-index: 9997;
 }

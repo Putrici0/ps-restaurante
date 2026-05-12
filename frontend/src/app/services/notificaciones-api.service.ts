@@ -41,4 +41,28 @@ export class NotificacionesApiService {
       .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/desasignar`, {})
       .pipe(timeout(this.requestTimeoutMs));
   }
+
+  solicitarAtencion(cuentaId: string): Observable<Notificacion> {
+    return this.http
+      .post<Notificacion>(`${this.apiUrl}/notificaciones/atencion/${cuentaId}`, {})
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
+  obtenerAtencionActiva(cuentaId: string): Observable<Notificacion | null> {
+    return this.http
+      .get<Notificacion | null>(`${this.apiUrl}/notificaciones/atencion/${cuentaId}`)
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
+  obtenerActivas(): Observable<Notificacion[]> {
+    return this.http
+      .get<Notificacion[]>(`${this.apiUrl}/notificaciones/activas`)
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
+  marcarComoCompletada(id: string): Observable<Notificacion> {
+    return this.http
+      .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/completada`, {})
+      .pipe(timeout(this.requestTimeoutMs));
+  }
 }

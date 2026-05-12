@@ -37,7 +37,7 @@
       <section class="notification-panel">
         <div class="notification-panel-header">
           <div>
-            <strong>Pedidos listos</strong>
+            <strong>Notificaciones</strong>
             <span>{{ totalNotificaciones() }} pendientes</span>
           </div>
 
@@ -48,40 +48,99 @@
 
         @if (totalNotificaciones() === 0) {
         <div class="empty-notifications">
-          No hay pedidos listos pendientes.
+          No hay notificaciones pendientes.
         </div>
         } @else {
         <div class="notification-list">
-          @for (notificacion of notificacionesRecoger(); track notificacion.id) {
-          <article class="notification-item">
-            <div class="notification-info">
-              <strong>{{ mesaTexto(notificacion) }}</strong>
-              <p>{{ descripcionNotificacion(notificacion) }}</p>
-              <span>{{ textoAsignacion(notificacion) }}</span>
-              <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
-            </div>
 
-            @if (!notificacion.enCurso) {
-            <button
-              type="button"
-              class="mark-read"
-              [disabled]="asignandoNotificacionId() === notificacion.id"
-              (click)="marcarEnCurso(notificacion)"
-            >
-              {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'En curso' }}
-            </button>
-            } @else {
-            <button
-              type="button"
-              class="mark-read"
-              [disabled]="asignandoNotificacionId() === notificacion.id"
-              (click)="desasignarYReenviar(notificacion)"
-            >
-              {{ asignandoNotificacionId() === notificacion.id ? 'Cancelando...' : 'Desasignar y reenviar' }}
-            </button>
+          @if (notificacionesRecoger().length > 0) {
+            <div class="panel-section-label">Pedidos listos</div>
+            @for (notificacion of notificacionesRecoger(); track notificacion.id) {
+            <article class="notification-item">
+              <div class="notification-info">
+                <strong>{{ mesaTexto(notificacion) }}</strong>
+                <p>{{ descripcionNotificacion(notificacion) }}</p>
+                <span>{{ textoAsignacion(notificacion) }}</span>
+                <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
+              </div>
+
+              <div class="notification-actions">
+                @if (!notificacion.enCurso) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarEnCurso(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Atender' }}
+                </button>
+                } @else if (esAsignadaAlCamareroActual(notificacion)) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarCompletada(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Finalizado' }}
+                </button>
+                <button
+                  type="button"
+                  class="mark-read secondary"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="desasignarYReenviar(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Liberando...' : 'Liberar' }}
+                </button>
+                }
+              </div>
+            </article>
             }
-          </article>
           }
+
+          @if (notificacionesAtencion().length > 0) {
+            <div class="panel-section-label">Atención al cliente</div>
+            @for (notificacion of notificacionesAtencion(); track notificacion.id) {
+            <article class="notification-item">
+              <div class="notification-info">
+                <strong>{{ mesaTexto(notificacion) }}</strong>
+                <p>{{ descripcionNotificacion(notificacion) }}</p>
+                <span>{{ textoAsignacion(notificacion) }}</span>
+                <span>{{ tiempoTranscurrido(notificacion.fecha) }}</span>
+              </div>
+
+              <div class="notification-actions">
+                @if (!notificacion.enCurso) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarEnCurso(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Asignando...' : 'Atender' }}
+                </button>
+                } @else if (esAsignadaAlCamareroActual(notificacion)) {
+                <button
+                  type="button"
+                  class="mark-read"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="marcarCompletada(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Finalizado' }}
+                </button>
+                <button
+                  type="button"
+                  class="mark-read secondary"
+                  [disabled]="asignandoNotificacionId() === notificacion.id"
+                  (click)="desasignarYReenviar(notificacion)"
+                >
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Liberando...' : 'Liberar' }}
+                </button>
+                }
+              </div>
+            </article>
+            }
+          }
+
         </div>
         }
       </section>

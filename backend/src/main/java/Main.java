@@ -102,6 +102,11 @@ public class Main {
                 cuentaRepository
         );
 
+        java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(
+                notificacionApplicationService::limpiarNotificacionesEstancadas,
+                1, 1, java.util.concurrent.TimeUnit.MINUTES
+        );
+
         HistorialCuentasApplicationService historialCuentasApplicationService =
                 new HistorialCuentasApplicationService(cuentaRepository, pedidoRepository, ordenRepository);
 

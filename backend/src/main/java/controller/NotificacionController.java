@@ -45,6 +45,13 @@ public class NotificacionController {
                     });
                 });
 
+                path("activas", () -> {
+                    get(ctx -> {
+                        List<Notificacion> activas = applicationService.obtenerTodasLasAtencionesActivas();
+                        ctx.json(activas);
+                    });
+                });
+
                 path("cuenta/{cuentaId}", () -> {
                     get(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");
@@ -78,6 +85,18 @@ public class NotificacionController {
                         Notificacion notificacion =
                                 applicationService.crearNotificacionAtencion(cuentaId);
                         ctx.status(201).json(notificacion);
+                    });
+
+                    get(ctx -> {
+                        String cuentaId = ctx.pathParam("cuentaId");
+                        Optional<Notificacion> notificacion =
+                                applicationService.obtenerNotificacionAtencionActiva(cuentaId);
+
+                        if (notificacion.isPresent()) {
+                            ctx.json(notificacion.get());
+                        } else {
+                            ctx.status(204);
+                        }
                     });
                 });
 
@@ -149,6 +168,14 @@ public class NotificacionController {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
                             Notificacion notificacion = applicationService.desasignarYReenviarNotificacion(id);
+                            ctx.json(notificacion);
+                        });
+                    });
+
+                    path("completada", () -> {
+                        post(ctx -> {
+                            String id = ctx.pathParam("id");
+                            Notificacion notificacion = applicationService.marcarNotificacionCompletada(id);
                             ctx.json(notificacion);
                         });
                     });
