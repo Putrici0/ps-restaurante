@@ -20,9 +20,11 @@ import java.util.stream.Collectors;
  */
 public abstract class AbstractFirestoreRepository<T> implements Repository<T, String> {
 
+    protected final Firestore db;
     protected final CollectionReference collection;
 
     protected AbstractFirestoreRepository(Firestore db, String collectionName) {
+        this.db = db;
         this.collection = db.collection(collectionName);
     }
 

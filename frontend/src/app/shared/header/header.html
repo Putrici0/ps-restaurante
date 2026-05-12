@@ -15,6 +15,31 @@
     </div>
   </div>
 
+  @if (cuentaId()) {
+    <div class="atencion-bar">
+      @if (atencionActiva(); as atencion) {
+        @if (atencion.enCurso && atencion.camareroNombre) {
+          <span class="atencion-status atencion-en-curso">
+            Camarero {{ atencion.camareroNombre }} está en camino
+          </span>
+        } @else {
+          <span class="atencion-status atencion-pendiente">
+            Solicitud enviada, esperando camarero...
+          </span>
+        }
+      } @else {
+        <button
+          type="button"
+          class="atencion-btn"
+          [disabled]="solicitarAtencionCargando()"
+          (click)="solicitarAtencion()"
+        >
+          {{ solicitarAtencionCargando() ? 'Enviando...' : 'Solicitar atención' }}
+        </button>
+      }
+    </div>
+  }
+
   @if (menuAbierto()) {
     <div class="menu-panel">
       <nav class="nav-links">
@@ -43,4 +68,3 @@
   ></div>
   }
 </header>
-

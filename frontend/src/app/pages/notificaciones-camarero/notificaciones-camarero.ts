@@ -48,7 +48,24 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
       }),
   );
 
-  readonly totalPendientes = computed(() => this.notificacionesRecoger().length);
+  readonly notificacionesAtencion = computed(() =>
+    this.notificaciones()
+      .filter((notificacion) => notificacion.tipo === 'Atencion')
+      .sort((a, b) => {
+        const prioridadA = this.esAsignadaAlCamareroActual(a) ? 1 : 0;
+        const prioridadB = this.esAsignadaAlCamareroActual(b) ? 1 : 0;
+
+        if (prioridadA !== prioridadB) {
+          return prioridadB - prioridadA;
+        }
+
+        return this.fechaMs(b.fecha) - this.fechaMs(a.fecha);
+      }),
+  );
+
+  readonly totalPendientes = computed(() =>
+    this.notificacionesRecoger().length + this.notificacionesAtencion().length
+  );
 
   readonly estaSilenciado = computed(() => this.silenciadoHasta() > this.ahora());
 
@@ -153,6 +170,41 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
     }
   }
 
+  marcarCompletada(notificacion: Notificacion): void {
+    if (this.actualizando() || this.asignandoNotificacionId()) {
+      return;
+    }
+
+    this.actualizando.set(true);
+    this.asignandoNotificacionId.set(notificacion.id);
+    this.error.set(null);
+
+    this.notificacionesApi
+      .marcarComoCompletada(notificacion.id)
+      .pipe(take(1))
+      .subscribe({
+        next: (actualizada) => {
+          this.notificacionesConAviso.delete(actualizada.id);
+          this.notificaciones.update((actuales) =>
+            actuales.filter((item) => item.id !== actualizada.id),
+          );
+
+          if (this.toast()?.id === actualizada.id) {
+            this.toast.set(null);
+          }
+
+          this.asignandoNotificacionId.set(null);
+          this.actualizando.set(false);
+        },
+        error: (err) => {
+          console.error(err);
+          this.error.set('No se ha podido completar la notificación.');
+          this.asignandoNotificacionId.set(null);
+          this.actualizando.set(false);
+        },
+      });
+  }
+
   desasignarYReenviar(notificacion: Notificacion): void {
     if (this.actualizando() || this.asignandoNotificacionId()) {
       return;
@@ -211,7 +263,7 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
       return notificacion.enCurso ? 'Pedido en curso' : 'Pedido listo para recoger';
     }
 
-    return 'Solicitud de atención';
+    return notificacion.enCurso ? 'Atención en curso' : 'Solicitud de atención';
   }
 
   descripcionNotificacion(notificacion: Notificacion): string {
@@ -303,17 +355,17 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (notificaciones) => {
-          const pendientesRecoger = notificaciones.filter(
-            (notificacion) => !notificacion.leida && notificacion.tipo === 'Recoger',
+          const pendientes = notificaciones.filter(
+            (notificacion) => !notificacion.leida,
           );
 
-          this.notificaciones.set(pendientesRecoger);
+          this.notificaciones.set(pendientes);
           this.cargando.set(false);
 
           if (avisarNuevas) {
-            this.procesarAvisosNuevos(pendientesRecoger);
+            this.procesarAvisosNuevos(pendientes);
           } else {
-            pendientesRecoger.forEach((notificacion) =>
+            pendientes.forEach((notificacion) =>
               this.notificacionesConAviso.add(notificacion.id),
             );
           }

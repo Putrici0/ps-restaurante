@@ -1,6 +1,10 @@
 package repository.firestore;
 
+import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
 import model.Cuenta;
 import model.Mesa;
 import model.Notificacion;
@@ -11,6 +15,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
 
 public class FirestoreNotificacionRepository extends AbstractFirestoreRepository<Notificacion> implements NotificacionRepository {
     public FirestoreNotificacionRepository(Firestore db) {
@@ -117,6 +122,56 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
     @Override
     public List<Notificacion> findByLeida(boolean leida) {
         return buscarPorCampo("leida", leida);
+    }
+
+    @Override
+    public Optional<Notificacion> findActiveAtencionByCuentaId(String cuentaId) {
+        List<Notificacion> resultados = buscar(
+                collection
+                        .whereEqualTo("cuenta.id", cuentaId)
+                        .whereEqualTo("tipo", "Atencion")
+                        .whereEqualTo("leida", false)
+                        .orderBy("fecha", com.google.cloud.firestore.Query.Direction.DESCENDING)
+                        .limit(1)
+        );
+
+        return resultados.isEmpty() ? Optional.empty() : Optional.of(resultados.get(0));
+    }
+
+    @Override
+    public Notificacion saveWithDedup(Notificacion notificacion) {
+        try {
+            if (notificacion.cuenta() == null || notificacion.cuenta().id() == null) {
+                return save(notificacion);
+            }
+
+            String cuentaId = notificacion.cuenta().id();
+
+            return db.runTransaction(transaction -> {
+                ApiFuture<QuerySnapshot> future = transaction.get(
+                        collection
+                                .whereEqualTo("cuenta.id", cuentaId)
+                                .whereEqualTo("tipo", "Atencion")
+                                .whereEqualTo("leida", false)
+                                .limit(1)
+                );
+
+                QuerySnapshot existing = future.get();
+
+                if (!existing.isEmpty()) {
+                    DocumentSnapshot doc = existing.getDocuments().get(0);
+                    return mapToEntity(doc.getId(), doc.getData());
+                }
+
+                DocumentReference docRef = collection.document();
+                String newId = docRef.getId();
+                Notificacion withId = createWithId(notificacion, newId);
+                transaction.create(docRef, entityToMap(withId));
+                return withId;
+            }).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error en transacción de notificación de atención", e);
+        }
     }
 
     private List<Map<String, Object>> mapMesas(List<Mesa> mesas) {
