@@ -111,7 +111,17 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
 
     @Override
     public List<Notificacion> findByCuenta(Cuenta cuenta) {
-        return buscarPorCampo("cuenta.id", cuenta.id());
+        return findByCuentaId(cuenta.id());
+    }
+
+    @Override
+    public List<Notificacion> findByCuentaId(String cuentaId) {
+        return buscarPorCampo("cuenta.id", cuentaId);
+    }
+
+    @Override
+    public List<Notificacion> findByOrdenId(String ordenId) {
+        return buscarPorCampo("ordenId", ordenId);
     }
 
     @Override
@@ -131,7 +141,6 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
                         .whereEqualTo("cuenta.id", cuentaId)
                         .whereEqualTo("tipo", "Atencion")
                         .whereEqualTo("leida", false)
-                        .orderBy("fecha", com.google.cloud.firestore.Query.Direction.DESCENDING)
                         .limit(1)
         );
 

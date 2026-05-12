@@ -1,6 +1,6 @@
 import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive, ActivatedRoute } from '@angular/router';
-import { catchError, of, take } from 'rxjs';
+import {Subscription, catchError, of, take} from 'rxjs';
 import { CuentaApiService } from '../../services/cuenta-api.service';
 import { NotificacionesApiService } from '../../services/notificaciones-api.service';
 import { CommonModule } from '@angular/common';
@@ -18,8 +18,9 @@ export class Header implements OnInit, OnDestroy {
   private readonly notificacionesApi = inject(NotificacionesApiService);
 
   private pollingTimer?: number;
+  private routeSub?: Subscription;
 
-  readonly tableId = signal(this.route.snapshot.params['id'] || '1');
+  readonly tableId = signal<string>('1');
   readonly menuAbierto = signal(false);
   readonly cuentaId = signal<string | null>(null);
   readonly solicitarAtencionCargando = signal(false);
@@ -33,12 +34,23 @@ export class Header implements OnInit, OnDestroy {
   readonly estadoAtencionTexto = signal('');
 
   ngOnInit(): void {
+    this.routeSub = this.route.params.subscribe(params => {
+      const id = params['id'];
+      if (id) {
+        this.tableId.set(id);
+        this.actualizarEstadoAtencion();
+      }
+    });
+
     this.iniciarPolling();
   }
 
   ngOnDestroy(): void {
     if (this.pollingTimer) {
       window.clearInterval(this.pollingTimer);
+    }
+    if (this.routeSub) {
+      this.routeSub.unsubscribe();
     }
   }
 
