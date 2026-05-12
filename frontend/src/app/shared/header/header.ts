@@ -24,6 +24,7 @@ export class Header implements OnInit, OnDestroy {
   readonly menuAbierto = signal(false);
   readonly cuentaId = signal<string | null>(null);
   readonly solicitarAtencionCargando = signal(false);
+  readonly toast = signal<{ mensaje: string; tipo: 'success' | 'error' } | null>(null);
   readonly atencionActiva = signal<{
     id: string;
     enCurso: boolean;
@@ -78,11 +79,20 @@ export class Header implements OnInit, OnDestroy {
           leida: notificacion.leida,
         });
         this.solicitarAtencionCargando.set(false);
+        this.mostrarToast('Solicitud enviada correctamente', 'success');
       },
       error: () => {
         this.solicitarAtencionCargando.set(false);
+        this.mostrarToast('Error al enviar la solicitud. Inténtalo de nuevo.', 'error');
       },
     });
+  }
+
+  private mostrarToast(mensaje: string, tipo: 'success' | 'error'): void {
+    this.toast.set({mensaje, tipo});
+    window.setTimeout(() => {
+      this.toast.set(null);
+    }, 5000);
   }
 
   private iniciarPolling(): void {
@@ -108,6 +118,8 @@ export class Header implements OnInit, OnDestroy {
 
           this.notificacionesApi.obtenerAtencionActiva(cuenta.id).pipe(take(1)).subscribe({
             next: (notificacion) => {
+              const previa = this.atencionActiva();
+
               if (notificacion) {
                 this.atencionActiva.set({
                   id: notificacion.id,
@@ -117,6 +129,9 @@ export class Header implements OnInit, OnDestroy {
                 });
               } else {
                 this.atencionActiva.set(null);
+                if (previa && !previa.leida) {
+                  this.mostrarToast('El camarero ha completado tu solicitud.', 'success');
+                }
               }
             },
             error: () => {},

@@ -40,6 +40,12 @@
     </div>
   }
 
+  @if (toast(); as t) {
+  <div class="toast-container" [class]="t.tipo">
+    {{ t.mensaje }}
+  </div>
+  }
+
   @if (menuAbierto()) {
     <div class="menu-panel">
       <nav class="nav-links">

@@ -6,7 +6,9 @@ import { Subscription, timer } from 'rxjs';
 import { Mesa, ZonaMesa } from '../../../models/mesa.model';
 import { CuentaApiService } from '../../../services/cuenta-api.service';
 import { MesasApiService } from '../../../services/mesas-api.service';
+import {NotificacionesApiService} from '../../../services/notificaciones-api.service';
 import { CamareroHeader } from '../camarero-header/camarero-header';
+import {Notificacion} from '../../../models/notificacion.model';
 
 interface ItemCobroAgrupado {
   platoId: string;
@@ -29,11 +31,13 @@ interface ItemCobroAgrupado {
 export class MesasCamarero implements OnDestroy {
   private readonly mesasApi = inject(MesasApiService);
   private readonly cuentaApi = inject(CuentaApiService);
+  private readonly notificacionesApi = inject(NotificacionesApiService);
   private readonly router = inject(Router);
 
   readonly zonaActiva = signal<ZonaMesa>('interior');
   readonly mesaSeleccionada = signal<Mesa | null>(null);
   readonly mesas = signal<Mesa[]>([]);
+  readonly notificacionesAtencion = signal<Notificacion[]>([]);
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly accionMesaId = signal<string | null>(null);
@@ -58,11 +62,22 @@ export class MesasCamarero implements OnDestroy {
   private pollingSub?: Subscription;
   private readonly pollingMs = 5000;
 
-  readonly mesasFiltradas = computed(() =>
-    this.mesas()
+  readonly mesasFiltradas = computed(() => {
+    const activas = this.notificacionesAtencion();
+    const idsMesasConAtencion = new Set<string>();
+
+    activas.forEach((n: Notificacion) => {
+      n.cuenta?.mesas?.forEach((m: any) => idsMesasConAtencion.add(m.id));
+    });
+
+    return this.mesas()
       .filter((mesa) => mesa.zona === this.zonaActiva())
-      .sort((a, b) => Number(a.id.replace('M', '')) - Number(b.id.replace('M', '')))
-  );
+      .map((mesa) => ({
+        ...mesa,
+        tieneAtencion: idsMesasConAtencion.has(mesa.id),
+      }))
+      .sort((a, b) => Number(a.id.replace('M', '')) - Number(b.id.replace('M', '')));
+  });
 
   readonly totalCobro = computed(() => {
     const seleccionadas = new Set(this.ordenesSeleccionadas());
@@ -147,7 +162,7 @@ export class MesasCamarero implements OnDestroy {
         this.recargarMesas(mesaId);
         this.cerrarModal();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error ocupando mesa:', err);
         this.accionMesaId.set(null);
         this.error.set('Error al ocupar mesa.');
@@ -184,7 +199,7 @@ export class MesasCamarero implements OnDestroy {
         this.recargarMesas(mesaId);
         this.cerrarModal();
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error liberando mesa:', err);
         this.accionMesaId.set(null);
         this.error.set('Error al liberar mesa.');
@@ -203,8 +218,14 @@ export class MesasCamarero implements OnDestroy {
       this.cargando.set(true);
     }
     this.error.set(null);
+
+    this.notificacionesApi.obtenerActivas().subscribe({
+      next: (notifs: Notificacion[]) => this.notificacionesAtencion.set(notifs),
+      error: (err: any) => console.error('Error cargando notificaciones activas:', err)
+    });
+
     this.mesasApi.cargarMesasParaVista().subscribe({
-      next: (mesas) => {
+      next: (mesas: Mesa[]) => {
         this.mesas.set(mesas);
         this.cargando.set(false);
         this.accionMesaId.set(null);
@@ -223,7 +244,7 @@ export class MesasCamarero implements OnDestroy {
         const mesaRefrescada = mesas.find((m) => m.id === seleccionActual.id) ?? null;
         this.mesaSeleccionada.set(mesaRefrescada);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error recargando mesas:', err);
         this.cargando.set(false);
         this.error.set('Error al cargar mesas.');

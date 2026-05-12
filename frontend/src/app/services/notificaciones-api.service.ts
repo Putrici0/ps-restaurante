@@ -54,6 +54,12 @@ export class NotificacionesApiService {
       .pipe(timeout(this.requestTimeoutMs));
   }
 
+  obtenerActivas(): Observable<Notificacion[]> {
+    return this.http
+      .get<Notificacion[]>(`${this.apiUrl}/notificaciones/activas`)
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
   marcarComoCompletada(id: string): Observable<Notificacion> {
     return this.http
       .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/completada`, {})

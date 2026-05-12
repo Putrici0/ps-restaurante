@@ -45,6 +45,13 @@ public class NotificacionController {
                     });
                 });
 
+                path("activas", () -> {
+                    get(ctx -> {
+                        List<Notificacion> activas = applicationService.obtenerTodasLasAtencionesActivas();
+                        ctx.json(activas);
+                    });
+                });
+
                 path("cuenta/{cuentaId}", () -> {
                     get(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");

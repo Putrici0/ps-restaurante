@@ -23,6 +23,9 @@
       @for(mesa of mesasFiltradas(); track mesa.id) {
         <div class="mesa-card-wrapper" (click)="abrirMesa(mesa)">
           <div class="mesa-card" [ngClass]="mesa.estado.toLowerCase()">
+            @if (mesa.tieneAtencion) {
+            <div class="atencion-indicator">!</div>
+            }
             <span class="mesa-id">M{{ mesa.id }}</span>
             <span class="mesa-pax">{{ mesa.capacidad || 4 }} Pax</span>
           </div>
