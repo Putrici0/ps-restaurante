@@ -86,17 +86,6 @@ public class NotificacionApplicationService {
 
     public List<Notificacion> obtenerNotificacionesDeCuenta(String cuentaId) {
         return notificacionRepository.findByCuentaId(cuentaId);
-        Cuenta cuentaRef = new Cuenta(
-                cuentaId,
-                List.of(),
-                false,
-                java.util.Optional.empty(),
-                Instant.EPOCH,
-                java.util.Optional.empty(),
-                "",
-                java.util.Optional.empty()
-        );
-        return notificacionRepository.findByCuenta(cuentaRef);
     }
 
     public List<Notificacion> obtenerNotificacionesPorTipo(TipoNotificacion tipo) {
@@ -107,7 +96,6 @@ public class NotificacionApplicationService {
         return notificacionRepository.findByTipoNotificacion(TipoNotificacion.Atencion).stream()
                 .filter(n -> !n.leida())
                 .toList();
-        return notificacionRepository.findByTipoNotificacion(tipo);
     }
 
     public void limpiarNotificacionesEstancadas() {
@@ -238,8 +226,6 @@ public class NotificacionApplicationService {
 
         notificacionRepository.findByOrdenId(ordenId).stream()
                 .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
-        notificacionRepository.findByTipoNotificacion(TipoNotificacion.Recoger).stream()
-                .filter(notificacion -> ordenId.equals(notificacion.ordenId()))
                 .forEach(notificacion -> notificacionRepository.deleteById(notificacion.id()));
     }
 
@@ -250,10 +236,7 @@ public class NotificacionApplicationService {
 
         notificacionRepository.findByCuentaId(cuentaId).stream()
                 .filter(notificacion -> !notificacion.leida())
-        notificacionRepository.findByLeida(false).stream()
                 .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
-                .filter(notificacion -> notificacion.cuenta() != null)
-                .filter(notificacion -> cuentaId.equals(notificacion.cuenta().id()))
                 .forEach(notificacion -> {
                     Notificacion actualizada = new Notificacion(
                             notificacion.id(),
