@@ -9,6 +9,8 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class PagoApplicationService {
 
@@ -37,20 +39,13 @@ public class PagoApplicationService {
     }
 
     public List<Orden> obtenerOrdenesDeCuenta(String cuentaId) {
-        List<Pedido> pedidos = obtenerPedidosDeCuenta(cuentaId);
-
-        return pedidos.stream()
-                .flatMap(pedido -> ordenRepository.findByPedido(pedido).stream())
+        return obtenerOrdenesDeCuentaInterno(cuentaId)
                 .filter(orden -> orden.ordenEstado() != OrdenEstado.Cancelado)
                 .toList();
     }
 
     public List<Orden> obtenerTodasLasOrdenesDeCuenta(String cuentaId) {
-        List<Pedido> pedidos = obtenerPedidosDeCuenta(cuentaId);
-
-        return pedidos.stream()
-                .flatMap(pedido -> ordenRepository.findByPedido(pedido).stream())
-                .toList();
+        return obtenerOrdenesDeCuentaInterno(cuentaId).toList();
     }
 
     public BigDecimal calcularTotalCuenta(String cuentaId) {
@@ -87,7 +82,8 @@ public class PagoApplicationService {
             throw new IllegalArgumentException("El método de pago es obligatorio");
         }
 
-        List<Orden> ordenesPendientes = obtenerOrdenesDeCuenta(cuentaId).stream()
+        List<Orden> ordenesCuenta = obtenerOrdenesDeCuenta(cuentaId);
+        List<Orden> ordenesPendientes = ordenesCuenta.stream()
                 .filter(orden -> !orden.pagada())
                 .toList();
 
@@ -170,7 +166,23 @@ public class PagoApplicationService {
             ordenRepository.update(orden.id(), ordenPagada);
         }
 
-        boolean quedaPendiente = obtenerOrdenesDeCuenta(cuentaId).stream()
+        Set<String> ordenesPagadasEnEstaOperacion = ordenIds.stream().collect(Collectors.toSet());
+        boolean quedaPendiente = ordenesCuenta.stream()
+                .map(orden -> ordenesPagadasEnEstaOperacion.contains(orden.id())
+                        ? new Orden(
+                        orden.id(),
+                        orden.pedido(),
+                        orden.plato(),
+                        orden.precio(),
+                        orden.ordenEstado(),
+                        orden.fecha(),
+                        orden.detalles(),
+                        orden.urgente(),
+                        true,
+                        Optional.of(ahora),
+                        Optional.of(metodoPago)
+                )
+                        : orden)
                 .anyMatch(orden -> !orden.pagada());
 
         if (!quedaPendiente) {
@@ -270,5 +282,19 @@ public class PagoApplicationService {
         );
 
         pedidoRepository.update(pedido.id(), pedidoActualizado);
+    }
+
+    private java.util.stream.Stream<Orden> obtenerOrdenesDeCuentaInterno(String cuentaId) {
+        List<Pedido> pedidos = obtenerPedidosDeCuenta(cuentaId);
+        List<String> pedidosIds = pedidos.stream()
+                .map(Pedido::id)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
+
+        if (pedidosIds.isEmpty()) {
+            return List.<Orden>of().stream();
+        }
+
+        return ordenRepository.findByPedidosIds(pedidosIds).stream();
     }
 }

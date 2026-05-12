@@ -130,6 +130,14 @@ public abstract class AbstractFirestoreRepository<T> implements Repository<T, St
         return buscar(collection.whereEqualTo(campo, valor));
     }
 
+    protected List<T> buscarPorCampoIn(String campo, List<?> valores) {
+        if (valores == null || valores.isEmpty()) {
+            return List.of();
+        }
+
+        return buscar(collection.whereIn(campo, valores));
+    }
+
     // --- Type Conversion Utilities (The "Magic" part) ---
 
     protected Instant toInstant(Object value) {

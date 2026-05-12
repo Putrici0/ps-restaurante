@@ -15,6 +15,7 @@ import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -120,8 +121,42 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
     }
 
     @Override
+    public List<Orden> findByPedidosIds(List<String> pedidosIds) {
+        if (pedidosIds == null || pedidosIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<Orden> resultado = new ArrayList<>();
+        List<String> idsLimpios = pedidosIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+
+        for (int i = 0; i < idsLimpios.size(); i += 10) {
+            int fin = Math.min(i + 10, idsLimpios.size());
+            List<String> lote = idsLimpios.subList(i, fin);
+            resultado.addAll(buscarPorCampoIn("pedido.id", lote));
+        }
+
+        // Evita duplicados si algún id llega repetido.
+        Map<String, Orden> porId = new LinkedHashMap<>();
+        for (Orden orden : resultado) {
+            if (orden != null && orden.id() != null) {
+                porId.put(orden.id(), orden);
+            }
+        }
+
+        return new ArrayList<>(porId.values());
+    }
+
+    @Override
     public List<Orden> findByEstado(OrdenEstado estado) {
         return buscarPorCampo("ordenEstado", estado.name());
+    }
+
+    @Override
+    public List<Orden> findByPagada(boolean pagada) {
+        return buscarPorCampo("pagada", pagada);
     }
 
     private Pedido mapPedido(Map<String, Object> pData) {

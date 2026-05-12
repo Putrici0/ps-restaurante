@@ -71,23 +71,25 @@ public class NotificacionApplicationService {
     }
 
     public List<Notificacion> obtenerNotificacionesPendientes() {
-        return notificacionRepository.findAll().stream()
-                .filter(notificacion -> !notificacion.leida())
-                .toList();
+        return notificacionRepository.findByLeida(false);
     }
 
     public List<Notificacion> obtenerNotificacionesDeCuenta(String cuentaId) {
-        return notificacionRepository.findAll().stream()
-                .filter(notificacion -> notificacion.cuenta() != null)
-                .filter(notificacion -> notificacion.cuenta().id() != null)
-                .filter(notificacion -> notificacion.cuenta().id().equals(cuentaId))
-                .toList();
+        Cuenta cuentaRef = new Cuenta(
+                cuentaId,
+                List.of(),
+                false,
+                java.util.Optional.empty(),
+                Instant.EPOCH,
+                java.util.Optional.empty(),
+                "",
+                java.util.Optional.empty()
+        );
+        return notificacionRepository.findByCuenta(cuentaRef);
     }
 
     public List<Notificacion> obtenerNotificacionesPorTipo(TipoNotificacion tipo) {
-        return notificacionRepository.findAll().stream()
-                .filter(notificacion -> notificacion.tipo() == tipo)
-                .toList();
+        return notificacionRepository.findByTipoNotificacion(tipo);
     }
 
     public Notificacion marcarNotificacionEnCurso(
@@ -181,8 +183,7 @@ public class NotificacionApplicationService {
             return;
         }
 
-        notificacionRepository.findAll().stream()
-                .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
+        notificacionRepository.findByTipoNotificacion(TipoNotificacion.Recoger).stream()
                 .filter(notificacion -> ordenId.equals(notificacion.ordenId()))
                 .forEach(notificacion -> notificacionRepository.deleteById(notificacion.id()));
     }
@@ -192,8 +193,7 @@ public class NotificacionApplicationService {
             return;
         }
 
-        notificacionRepository.findAll().stream()
-                .filter(notificacion -> !notificacion.leida())
+        notificacionRepository.findByLeida(false).stream()
                 .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
                 .filter(notificacion -> notificacion.cuenta() != null)
                 .filter(notificacion -> cuentaId.equals(notificacion.cuenta().id()))

@@ -12,7 +12,6 @@ import repository.interfaces.PedidoRepository;
 
 import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -80,29 +79,32 @@ public class MesaApplicationService {
                 .orElseThrow(() -> new IllegalArgumentException("La mesa ya esta libre"));
 
         List<Pedido> pedidos = pedidoRepository.findByCuenta(cuentaActiva);
-        for (Pedido pedido : pedidos) {
-            List<Orden> ordenes = ordenRepository.findByPedido(pedido);
-            for (Orden orden : ordenes) {
-                if (orden.ordenEstado() == OrdenEstado.Cancelado) {
-                    continue;
-                }
+        List<String> pedidosIds = pedidos.stream()
+                .map(Pedido::id)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
 
-                Orden ordenCancelada = new Orden(
-                        orden.id(),
-                        orden.pedido(),
-                        orden.plato(),
-                        orden.precio(),
-                        OrdenEstado.Cancelado,
-                        orden.fecha(),
-                        orden.detalles(),
-                        orden.urgente(),
-                        orden.pagada(),
-                        orden.fechaPago(),
-                        orden.metodoPago()
-                );
-
-                ordenRepository.update(orden.id(), ordenCancelada);
+        List<Orden> ordenes = ordenRepository.findByPedidosIds(pedidosIds);
+        for (Orden orden : ordenes) {
+            if (orden.ordenEstado() == OrdenEstado.Cancelado) {
+                continue;
             }
+
+            Orden ordenCancelada = new Orden(
+                    orden.id(),
+                    orden.pedido(),
+                    orden.plato(),
+                    orden.precio(),
+                    OrdenEstado.Cancelado,
+                    orden.fecha(),
+                    orden.detalles(),
+                    orden.urgente(),
+                    orden.pagada(),
+                    orden.fechaPago(),
+                    orden.metodoPago()
+            );
+
+            ordenRepository.update(orden.id(), ordenCancelada);
         }
 
         Cuenta cuentaLiberada = new Cuenta(
@@ -131,13 +133,11 @@ public class MesaApplicationService {
 
     public List<Orden> obtenerOrdenesActivasDeMesa(String mesaId) {
         List<Pedido> pedidos = obtenerPedidosActivosDeMesa(mesaId);
-        List<Orden> ordenes = new ArrayList<>();
-
-        for (Pedido pedido : pedidos) {
-            ordenes.addAll(ordenRepository.findByPedido(pedido));
-        }
-
-        return ordenes;
+        List<String> pedidosIds = pedidos.stream()
+                .map(Pedido::id)
+                .filter(id -> id != null && !id.isBlank())
+                .toList();
+        return ordenRepository.findByPedidosIds(pedidosIds);
     }
 
     public Cuenta validarAccesoMesa(String mesaId, String password) {

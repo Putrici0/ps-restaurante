@@ -14,6 +14,8 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class HistorialCuentasApplicationService {
     private final CuentaRepository cuentaRepository;
@@ -31,9 +33,14 @@ public class HistorialCuentasApplicationService {
     }
 
     public List<CuentaPagadaResumenResponse> obtenerCuentasPagadas(LocalDate fecha) {
-        return cuentaRepository.findByEstaPagada(true).stream()
+        List<Cuenta> cuentasPagadas = cuentaRepository.findByEstaPagada(true).stream()
                 .filter(cuenta -> coincideFecha(cuenta, fecha))
-                .map(this::mapearResumen)
+                .toList();
+
+        Map<String, BigDecimal> totalesPorCuenta = calcularTotalesPorCuenta(cuentasPagadas);
+
+        return cuentasPagadas.stream()
+                .map(cuenta -> mapearResumen(cuenta, totalesPorCuenta.getOrDefault(cuenta.id(), BigDecimal.ZERO)))
                 .sorted(Comparator.comparing(CuentaPagadaResumenResponse::fechaHora).reversed())
                 .toList();
     }
@@ -48,10 +55,9 @@ public class HistorialCuentasApplicationService {
         return fechaCuenta.equals(fecha);
     }
 
-    private CuentaPagadaResumenResponse mapearResumen(Cuenta cuenta) {
+    private CuentaPagadaResumenResponse mapearResumen(Cuenta cuenta, BigDecimal total) {
         Instant fechaHora = cuenta.fechaPago().orElse(cuenta.fechaCreacion());
         String mesa = obtenerMesaPrincipal(cuenta);
-        BigDecimal total = calcularTotalCuenta(cuenta);
 
         return new CuentaPagadaResumenResponse(
                 cuenta.id(),
@@ -70,10 +76,27 @@ public class HistorialCuentasApplicationService {
         return mesas.get(0).id();
     }
 
-    private BigDecimal calcularTotalCuenta(Cuenta cuenta) {
-        return pedidoRepository.findByCuenta(cuenta).stream()
-                .flatMap(pedido -> ordenRepository.findByPedido(pedido).stream())
-                .map(Orden::precio)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    private Map<String, BigDecimal> calcularTotalesPorCuenta(List<Cuenta> cuentas) {
+        if (cuentas.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> pedidoIdACuentaId = cuentas.stream()
+                .flatMap(cuenta -> pedidoRepository.findByCuenta(cuenta).stream()
+                        .map(pedido -> Map.entry(pedido.id(), cuenta.id())))
+                .filter(entry -> entry.getKey() != null && !entry.getKey().isBlank())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
+
+        List<String> pedidosIds = pedidoIdACuentaId.keySet().stream().toList();
+        if (pedidosIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return ordenRepository.findByPedidosIds(pedidosIds).stream()
+                .filter(orden -> orden.pedido() != null && orden.pedido().id() != null)
+                .collect(Collectors.groupingBy(
+                        orden -> pedidoIdACuentaId.get(orden.pedido().id()),
+                        Collectors.mapping(Orden::precio, Collectors.reducing(BigDecimal.ZERO, BigDecimal::add))
+                ));
     }
 }

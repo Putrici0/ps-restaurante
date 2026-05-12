@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class FirestoreCuentaRepository implements CuentaRepository {
 
@@ -92,10 +93,22 @@ public class FirestoreCuentaRepository implements CuentaRepository {
     @Override
     public Optional<Cuenta> findByMesa(Mesa mesa) {
         try {
-            return findAll().stream()
+            if (mesa == null || mesa.id() == null || mesa.id().isBlank()) {
+                return Optional.empty();
+            }
+
+            List<Cuenta> cuentasActivas = db.collection(COLLECTION)
+                    .whereEqualTo("payed", false)
+                    .get()
+                    .get()
+                    .getDocuments()
+                    .stream()
+                    .map(this::mapDocumentToCuenta)
+                    .collect(Collectors.toList());
+
+            return cuentasActivas.stream()
                     .filter(cuenta -> cuenta.mesas() != null)
                     .filter(cuenta -> cuenta.mesas().stream().anyMatch(m -> m.id().equals(mesa.id())))
-                    .filter(cuenta -> !cuenta.payed())
                     .findFirst();
         } catch (Exception e) {
             throw new RuntimeException("Error al buscar cuenta por mesa", e);
@@ -105,9 +118,14 @@ public class FirestoreCuentaRepository implements CuentaRepository {
     @Override
     public List<Cuenta> findByEstaPagada(boolean estaPagada) {
         try {
-            return findAll().stream()
-                    .filter(cuenta -> cuenta.payed() == estaPagada)
-                    .toList();
+            return db.collection(COLLECTION)
+                    .whereEqualTo("payed", estaPagada)
+                    .get()
+                    .get()
+                    .getDocuments()
+                    .stream()
+                    .map(this::mapDocumentToCuenta)
+                    .collect(Collectors.toList());
         } catch (Exception e) {
             throw new RuntimeException("Error al buscar cuentas por estado de pago", e);
         }

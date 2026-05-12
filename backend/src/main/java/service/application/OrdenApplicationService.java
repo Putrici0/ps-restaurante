@@ -77,9 +77,8 @@ public class OrdenApplicationService {
             return List.of();
         }
 
-        return ordenRepository.findAll().stream()
+        return ordenRepository.findByPagada(false).stream()
                 .filter(orden -> orden.ordenEstado() != OrdenEstado.Cancelado)
-                .filter(orden -> !orden.pagada())
                 .filter(orden -> {
                     if (orden.pedido() == null || orden.pedido().cuenta() == null) {
                         return false;
