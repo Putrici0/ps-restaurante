@@ -48,6 +48,25 @@ public class PagoApplicationService {
         return obtenerOrdenesDeCuentaInterno(cuentaId).toList();
     }
 
+    public CuentaResumen obtenerResumenCuenta(String cuentaId) {
+        Cuenta cuenta = obtenerCuentaPorId(cuentaId);
+        List<Orden> ordenes = obtenerOrdenesDeCuenta(cuentaId);
+
+        BigDecimal total = ordenes.stream()
+                .map(Orden::precio)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal pendiente = cuenta.payed()
+                ? BigDecimal.ZERO
+                : ordenes.stream()
+                .filter(orden -> !orden.pagada())
+                .map(Orden::precio)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        boolean saldada = pendiente.compareTo(BigDecimal.ZERO) == 0;
+        return new CuentaResumen(cuenta.id(), ordenes, total, pendiente, saldada);
+    }
+
     public BigDecimal calcularTotalCuenta(String cuentaId) {
         return obtenerOrdenesDeCuenta(cuentaId).stream()
                 .map(Orden::precio)
@@ -296,5 +315,14 @@ public class PagoApplicationService {
         }
 
         return ordenRepository.findByPedidosIds(pedidosIds).stream();
+    }
+
+    public record CuentaResumen(
+            String cuentaId,
+            List<Orden> ordenes,
+            BigDecimal total,
+            BigDecimal pendiente,
+            boolean saldada
+    ) {
     }
 }

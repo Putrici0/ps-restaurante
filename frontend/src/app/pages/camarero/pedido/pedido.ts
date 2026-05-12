@@ -6,7 +6,6 @@ import { CamareroHeader } from '../camarero-header/camarero-header';
 import {
   CuentaActivaResponse,
   CuentaApiService,
-  EstadoCuentaResponse,
   OrdenCuentaResponse,
 } from '../../../services/cuenta-api.service';
 
@@ -43,10 +42,10 @@ export class PedidoCamarero implements OnInit, OnDestroy {
   readonly cuentaActiva = signal<CuentaActivaResponse | null>(null);
   readonly ordenes = signal<OrdenCuentaResponse[]>([]);
   readonly importePendiente = signal(0);
-  readonly estadoSaldada = signal<EstadoCuentaResponse | null>(null);
+  readonly estadoSaldada = signal<boolean | null>(null);
 
   readonly cuentaCerrada = computed(() => {
-    return !!this.cuentaActiva()?.payed || !!this.estadoSaldada()?.saldada;
+    return !!this.cuentaActiva()?.payed || !!this.estadoSaldada();
   });
 
   readonly sinCuentaActiva = computed(() => {
@@ -238,17 +237,14 @@ export class PedidoCamarero implements OnInit, OnDestroy {
             return;
           }
 
-          forkJoin({
-            ordenes: this.cuentaApiService.obtenerOrdenesDeCuenta(cuenta.id),
-            pendiente: this.cuentaApiService.obtenerPendienteCuenta(cuenta.id),
-            saldada: this.cuentaApiService.obtenerEstadoSaldada(cuenta.id),
-          })
+          this.cuentaApiService
+            .obtenerResumenCuenta(cuenta.id)
             .pipe(take(1))
             .subscribe({
-              next: ({ ordenes, pendiente, saldada }) => {
-                this.ordenes.set(ordenes);
-                this.importePendiente.set(Number(pendiente.importe));
-                this.estadoSaldada.set(saldada);
+              next: (resumen) => {
+                this.ordenes.set(resumen.ordenes);
+                this.importePendiente.set(Number(resumen.pendiente));
+                this.estadoSaldada.set(resumen.saldada);
                 this.cargando.set(false);
               },
               error: () => {

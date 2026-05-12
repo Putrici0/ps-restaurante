@@ -136,6 +136,20 @@ public class CuentaController {
                         });
                     });
 
+                    path("resumen", () -> {
+                        get(ctx -> {
+                            String id = ctx.pathParam("id");
+                            PagoApplicationService.CuentaResumen resumen = pagoApplicationService.obtenerResumenCuenta(id);
+                            ctx.json(new CuentaResumenResponse(
+                                    resumen.cuentaId(),
+                                    resumen.ordenes(),
+                                    resumen.total(),
+                                    resumen.pendiente(),
+                                    resumen.saldada()
+                            ));
+                        });
+                    });
+
                     path("total", () -> {
                         get(ctx -> {
                             String id = ctx.pathParam("id");
@@ -223,4 +237,11 @@ public class CuentaController {
 
     private record ImporteResponse(String cuentaId, BigDecimal importe) {}
     private record EstadoCuentaResponse(String cuentaId, boolean saldada) {}
+    private record CuentaResumenResponse(
+            String cuentaId,
+            List<Orden> ordenes,
+            BigDecimal total,
+            BigDecimal pendiente,
+            boolean saldada
+    ) {}
 }

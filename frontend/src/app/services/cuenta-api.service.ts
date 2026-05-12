@@ -75,6 +75,14 @@ export interface CuentaPagadaResumenResponse {
   metodoPago?: 'EFECTIVO' | 'TARJETA' | null;
 }
 
+export interface CuentaResumenResponse {
+  cuentaId: string;
+  ordenes: OrdenCuentaResponse[];
+  total: number;
+  pendiente: number;
+  saldada: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -135,6 +143,12 @@ export class CuentaApiService {
   obtenerEstadoSaldada(cuentaId: string): Observable<EstadoCuentaResponse> {
     return this.http.get<EstadoCuentaResponse>(
       `${this.apiUrl}/cuentas/${cuentaId}/saldada`,
+    );
+  }
+
+  obtenerResumenCuenta(cuentaId: string): Observable<CuentaResumenResponse> {
+    return this.http.get<CuentaResumenResponse>(
+      `${this.apiUrl}/cuentas/${cuentaId}/resumen`,
     );
   }
 

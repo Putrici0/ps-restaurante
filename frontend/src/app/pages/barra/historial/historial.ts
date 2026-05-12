@@ -160,12 +160,14 @@ export class HistorialComponent {
     forkJoin({
       cuenta: this.cuentaApi.obtenerCuentaPorId(cuentaId),
       ordenes: this.cuentaApi.obtenerTodasLasOrdenesDeCuenta(cuentaId),
-      total: this.cuentaApi.obtenerTotalCuenta(cuentaId),
     }).subscribe({
-      next: ({ cuenta, ordenes, total }) => {
+      next: ({ cuenta, ordenes }) => {
         this.cuentaDetalle.set(cuenta);
         this.ordenesDetalle.set(ordenes);
-        this.totalDetalle.set(Number(total.importe));
+        const total = ordenes
+          .filter((orden) => orden.ordenEstado !== 'Cancelado')
+          .reduce((acc, orden) => acc + Number(orden.precio ?? 0), 0);
+        this.totalDetalle.set(Number(total));
         this.cargandoDetalle.set(false);
       },
       error: (err) => {

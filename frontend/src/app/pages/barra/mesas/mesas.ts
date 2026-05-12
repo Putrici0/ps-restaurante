@@ -464,20 +464,17 @@ export class Mesas {
 
     this.cargandoCobro.set(true);
 
-    forkJoin({
-      total: this.mesasApi.obtenerTotalCuenta(cuentaId),
-      ordenes: this.cuentaApi.obtenerOrdenesDeCuenta(cuentaId),
-    }).subscribe({
-      next: ({ total, ordenes }) => {
-        const ordenesPendientes = ordenes.filter(
+    this.cuentaApi.obtenerResumenCuenta(cuentaId).subscribe({
+      next: (cuentaResumen) => {
+        const ordenesPendientes = cuentaResumen.ordenes.filter(
           (orden) => orden.ordenEstado !== 'Cancelado' && !orden.pagada,
         );
 
-        this.totalCuentaCobro.set(Number(total.importe));
-        const resumen = this.agruparOrdenes(ordenesPendientes);
-        this.resumenCobro.set(resumen);
+        this.totalCuentaCobro.set(Number(cuentaResumen.total));
+        const resumenAgrupado = this.agruparOrdenes(ordenesPendientes);
+        this.resumenCobro.set(resumenAgrupado);
         const seleccionInicial: Record<string, number> = {};
-        for (const item of resumen) {
+        for (const item of resumenAgrupado) {
           seleccionInicial[item.key] = 0;
         }
         this.seleccionCantidadPorPlato.set(seleccionInicial);
