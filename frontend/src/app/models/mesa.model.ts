@@ -4,6 +4,7 @@ export type ZonaMesa = 'interior' | 'terraza';
 export interface MesaApi {
   id: string;
   capacidad: number;
+  mesasUnidas?: string[];
 }
 
 export interface CuentaApi {
@@ -45,4 +46,6 @@ export interface Mesa {
   estado: EstadoMesa;
   cuentaActivaId: string | null;
   cuentaActiva: CuentaApi | null;
+  grupoMesaIds: string[];
+  mesaPrincipalId?: string;
 }

@@ -2,12 +2,24 @@ import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
 
-import { MesaCardComponent } from '../../../shared/mesa-card/mesa-card';
 import { MesaDetalle } from '../../../shared/mesa-detalle/mesa-detalle';
 import { Navbar } from '../../../shared/navbar/navbar';
 import { Mesa, ZonaMesa } from '../../../models/mesa.model';
 import { CuentaApiService, OrdenCuentaResponse } from '../../../services/cuenta-api.service';
 import { MesasApiService } from '../../../services/mesas-api.service';
+import { MESAS_LAYOUT } from '../../../data/mesas-layout';
+
+type DireccionUnion = 'arriba' | 'derecha' | 'abajo' | 'izquierda';
+
+interface MesaCeldaVista {
+  mesaFisicaId: string;
+  mesa: Mesa;
+  esPrincipal: boolean;
+  esFantasma: boolean;
+  fila: number;
+  columna: number;
+  vecinos: Partial<Record<DireccionUnion, string>>;
+}
 
 interface ItemCobroAgrupado {
   key: string;
@@ -24,7 +36,7 @@ interface ItemCobroAgrupado {
 @Component({
   selector: 'app-mesas',
   standalone: true,
-  imports: [CommonModule, MesaCardComponent, MesaDetalle, Navbar],
+  imports: [CommonModule, MesaDetalle, Navbar],
   templateUrl: './mesas.html',
   styleUrl: './mesas.css',
 })
@@ -38,6 +50,8 @@ export class Mesas {
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly accionMesaId = signal<string | null>(null);
+  readonly modoEdicion = signal(false);
+  readonly accionAgrupacionMesaId = signal<string | null>(null);
 
   readonly mostrarModalCobro = signal(false);
   readonly cuentaCobroId = signal<string | null>(null);
@@ -58,11 +72,11 @@ export class Mesas {
 
   readonly seleccionCantidadPorPlato = signal<Record<string, number>>({});
 
-  readonly mesasActuales = computed(() =>
-    this.mesas()
-      .filter((mesa) => mesa.zona === this.zona())
-      .sort((a, b) => Number(a.id) - Number(b.id)),
-  );
+  readonly celdasActuales = computed(() => this.construirCeldasZona(this.zona()));
+  readonly puedeSepararSeleccion = computed(() => {
+    const mesa = this.mesaSeleccionada();
+    return !!mesa && mesa.grupoMesaIds.length > 1 && mesa.estado === 'libre';
+  });
 
   readonly totalCobro = computed(() => {
     const seleccion = this.seleccionCantidadPorPlato();
@@ -155,8 +169,14 @@ export class Mesas {
     this.recargarMesas();
   }
 
-  seleccionar(mesa: Mesa): void {
-    if (this.mesaSeleccionada()?.id === mesa.id) {
+  seleccionarCelda(celda: MesaCeldaVista): void {
+    const mesa = celda.mesa;
+    const actual = this.mesaSeleccionada();
+
+    if (
+      actual &&
+      this.claveGrupo(actual.grupoMesaIds) === this.claveGrupo(mesa.grupoMesaIds)
+    ) {
       this.mesaSeleccionada.set(null);
       return;
     }
@@ -164,9 +184,84 @@ export class Mesas {
     this.mesaSeleccionada.set(mesa);
   }
 
+  toggleModoEdicion(): void {
+    this.modoEdicion.update((value) => !value);
+  }
+
+  unirMesaLado(celda: MesaCeldaVista, direccion: DireccionUnion, event: MouseEvent): void {
+    event.stopPropagation();
+
+    const mesaIdDestino = celda.vecinos[direccion];
+    if (!mesaIdDestino || this.accionAgrupacionMesaId() !== null) {
+      return;
+    }
+
+    this.error.set(null);
+    this.accionAgrupacionMesaId.set(celda.mesaFisicaId);
+
+    this.mesasApi.unirMesas(celda.mesaFisicaId, mesaIdDestino).subscribe({
+      next: () => {
+        this.accionAgrupacionMesaId.set(null);
+        this.recargarMesas(celda.mesa.mesaPrincipalId ?? celda.mesa.id);
+      },
+      error: (err) => {
+        console.error('Error uniendo mesas:', err);
+        this.accionAgrupacionMesaId.set(null);
+        this.error.set(this.extraerMensaje(err));
+      },
+    });
+  }
+
+  separarMesaSeleccionada(): void {
+    const mesa = this.mesaSeleccionada();
+    if (!mesa || mesa.grupoMesaIds.length <= 1 || this.accionAgrupacionMesaId() !== null) {
+      return;
+    }
+
+    const mesaId = mesa.mesaPrincipalId ?? mesa.id;
+    this.error.set(null);
+    this.accionAgrupacionMesaId.set(mesaId);
+
+    this.mesasApi.separarMesa(mesaId).subscribe({
+      next: () => {
+        this.accionAgrupacionMesaId.set(null);
+        this.recargarMesas(mesaId);
+      },
+      error: (err) => {
+        console.error('Error separando mesas:', err);
+        this.accionAgrupacionMesaId.set(null);
+        this.error.set(this.extraerMensaje(err));
+      },
+    });
+  }
+
   cambiarZona(nuevaZona: ZonaMesa): void {
     this.zona.set(nuevaZona);
     this.mesaSeleccionada.set(null);
+  }
+
+  esMesaSeleccionada(mesa: Mesa): boolean {
+    const seleccionada = this.mesaSeleccionada();
+    return !!seleccionada && this.claveGrupo(seleccionada.grupoMesaIds) === this.claveGrupo(mesa.grupoMesaIds);
+  }
+
+  etiquetaMesa(mesa: Mesa): string {
+    const ids = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
+    if (ids.length <= 1) {
+      return `M${mesa.id}`;
+    }
+
+    return ids.map((id) => `M${id}`).join(' + ');
+  }
+
+  subEtiquetaMesa(mesa: Mesa): string {
+    const ids = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
+    return ids.length <= 1 ? 'Mesa individual' : `${ids.length} mesas unidas`;
+  }
+
+  puedeUnirsePor(direccion: DireccionUnion, celda: MesaCeldaVista): boolean {
+    const vecinoId = celda.vecinos[direccion];
+    return !!vecinoId && !celda.mesa.grupoMesaIds.includes(vecinoId);
   }
 
   ocuparMesa(mesaId: string): void {
@@ -565,7 +660,7 @@ export class Mesas {
         this.accionMesaId.set(null);
 
         if (mesaAReseleccionar) {
-          const nuevaMesa = mesas.find((m) => m.id === mesaAReseleccionar) ?? null;
+          const nuevaMesa = this.buscarMesaLogicaPorId(mesas, mesaAReseleccionar);
           this.mesaSeleccionada.set(nuevaMesa);
           return;
         }
@@ -576,7 +671,10 @@ export class Mesas {
           return;
         }
 
-        const mesaRefrescada = mesas.find((m) => m.id === seleccionActual.id) ?? null;
+        const mesaRefrescada = this.buscarMesaLogicaPorId(
+          mesas,
+          seleccionActual.mesaPrincipalId ?? seleccionActual.id,
+        );
         this.mesaSeleccionada.set(mesaRefrescada);
       },
       error: (err) => {
@@ -596,8 +694,133 @@ export class Mesas {
   cerrarSeleccion(event: MouseEvent): void {
     const target = event.target as HTMLElement;
 
-    if (!target.closest('app-mesa-card') && !target.closest('.sidebar-detalle')) {
+    if (!target.closest('.mesa-grid-cell') && !target.closest('.sidebar-detalle')) {
       this.mesaSeleccionada.set(null);
     }
+  }
+
+  private construirCeldasZona(zona: ZonaMesa): MesaCeldaVista[] {
+    const mesasZona = this.mesas()
+      .filter((mesa) => mesa.zona === zona)
+      .sort((a, b) => this.compararMesaIds(a.id, b.id));
+
+    const layoutZona = MESAS_LAYOUT.filter((mesa) => mesa.zona === zona);
+    const ordenMesaIds = layoutZona.map((mesa) => mesa.id);
+    const indiceMesaId = new Map(ordenMesaIds.map((id, index) => [id, index]));
+    const mesasPorId = new Map(mesasZona.map((mesa) => [mesa.id, mesa]));
+    const mesasLogicasPorClave = new Map<string, Mesa>();
+
+    for (const mesa of mesasZona) {
+      const grupoMesaIds = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
+      const clave = this.claveGrupo(grupoMesaIds);
+
+      if (mesasLogicasPorClave.has(clave)) {
+        continue;
+      }
+
+      const miembros = grupoMesaIds
+        .map((id) => mesasPorId.get(id))
+        .filter((value): value is Mesa => !!value)
+        .sort((a, b) => this.compararMesaIds(a.id, b.id));
+
+      const mesaPrincipalId = [...grupoMesaIds].sort((a, b) => {
+        const indiceA = indiceMesaId.get(a) ?? Number.MAX_SAFE_INTEGER;
+        const indiceB = indiceMesaId.get(b) ?? Number.MAX_SAFE_INTEGER;
+        return indiceA - indiceB || this.compararMesaIds(a, b);
+      })[0];
+
+      const mesaPrincipal = mesasPorId.get(mesaPrincipalId) ?? mesa;
+      const cuentaActiva = miembros.find((item) => item.cuentaActiva)?.cuentaActiva ?? null;
+
+      mesasLogicasPorClave.set(clave, {
+        id: mesaPrincipal.id,
+        capacidad: miembros.reduce((acc, item) => acc + item.capacidad, 0),
+        zona,
+        estado: cuentaActiva ? 'ocupada' : 'libre',
+        cuentaActivaId: cuentaActiva?.id ?? null,
+        cuentaActiva,
+        grupoMesaIds,
+        mesaPrincipalId,
+      });
+    }
+
+    return ordenMesaIds.map((mesaId, index) => {
+      const mesaFisica = mesasPorId.get(mesaId);
+      const grupoMesaIds = this.normalizarGrupoMesaIds(mesaFisica?.grupoMesaIds ?? [mesaId]);
+      const mesaLogica =
+        mesasLogicasPorClave.get(this.claveGrupo(grupoMesaIds)) ??
+        ({
+          id: mesaId,
+          capacidad: mesaFisica?.capacidad ?? 0,
+          zona,
+          estado: mesaFisica?.estado ?? 'libre',
+          cuentaActivaId: mesaFisica?.cuentaActivaId ?? null,
+          cuentaActiva: mesaFisica?.cuentaActiva ?? null,
+          grupoMesaIds,
+          mesaPrincipalId: mesaId,
+        } as Mesa);
+
+      const fila = Math.floor(index / 3) + 1;
+      const columna = (index % 3) + 1;
+
+      return {
+        mesaFisicaId: mesaId,
+        mesa: mesaLogica,
+        esPrincipal: mesaLogica.mesaPrincipalId === mesaId,
+        esFantasma: mesaLogica.grupoMesaIds.length > 1 && mesaLogica.mesaPrincipalId !== mesaId,
+        fila,
+        columna,
+        vecinos: {
+          arriba: fila > 1 ? ordenMesaIds[index - 3] : undefined,
+          derecha: columna < 3 ? ordenMesaIds[index + 1] : undefined,
+          abajo: index + 3 < ordenMesaIds.length ? ordenMesaIds[index + 3] : undefined,
+          izquierda: columna > 1 ? ordenMesaIds[index - 1] : undefined,
+        },
+      };
+    });
+  }
+
+  private buscarMesaLogicaPorId(mesas: Mesa[], mesaId: string): Mesa | null {
+    if (!mesaId) {
+      return null;
+    }
+
+    const mesaFisica = mesas.find((mesa) => mesa.id === mesaId);
+    if (!mesaFisica) {
+      return null;
+    }
+
+    const grupoMesaIds = this.normalizarGrupoMesaIds(mesaFisica.grupoMesaIds);
+    const miembros = grupoMesaIds
+      .map((id) => mesas.find((mesa) => mesa.id === id))
+      .filter((value): value is Mesa => !!value)
+      .sort((a, b) => this.compararMesaIds(a.id, b.id));
+
+    const cuentaActiva = miembros.find((item) => item.cuentaActiva)?.cuentaActiva ?? null;
+    const mesaPrincipalId = miembros[0]?.id ?? mesaFisica.id;
+
+    return {
+      id: mesaPrincipalId,
+      capacidad: miembros.reduce((acc, item) => acc + item.capacidad, 0),
+      zona: mesaFisica.zona,
+      estado: cuentaActiva ? 'ocupada' : 'libre',
+      cuentaActivaId: cuentaActiva?.id ?? null,
+      cuentaActiva,
+      grupoMesaIds,
+      mesaPrincipalId,
+    };
+  }
+
+  private normalizarGrupoMesaIds(grupoMesaIds: string[]): string[] {
+    return Array.from(new Set(grupoMesaIds))
+      .sort((a, b) => this.compararMesaIds(a, b));
+  }
+
+  private claveGrupo(grupoMesaIds: string[]): string {
+    return this.normalizarGrupoMesaIds(grupoMesaIds).join('|');
+  }
+
+  private compararMesaIds(left: string, right: string): number {
+    return Number(left) - Number(right);
   }
 }

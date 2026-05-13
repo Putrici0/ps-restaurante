@@ -21,6 +21,27 @@
     <div></div>
 
     <div class="mesas-topbar-right">
+      <div class="acciones-edicion">
+        <button
+          type="button"
+          class="btn-edicion"
+          [class.active]="modoEdicion()"
+          (click)="toggleModoEdicion()"
+          [disabled]="accionAgrupacionMesaId() !== null">
+          {{ modoEdicion() ? 'SALIR' : 'EDITAR' }}
+        </button>
+
+        @if (modoEdicion()) {
+          <button
+            type="button"
+            class="btn-edicion btn-edicion--secondary"
+            (click)="separarMesaSeleccionada()"
+            [disabled]="!puedeSepararSeleccion() || accionAgrupacionMesaId() !== null">
+            SEPARAR
+          </button>
+        }
+      </div>
+
       <div class="estado-legend">
         <span class="legend-item">
           <span class="legend-dot legend-dot--ocupada"></span>
@@ -49,14 +70,65 @@
   } @else {
     <div class="mesas-layout" [class.panel-abierto]="!!mesaSeleccionada()">
       <section class="grid-mesas">
-        @for (mesa of mesasActuales(); track mesa.id) {
-          <div (click)="seleccionar(mesa)">
-            <app-mesa-card
-              [numero]="mesa.id"
-              [capacidad]="mesa.capacidad"
-              [estado]="mesa.estado"
-              [seleccionada]="mesaSeleccionada()?.id === mesa.id">
-            </app-mesa-card>
+        @for (celda of celdasActuales(); track celda.mesaFisicaId) {
+          <div
+            class="mesa-grid-cell"
+            [class.mesa-grid-cell--principal]="celda.esPrincipal"
+            [class.mesa-grid-cell--fantasma]="celda.esFantasma"
+            [class.mesa-grid-cell--seleccionada]="esMesaSeleccionada(celda.mesa)"
+            [class.mesa-grid-cell--ocupada]="celda.mesa.estado === 'ocupada'"
+            [class.mesa-grid-cell--libre]="celda.mesa.estado === 'libre'"
+            [class.mesa-grid-cell--editando]="modoEdicion()"
+            (click)="seleccionarCelda(celda)">
+            @if (modoEdicion()) {
+              @if (puedeUnirsePor('arriba', celda)) {
+                <button
+                  type="button"
+                  class="union-btn union-btn--arriba"
+                  (click)="unirMesaLado(celda, 'arriba', $event)">
+                  +
+                </button>
+              }
+              @if (puedeUnirsePor('derecha', celda)) {
+                <button
+                  type="button"
+                  class="union-btn union-btn--derecha"
+                  (click)="unirMesaLado(celda, 'derecha', $event)">
+                  +
+                </button>
+              }
+              @if (puedeUnirsePor('abajo', celda)) {
+                <button
+                  type="button"
+                  class="union-btn union-btn--abajo"
+                  (click)="unirMesaLado(celda, 'abajo', $event)">
+                  +
+                </button>
+              }
+              @if (puedeUnirsePor('izquierda', celda)) {
+                <button
+                  type="button"
+                  class="union-btn union-btn--izquierda"
+                  (click)="unirMesaLado(celda, 'izquierda', $event)">
+                  +
+                </button>
+              }
+            }
+
+            @if (!celda.esFantasma) {
+              <div class="mesa-visual" [class.mesa-visual--agrupada]="celda.mesa.grupoMesaIds.length > 1">
+                <div class="mesa-visual__title">{{ etiquetaMesa(celda.mesa) }}</div>
+                <div class="mesa-visual__pill">{{ celda.mesa.capacidad }} Pax</div>
+                @if (celda.mesa.grupoMesaIds.length > 1) {
+                  <div class="mesa-visual__subgroup">{{ celda.mesa.grupoMesaIds.length }} mesas unidas</div>
+                }
+              </div>
+            } @else {
+              <div class="mesa-fantasma">
+                <div class="mesa-fantasma__title">M{{ celda.mesaFisicaId }}</div>
+                <div class="mesa-fantasma__meta">Unida a {{ etiquetaMesa(celda.mesa) }}</div>
+              </div>
+            }
           </div>
         }
       </section>

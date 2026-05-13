@@ -16,9 +16,18 @@ public class FirestoreMesaRepository extends AbstractFirestoreRepository<Mesa> i
 
     @Override
     protected Mesa mapToEntity(String id, Map<String, Object> data) {
+        @SuppressWarnings("unchecked")
+        List<String> mesasUnidas = data.get("mesasUnidas") instanceof List<?>
+                ? ((List<?>) data.get("mesasUnidas")).stream()
+                .filter(java.util.Objects::nonNull)
+                .map(Object::toString)
+                .toList()
+                : List.of(id);
+
         return new Mesa(
                 id,
-                ((Long) data.getOrDefault("capacidad", 0L)).intValue()
+                ((Long) data.getOrDefault("capacidad", 0L)).intValue(),
+                mesasUnidas
         );
     }
 
@@ -26,6 +35,7 @@ public class FirestoreMesaRepository extends AbstractFirestoreRepository<Mesa> i
     protected Map<String, Object> entityToMap(Mesa mesa) {
         Map<String, Object> map = new HashMap<>();
         map.put("capacidad", mesa.capacidad());
+        map.put("mesasUnidas", mesa.mesasUnidas());
         return map;
     }
 
@@ -36,7 +46,7 @@ public class FirestoreMesaRepository extends AbstractFirestoreRepository<Mesa> i
 
     @Override
     protected Mesa createWithId(Mesa mesa, String id) {
-        return new Mesa(id, mesa.capacidad());
+        return new Mesa(id, mesa.capacidad(), mesa.mesasUnidas());
     }
 
     @Override

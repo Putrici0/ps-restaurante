@@ -58,6 +58,17 @@ export class MesasApiService {
     return this.http.post<CuentaApi>(`${this.apiUrl}/mesas/${id}/liberar`, {});
   }
 
+  unirMesas(mesaIdOrigen: string, mesaIdDestino: string): Observable<MesaApi[]> {
+    return this.http.post<MesaApi[]>(`${this.apiUrl}/mesas/unir`, {
+      mesaIdOrigen,
+      mesaIdDestino,
+    });
+  }
+
+  separarMesa(id: string): Observable<MesaApi[]> {
+    return this.http.post<MesaApi[]>(`${this.apiUrl}/mesas/${id}/separar`, {});
+  }
+
   validarAccesoMesa(
     mesaId: string,
     password: string
@@ -79,11 +90,16 @@ export class MesasApiService {
         return mesas
           .map((mesaDb) => {
             const layout = layoutMap.get(mesaDb.id);
+            const grupoMesaIds = this.normalizarGrupoMesaIds(
+              mesaDb.id,
+              mesaDb.mesasUnidas,
+            );
 
             const cuentaActiva =
               cuentas.find(
                 (cuenta) =>
-                  !cuenta.payed && cuenta.mesas?.some((mesa) => mesa.id === mesaDb.id)
+                  !cuenta.payed &&
+                  cuenta.mesas?.some((mesa) => grupoMesaIds.includes(mesa.id))
               ) ?? null;
 
             return {
@@ -93,10 +109,18 @@ export class MesasApiService {
               estado: cuentaActiva ? 'ocupada' : 'libre',
               cuentaActivaId: cuentaActiva?.id ?? null,
               cuentaActiva,
+              grupoMesaIds,
             } as Mesa;
           })
           .sort((a, b) => Number(a.id) - Number(b.id));
       })
     );
+  }
+
+  private normalizarGrupoMesaIds(id: string, grupoMesaIds?: string[]): string[] {
+    return Array.from(new Set([id, ...(grupoMesaIds ?? [])]))
+      .filter((value) => value != null && `${value}`.trim() !== '')
+      .map((value) => `${value}`.trim())
+      .sort((a, b) => Number(a) - Number(b));
   }
 }

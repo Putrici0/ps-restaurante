@@ -70,13 +70,43 @@ export class MesasCamarero implements OnDestroy {
       n.cuenta?.mesas?.forEach((m: any) => idsMesasConAtencion.add(m.id));
     });
 
-    return this.mesas()
+    const mesasZona = this.mesas()
       .filter((mesa) => mesa.zona === this.zonaActiva())
-      .map((mesa) => ({
-        ...mesa,
-        tieneAtencion: idsMesasConAtencion.has(mesa.id),
-      }))
-      .sort((a, b) => Number(a.id.replace('M', '')) - Number(b.id.replace('M', '')));
+      .sort((a, b) => this.compararMesaIds(a.id, b.id));
+
+    const mesasAgrupadas = new Map<string, (Mesa & { tieneAtencion: boolean })>();
+
+    for (const mesa of mesasZona) {
+      const grupoMesaIds = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
+      const clave = this.claveGrupo(grupoMesaIds);
+      if (mesasAgrupadas.has(clave)) {
+        continue;
+      }
+
+      const miembros = grupoMesaIds
+        .map((id) => mesasZona.find((mesaZona) => mesaZona.id === id))
+        .filter((value): value is Mesa => !!value)
+        .sort((a, b) => this.compararMesaIds(a.id, b.id));
+
+      const cuentaActiva = miembros.find((item) => item.cuentaActiva)?.cuentaActiva ?? null;
+      const mesaPrincipalId = miembros[0]?.id ?? mesa.id;
+
+      mesasAgrupadas.set(clave, {
+        id: mesaPrincipalId,
+        capacidad: miembros.reduce((acc, item) => acc + item.capacidad, 0),
+        zona: mesa.zona,
+        estado: cuentaActiva ? 'ocupada' : 'libre',
+        cuentaActivaId: cuentaActiva?.id ?? null,
+        cuentaActiva,
+        grupoMesaIds,
+        mesaPrincipalId,
+        tieneAtencion: grupoMesaIds.some((id) => idsMesasConAtencion.has(id)),
+      });
+    }
+
+    return Array.from(mesasAgrupadas.values()).sort((a, b) =>
+      this.compararMesaIds(a.id, b.id),
+    );
   });
 
   readonly totalCobro = computed(() => {
@@ -129,6 +159,11 @@ export class MesasCamarero implements OnDestroy {
   }
 
   abrirMesa(mesa: Mesa): void {
+    const actual = this.mesaSeleccionada();
+    if (actual && this.claveGrupo(actual.grupoMesaIds) === this.claveGrupo(mesa.grupoMesaIds)) {
+      this.mesaSeleccionada.set(null);
+      return;
+    }
     this.mesaSeleccionada.set(mesa);
   }
 
@@ -241,7 +276,7 @@ export class MesasCamarero implements OnDestroy {
           return;
         }
 
-        const mesaRefrescada = mesas.find((m) => m.id === seleccionActual.id) ?? null;
+        const mesaRefrescada = this.buscarMesaLogicaPorId(mesas, seleccionActual.id);
         this.mesaSeleccionada.set(mesaRefrescada);
       },
       error: (err: any) => {
@@ -250,5 +285,61 @@ export class MesasCamarero implements OnDestroy {
         this.error.set('Error al cargar mesas.');
       },
     });
+  }
+
+  etiquetaMesa(mesa: Mesa): string {
+    const ids = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
+    if (ids.length <= 1) {
+      return `M${mesa.id}`;
+    }
+
+    return ids.map((id) => `M${id}`).join(' + ');
+  }
+
+  esMesaAgrupada(mesa: Mesa): boolean {
+    return this.normalizarGrupoMesaIds(mesa.grupoMesaIds).length > 1;
+  }
+
+  private buscarMesaLogicaPorId(mesas: Mesa[], mesaId: string): Mesa | null {
+    if (!mesaId) {
+      return null;
+    }
+
+    const mesaFisica = mesas.find((mesa) => mesa.id === mesaId);
+    if (!mesaFisica) {
+      return null;
+    }
+
+    const grupoMesaIds = this.normalizarGrupoMesaIds(mesaFisica.grupoMesaIds);
+    const miembros = grupoMesaIds
+      .map((id) => mesas.find((mesa) => mesa.id === id))
+      .filter((value): value is Mesa => !!value)
+      .sort((a, b) => this.compararMesaIds(a.id, b.id));
+
+    const cuentaActiva = miembros.find((item) => item.cuentaActiva)?.cuentaActiva ?? null;
+    const mesaPrincipalId = miembros[0]?.id ?? mesaFisica.id;
+
+    return {
+      id: mesaPrincipalId,
+      capacidad: miembros.reduce((acc, item) => acc + item.capacidad, 0),
+      zona: mesaFisica.zona,
+      estado: cuentaActiva ? 'ocupada' : 'libre',
+      cuentaActivaId: cuentaActiva?.id ?? null,
+      cuentaActiva,
+      grupoMesaIds,
+      mesaPrincipalId,
+    };
+  }
+
+  private normalizarGrupoMesaIds(grupoMesaIds: string[]): string[] {
+    return Array.from(new Set(grupoMesaIds)).sort((a, b) => this.compararMesaIds(a, b));
+  }
+
+  private claveGrupo(grupoMesaIds: string[]): string {
+    return this.normalizarGrupoMesaIds(grupoMesaIds).join('|');
+  }
+
+  private compararMesaIds(left: string, right: string): number {
+    return Number(left) - Number(right);
   }
 }

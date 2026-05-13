@@ -26,8 +26,11 @@
             @if (mesa.tieneAtencion) {
             <div class="atencion-indicator">!</div>
             }
-            <span class="mesa-id">M{{ mesa.id }}</span>
+            <span class="mesa-id">{{ etiquetaMesa(mesa) }}</span>
             <span class="mesa-pax">{{ mesa.capacidad || 4 }} Pax</span>
+            @if (esMesaAgrupada(mesa)) {
+              <span class="mesa-group">{{ mesa.grupoMesaIds.length }} mesas unidas</span>
+            }
           </div>
         </div>
       }
@@ -39,8 +42,11 @@
       <div class="modal-card" (click)="$event.stopPropagation()">
 
         <p class="modal-subtitle">MESA SELECCIONADA</p>
-        <h2 class="modal-title">Mesa M{{ mesaSel.id }}</h2>
+        <h2 class="modal-title">Mesa {{ etiquetaMesa(mesaSel) }}</h2>
         <span class="modal-pax">{{ mesaSel.capacidad || 4 }} Pax</span>
+        @if (esMesaAgrupada(mesaSel)) {
+          <span class="modal-group">{{ mesaSel.grupoMesaIds.length }} mesas unidas</span>
+        }
 
         <hr class="divider">
 

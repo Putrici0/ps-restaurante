@@ -61,4 +61,20 @@ export class MesaDetalle implements OnChanges {
 
     this.liberar.emit(this.mesa.id);
   }
+
+  tituloMesa(): string {
+    const grupoMesaIds = this.grupoMesaIds();
+    return grupoMesaIds.length <= 1
+      ? `MESA ${this.mesa.id}`
+      : grupoMesaIds.map((id) => `M${id}`).join(' + ');
+  }
+
+  subtituloMesa(): string {
+    const grupoMesaIds = this.grupoMesaIds();
+    return grupoMesaIds.length <= 1 ? 'Mesa seleccionada' : 'Grupo de mesas seleccionado';
+  }
+
+  private grupoMesaIds(): string[] {
+    return (this.mesa.grupoMesaIds?.length ? this.mesa.grupoMesaIds : [this.mesa.id]).slice();
+  }
 }

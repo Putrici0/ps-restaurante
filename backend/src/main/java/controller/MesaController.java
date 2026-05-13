@@ -1,6 +1,7 @@
 package controller;
 
 import dto.MesaRequest;
+import dto.MesaUnionRequest;
 import io.javalin.apibuilder.EndpointGroup;
 import model.Cuenta;
 import model.Mesa;
@@ -35,6 +36,14 @@ public class MesaController {
                 });
 
                 get(ctx -> ctx.json(service.findAll()));
+
+                path("unir", () -> {
+                    post(ctx -> {
+                        MesaUnionRequest request = ctx.bodyAsClass(MesaUnionRequest.class);
+                        List<Mesa> mesasUnidas = applicationService.unirMesas(request.mesaIdOrigen, request.mesaIdDestino);
+                        ctx.json(mesasUnidas);
+                    });
+                });
 
                 path("{id}", () -> {
                     get(ctx -> {
@@ -148,6 +157,14 @@ public class MesaController {
                             String id = ctx.pathParam("id");
                             Cuenta cuenta = applicationService.liberarMesa(id);
                             ctx.json(cuenta);
+                        });
+                    });
+
+                    path("separar", () -> {
+                        post(ctx -> {
+                            String id = ctx.pathParam("id");
+                            List<Mesa> mesasSeparadas = applicationService.separarMesa(id);
+                            ctx.json(mesasSeparadas);
                         });
                     });
                 });

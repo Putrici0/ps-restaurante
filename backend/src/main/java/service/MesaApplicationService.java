@@ -12,8 +12,12 @@ import repository.interfaces.PedidoRepository;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 public class MesaApplicationService {
     private final MesaRepository mesaRepository;
@@ -54,7 +58,7 @@ public class MesaApplicationService {
     }
 
     public Cuenta ocuparMesa(String mesaId) {
-        Mesa mesa = obtenerMesa(mesaId);
+        List<Mesa> grupoMesas = obtenerGrupoMesas(mesaId);
 
         if (estaOcupada(mesaId)) {
             throw new IllegalArgumentException("La mesa ya esta ocupada");
@@ -62,7 +66,7 @@ public class MesaApplicationService {
 
         Cuenta nuevaCuenta = new Cuenta(
                 null,
-                List.of(mesa),
+                grupoMesas,
                 false,
                 Optional.empty(),
                 Instant.now(),
@@ -121,6 +125,75 @@ public class MesaApplicationService {
         return cuentaRepository.update(cuentaActiva.id(), cuentaLiberada);
     }
 
+    public List<Mesa> unirMesas(String mesaIdOrigen, String mesaIdDestino) {
+        if (mesaIdOrigen == null || mesaIdOrigen.isBlank() || mesaIdDestino == null || mesaIdDestino.isBlank()) {
+            throw new IllegalArgumentException("Debes indicar dos mesas validas para unir");
+        }
+
+        Mesa mesaOrigen = obtenerMesa(mesaIdOrigen);
+        Mesa mesaDestino = obtenerMesa(mesaIdDestino);
+
+        Set<String> grupoIds = new LinkedHashSet<>(grupoIdsDe(mesaOrigen));
+        grupoIds.addAll(grupoIdsDe(mesaDestino));
+
+        if (grupoIds.size() < 2) {
+            return obtenerGrupoMesas(mesaIdOrigen);
+        }
+
+        List<Mesa> mesasDelGrupo = grupoIds.stream()
+                .map(this::obtenerMesa)
+                .sorted(Comparator.comparing(Mesa::id, this::compararMesaId))
+                .toList();
+
+        List<Cuenta> cuentasActivas = cuentasActivasDeGrupo(grupoIds);
+        Set<String> cuentasActivasIds = cuentasActivas.stream()
+                .map(Cuenta::id)
+                .collect(Collectors.toSet());
+
+        if (cuentasActivasIds.size() > 1) {
+            throw new IllegalArgumentException("No se pueden unir mesas con cuentas activas distintas");
+        }
+
+        for (Mesa mesa : mesasDelGrupo) {
+            mesaRepository.update(mesa.id(), new Mesa(mesa.id(), mesa.capacidad(), List.copyOf(grupoIds)));
+        }
+
+        if (!cuentasActivas.isEmpty()) {
+            Cuenta cuentaActiva = cuentasActivas.getFirst();
+            Cuenta cuentaActualizada = new Cuenta(
+                    cuentaActiva.id(),
+                    mesasDelGrupo,
+                    cuentaActiva.payed(),
+                    cuentaActiva.reserva(),
+                    cuentaActiva.fechaCreacion(),
+                    cuentaActiva.fechaPago(),
+                    cuentaActiva.password(),
+                    cuentaActiva.metodoPago()
+            );
+            cuentaRepository.update(cuentaActiva.id(), cuentaActualizada);
+        }
+
+        return obtenerGrupoMesas(mesaIdOrigen);
+    }
+
+    public List<Mesa> separarMesa(String mesaId) {
+        List<Mesa> grupoMesas = obtenerGrupoMesas(mesaId);
+        if (grupoMesas.size() <= 1) {
+            return grupoMesas;
+        }
+
+        Set<String> grupoIds = grupoMesas.stream().map(Mesa::id).collect(Collectors.toSet());
+        if (!cuentasActivasDeGrupo(grupoIds).isEmpty()) {
+            throw new IllegalArgumentException("No se puede separar una agrupacion con una cuenta activa");
+        }
+
+        for (Mesa mesa : grupoMesas) {
+            mesaRepository.update(mesa.id(), new Mesa(mesa.id(), mesa.capacidad(), List.of(mesa.id())));
+        }
+
+        return obtenerGrupoMesas(mesaId);
+    }
+
     public List<Pedido> obtenerPedidosActivosDeMesa(String mesaId) {
         Optional<Cuenta> cuentaActiva = obtenerCuentaActivaDeMesa(mesaId);
 
@@ -157,5 +230,42 @@ public class MesaApplicationService {
     private String generarPassword() {
         int pin = RANDOM.nextInt(9000) + 1000;
         return String.valueOf(pin);
+    }
+
+    private List<Mesa> obtenerGrupoMesas(String mesaId) {
+        Mesa mesa = obtenerMesa(mesaId);
+        return grupoIdsDe(mesa).stream()
+                .map(this::obtenerMesa)
+                .sorted(Comparator.comparing(Mesa::id, this::compararMesaId))
+                .toList();
+    }
+
+    private List<String> grupoIdsDe(Mesa mesa) {
+        if (mesa == null) {
+            return List.of();
+        }
+
+        return mesa.mesasUnidas() == null || mesa.mesasUnidas().isEmpty()
+                ? List.of(mesa.id())
+                : mesa.mesasUnidas();
+    }
+
+    private List<Cuenta> cuentasActivasDeGrupo(Set<String> grupoIds) {
+        if (grupoIds == null || grupoIds.isEmpty()) {
+            return List.of();
+        }
+
+        return cuentaRepository.findByEstaPagada(false).stream()
+                .filter(cuenta -> cuenta.mesas() != null)
+                .filter(cuenta -> cuenta.mesas().stream().map(Mesa::id).anyMatch(grupoIds::contains))
+                .toList();
+    }
+
+    private int compararMesaId(String left, String right) {
+        try {
+            return Integer.compare(Integer.parseInt(left), Integer.parseInt(right));
+        } catch (NumberFormatException e) {
+            return left.compareTo(right);
+        }
     }
 }
