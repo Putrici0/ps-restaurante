@@ -63,7 +63,7 @@ export class HistorialComponent {
     }
 
     return this.cuentas().filter((cuenta) =>
-      cuenta.mesa
+      this.obtenerMesaResumen(cuenta)
         .split(',')
         .map((mesa) => mesa.trim().toLowerCase())
         .some((mesa) => mesa === filtroMesa),
@@ -206,6 +206,15 @@ export class HistorialComponent {
     }
 
     return mesas.map((mesa) => mesa.id).join(', ');
+  }
+
+  obtenerMesaResumen(cuenta: CuentaPagadaResumenResponse): string {
+    const mesas = cuenta.mesas ?? [];
+    if (mesas.length > 0) {
+      return mesas.map((mesa) => mesa.id).join(', ');
+    }
+
+    return cuenta.mesa || '-';
   }
 
   obtenerMetodoPagoDetalle(): string {

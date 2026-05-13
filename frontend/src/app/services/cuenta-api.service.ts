@@ -71,6 +71,10 @@ export interface CuentaPagadaResumenResponse {
   cuentaId: string;
   fechaHora: string;
   mesa: string;
+  mesas?: Array<{
+    id: string;
+    capacidad?: number;
+  }>;
   importeTotal: number;
   metodoPago?: 'EFECTIVO' | 'TARJETA' | null;
 }

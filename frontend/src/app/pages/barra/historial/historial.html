@@ -51,7 +51,7 @@
         @for (cuenta of cuentasPaginadas(); track cuenta.cuentaId) {
           <div class="historial-tabla__row">
             <span>{{ formatearFecha(cuenta.fechaHora) }}</span>
-            <span>{{ cuenta.mesa }}</span>
+            <span>{{ obtenerMesaResumen(cuenta) }}</span>
             <span>{{ cuenta.importeTotal | currency:'EUR':'symbol':'1.2-2' }}</span>
             <button type="button" class="historial-ojo" (click)="abrirDetalle(cuenta.cuentaId)">
               👁

@@ -15,6 +15,7 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class HistorialCuentasApplicationService {
@@ -73,7 +74,12 @@ public class HistorialCuentasApplicationService {
         if (mesas == null || mesas.isEmpty()) {
             return "-";
         }
-        return mesas.get(0).id();
+
+        return mesas.stream()
+                .map(Mesa::id)
+                .filter(Objects::nonNull)
+                .filter(id -> !id.isBlank())
+                .collect(Collectors.joining(", "));
     }
 
     private Map<String, BigDecimal> calcularTotalesPorCuenta(List<Cuenta> cuentas) {
