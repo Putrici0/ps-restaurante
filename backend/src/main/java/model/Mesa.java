@@ -3,6 +3,7 @@ package model;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
 public record Mesa(String id, int capacidad, List<String> mesasUnidas) {
 
@@ -21,7 +22,7 @@ public record Mesa(String id, int capacidad, List<String> mesasUnidas) {
                 )
                 .filter(Objects::nonNull)
                 .map(String::trim)
-                .filter(value -> !value.isBlank())
+                .filter(Predicate.not(String::isBlank))
                 .distinct()
                 .sorted(comparadorIdsMesa())
                 .toList();
