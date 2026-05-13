@@ -186,11 +186,10 @@
   border-radius: 12px;
   box-sizing: border-box;
   padding: 10px 16px;
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: center;
-  gap: 38px;
+  gap: 8px 16px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
 }
 
@@ -209,11 +208,14 @@
 }
 
 .mesa-visual__title {
-  font-size: 2.28rem;
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 2rem;
   font-weight: 500;
   color: #111111;
-  line-height: 1;
+  line-height: 1.06;
   letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
 }
 
 .mesa-visual__meta {
@@ -221,15 +223,17 @@
 }
 
 .mesa-visual__subgroup {
-  position: absolute;
-  left: 14px;
-  bottom: 10px;
+  grid-column: 1 / -1;
+  grid-row: 2;
   font-size: 0.74rem;
   font-weight: 700;
   color: rgba(17, 17, 17, 0.74);
 }
 
 .mesa-visual__pill {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
   background: rgba(255, 255, 255, 0.42);
   color: #4a4a4a;
   border-radius: 999px;
