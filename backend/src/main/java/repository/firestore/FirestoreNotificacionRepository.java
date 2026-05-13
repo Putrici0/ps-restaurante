@@ -135,6 +135,24 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
     }
 
     @Override
+    public List<Notificacion> findByTipoAndLeida(TipoNotificacion tipoNotificacion, boolean leida) {
+        return buscar(
+                collection
+                        .whereEqualTo("tipo", tipoNotificacion.name())
+                        .whereEqualTo("leida", leida)
+        );
+    }
+
+    @Override
+    public List<Notificacion> findEnCursoNoLeidas() {
+        return buscar(
+                collection
+                        .whereEqualTo("leida", false)
+                        .whereEqualTo("enCurso", true)
+        );
+    }
+
+    @Override
     public Optional<Notificacion> findActiveAtencionByCuentaId(String cuentaId) {
         List<Notificacion> resultados = buscar(
                 collection

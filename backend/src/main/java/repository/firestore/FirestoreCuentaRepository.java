@@ -15,15 +15,20 @@ import repository.interfaces.CuentaRepository;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 public class FirestoreCuentaRepository implements CuentaRepository {
 
     private static final String COLLECTION = "cuentas";
+    private static final String MESA_IDS_FIELD = "mesaIds";
     private final Firestore db;
+    private volatile boolean legacyMesaIdsFallbackEnabled = true;
 
     public FirestoreCuentaRepository(Firestore db) {
         this.db = db;
@@ -97,22 +102,113 @@ public class FirestoreCuentaRepository implements CuentaRepository {
                 return Optional.empty();
             }
 
-            List<Cuenta> cuentasActivas = db.collection(COLLECTION)
-                    .whereEqualTo("payed", false)
-                    .get()
-                    .get()
-                    .getDocuments()
-                    .stream()
-                    .map(this::mapDocumentToCuenta)
-                    .collect(Collectors.toList());
+            List<Cuenta> cuentasActivas = queryCuentasActivasPorMesaIdsConFallback(List.of(mesa.id()));
+            if (cuentasActivas.isEmpty() && legacyMesaIdsFallbackEnabled) {
+                cuentasActivas = findCuentasActivasLegacyFallback();
+            }
 
             return cuentasActivas.stream()
-                    .filter(cuenta -> cuenta.mesas() != null)
-                    .filter(cuenta -> cuenta.mesas().stream().anyMatch(m -> m.id().equals(mesa.id())))
+                    .filter(cuenta -> contieneMesa(cuenta, mesa.id()))
                     .findFirst();
         } catch (Exception e) {
             throw new RuntimeException("Error al buscar cuenta por mesa", e);
         }
+    }
+
+    @Override
+    public List<Cuenta> findActivasByMesaIds(List<String> mesaIds) {
+        try {
+            List<String> idsLimpios = limpiarMesaIds(mesaIds);
+            if (idsLimpios.isEmpty()) {
+                return List.of();
+            }
+
+            List<Cuenta> cuentasActivas = queryCuentasActivasPorMesaIdsConFallback(idsLimpios);
+            if (cuentasActivas.isEmpty() && legacyMesaIdsFallbackEnabled) {
+                cuentasActivas = findCuentasActivasLegacyFallback();
+            }
+
+            Set<String> idsBuscados = new LinkedHashSet<>(idsLimpios);
+            return cuentasActivas.stream()
+                    .filter(cuenta -> cuenta.mesas() != null)
+                    .filter(cuenta -> cuenta.mesas().stream().anyMatch(mesa -> mesa != null && idsBuscados.contains(mesa.id())))
+                    .toList();
+        } catch (Exception e) {
+            throw new RuntimeException("Error al buscar cuentas activas por mesas", e);
+        }
+    }
+
+    private List<Cuenta> queryCuentasActivasPorMesaIdsConFallback(List<String> mesaIds) {
+        try {
+            return queryCuentasActivasPorMesaIds(mesaIds);
+        } catch (Exception e) {
+            return findCuentasActivasLegacyFallback();
+        }
+    }
+
+    private List<Cuenta> findCuentasActivasLegacyFallback() {
+        try {
+            List<QueryDocumentSnapshot> documents = db.collection(COLLECTION)
+                    .whereEqualTo("payed", false)
+                    .get()
+                    .get()
+                    .getDocuments();
+
+            if (documents.stream().allMatch(document -> document.contains(MESA_IDS_FIELD))) {
+                legacyMesaIdsFallbackEnabled = false;
+            }
+
+            return documents.stream()
+                    .map(this::mapDocumentToCuenta)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new RuntimeException("Error al buscar cuentas activas antiguas", e);
+        }
+    }
+
+    private List<Cuenta> queryCuentasActivasPorMesaIds(List<String> mesaIds) throws Exception {
+        List<String> idsLimpios = limpiarMesaIds(mesaIds);
+        if (idsLimpios.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, Cuenta> cuentasPorId = new LinkedHashMap<>();
+        for (int i = 0; i < idsLimpios.size(); i += 10) {
+            int fin = Math.min(i + 10, idsLimpios.size());
+            List<String> lote = idsLimpios.subList(i, fin);
+
+            List<QueryDocumentSnapshot> documentos = db.collection(COLLECTION)
+                    .whereEqualTo("payed", false)
+                    .whereArrayContainsAny(MESA_IDS_FIELD, lote)
+                    .get()
+                    .get()
+                    .getDocuments();
+
+            for (QueryDocumentSnapshot document : documentos) {
+                Cuenta cuenta = mapDocumentToCuenta(document);
+                cuentasPorId.put(cuenta.id(), cuenta);
+            }
+        }
+
+        return new ArrayList<>(cuentasPorId.values());
+    }
+
+    private List<String> limpiarMesaIds(List<String> mesaIds) {
+        if (mesaIds == null) {
+            return List.of();
+        }
+
+        return mesaIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+    }
+
+    private boolean contieneMesa(Cuenta cuenta, String mesaId) {
+        return cuenta != null
+                && cuenta.mesas() != null
+                && cuenta.mesas().stream().anyMatch(m -> m != null && mesaId.equals(m.id()));
     }
 
     @Override
@@ -134,10 +230,6 @@ public class FirestoreCuentaRepository implements CuentaRepository {
     @Override
     public Cuenta update(String id, Cuenta cuenta) {
         try {
-            if (!existsById(id)) {
-                throw new IllegalArgumentException("La cuenta no existe");
-            }
-
             Cuenta cuentaActualizada = new Cuenta(
                     id,
                     cuenta.mesas(),
@@ -151,7 +243,7 @@ public class FirestoreCuentaRepository implements CuentaRepository {
 
             db.collection(COLLECTION)
                     .document(id)
-                    .set(cuentaToMap(cuentaActualizada))
+                    .update(cuentaToMap(cuentaActualizada))
                     .get();
 
             return cuentaActualizada;
@@ -233,6 +325,7 @@ public class FirestoreCuentaRepository implements CuentaRepository {
         Map<String, Object> data = new HashMap<>();
         data.put("id", cuenta.id());
         data.put("mesas", mesasToList(cuenta.mesas()));
+        data.put(MESA_IDS_FIELD, mesaIds(cuenta.mesas()));
         data.put("payed", cuenta.payed());
         data.put("reserva", null);
         data.put("fechaCreacion", cuenta.fechaCreacion());
@@ -240,6 +333,18 @@ public class FirestoreCuentaRepository implements CuentaRepository {
         data.put("password", cuenta.password());
         data.put("metodoPago", cuenta.metodoPago().map(Enum::name).orElse(null));
         return data;
+    }
+
+    private List<String> mesaIds(List<Mesa> mesas) {
+        if (mesas == null) {
+            return List.of();
+        }
+
+        return mesas.stream()
+                .filter(mesa -> mesa != null && mesa.id() != null && !mesa.id().isBlank())
+                .map(mesa -> mesa.id().trim())
+                .distinct()
+                .toList();
     }
 
     private List<Map<String, Object>> mesasToList(List<Mesa> mesas) {

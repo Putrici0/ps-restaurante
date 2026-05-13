@@ -37,6 +37,10 @@ public class PlatoService {
         return repository.findAll();
     }
 
+    public List<Plato> findActivos() {
+        return repository.findByEstaActivo(true);
+    }
+
     public Optional<Plato> findById(String id) {
         return repository.findById(id);
     }

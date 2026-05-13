@@ -15,6 +15,8 @@ public interface NotificacionRepository extends Repository<Notificacion, String>
     List<Notificacion> findByOrdenId(String ordenId);
     List<Notificacion> findByTipoNotificacion(TipoNotificacion tipoNotificacion);
     List<Notificacion> findByLeida(boolean leida);
+    List<Notificacion> findByTipoAndLeida(TipoNotificacion tipoNotificacion, boolean leida);
+    List<Notificacion> findEnCursoNoLeidas();
     Optional<Notificacion> findActiveAtencionByCuentaId(String cuentaId);
     Notificacion saveWithDedup(Notificacion notificacion);
 }

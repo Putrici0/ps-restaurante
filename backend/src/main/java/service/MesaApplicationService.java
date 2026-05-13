@@ -59,8 +59,9 @@ public class MesaApplicationService {
 
     public Cuenta ocuparMesa(String mesaId) {
         List<Mesa> grupoMesas = obtenerGrupoMesas(mesaId);
+        Set<String> grupoIds = grupoMesas.stream().map(Mesa::id).collect(Collectors.toSet());
 
-        if (estaOcupada(mesaId)) {
+        if (!cuentasActivasDeGrupo(grupoIds).isEmpty()) {
             throw new IllegalArgumentException("La mesa ya esta ocupada");
         }
 
@@ -235,7 +236,7 @@ public class MesaApplicationService {
     private List<Mesa> obtenerGrupoMesas(String mesaId) {
         Mesa mesa = obtenerMesa(mesaId);
         return grupoIdsDe(mesa).stream()
-                .map(this::obtenerMesa)
+                .map(id -> mesa.id().equals(id) ? mesa : obtenerMesa(id))
                 .sorted(Comparator.comparing(Mesa::id, this::compararMesaId))
                 .toList();
     }
@@ -255,10 +256,7 @@ public class MesaApplicationService {
             return List.of();
         }
 
-        return cuentaRepository.findByEstaPagada(false).stream()
-                .filter(cuenta -> cuenta.mesas() != null)
-                .filter(cuenta -> cuenta.mesas().stream().map(Mesa::id).anyMatch(grupoIds::contains))
-                .toList();
+        return cuentaRepository.findActivasByMesaIds(List.copyOf(grupoIds));
     }
 
     private int compararMesaId(String left, String right) {

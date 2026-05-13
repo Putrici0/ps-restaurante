@@ -93,16 +93,14 @@ public class NotificacionApplicationService {
     }
 
     public List<Notificacion> obtenerTodasLasAtencionesActivas() {
-        return notificacionRepository.findByTipoNotificacion(TipoNotificacion.Atencion).stream()
-                .filter(n -> !n.leida())
-                .toList();
+        return notificacionRepository.findByTipoAndLeida(TipoNotificacion.Atencion, false);
     }
 
     public void limpiarNotificacionesEstancadas() {
         Instant haceCincoMinutos = Instant.now().minusSeconds(5 * 60);
 
-        notificacionRepository.findAll().stream()
-                .filter(n -> !n.leida() && n.enCurso() && n.fechaEnCurso() != null)
+        notificacionRepository.findEnCursoNoLeidas().stream()
+                .filter(n -> n.fechaEnCurso() != null)
                 .filter(n -> n.fechaEnCurso().isBefore(haceCincoMinutos))
                 .forEach(n -> desasignarYReenviarNotificacion(n.id()));
     }

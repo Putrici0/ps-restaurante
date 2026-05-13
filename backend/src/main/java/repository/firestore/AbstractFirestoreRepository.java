@@ -79,12 +79,8 @@ public abstract class AbstractFirestoreRepository<T> implements Repository<T, St
     @Override
     public T update(String id, T entity) {
         try {
-            if (!existsById(id)) {
-                throw new RuntimeException("Cannot update: Document with ID " + id + " does not exist.");
-            }
-
             T entityWithId = createWithId(entity, id);
-            collection.document(id).set(entityToMap(entityWithId)).get();
+            collection.document(id).update(entityToMap(entityWithId)).get();
             return entityWithId;
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error updating entity: " + id, e);

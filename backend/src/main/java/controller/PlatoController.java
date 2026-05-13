@@ -30,6 +30,10 @@ public class PlatoController {
 
                 get(ctx -> ctx.json(service.findAll()));
 
+                path("activos", () ->
+                        get(ctx -> ctx.json(service.findActivos()))
+                );
+
                 path("{id}", () -> {
 
                     get(ctx -> {
