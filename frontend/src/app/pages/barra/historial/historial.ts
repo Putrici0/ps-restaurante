@@ -201,7 +201,11 @@ export class HistorialComponent {
 
   obtenerMesaDetalle(): string {
     const mesas = this.cuentaDetalle()?.mesas ?? [];
-    return mesas.length > 0 ? mesas[0].id : '-';
+    if (mesas.length === 0) {
+      return '-';
+    }
+
+    return mesas.map((mesa) => mesa.id).join(', ');
   }
 
   obtenerMetodoPagoDetalle(): string {
