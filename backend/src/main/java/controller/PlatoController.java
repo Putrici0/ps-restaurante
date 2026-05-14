@@ -28,7 +28,16 @@ public class PlatoController {
                     ctx.status(201).json(creado);
                 });
 
-                get(ctx -> ctx.json(service.findAll()));
+                get(ctx -> {
+                    if (!paginationRequested(ctx.queryParam("limit"), ctx.queryParam("cursor"))) {
+                        ctx.json(service.findAll());
+                        return;
+                    }
+
+                    int limit = parseLimit(ctx.queryParam("limit"));
+                    String cursor = normalizeCursor(ctx.queryParam("cursor"));
+                    ctx.json(service.findPage(limit, cursor));
+                });
 
                 path("activos", () ->
                         get(ctx -> ctx.json(service.findActivos()))
@@ -74,5 +83,28 @@ public class PlatoController {
                 });
             });
         };
+    }
+
+    private boolean paginationRequested(String limitParam, String cursorParam) {
+        return (limitParam != null && !limitParam.isBlank())
+                || (cursorParam != null && !cursorParam.isBlank());
+    }
+
+    private int parseLimit(String limitParam) {
+        if (limitParam == null || limitParam.isBlank()) {
+            return 50;
+        }
+
+        int parsed;
+        try {
+            parsed = Integer.parseInt(limitParam.trim());
+        } catch (NumberFormatException e) {
+            return 50;
+        }
+        return Math.max(1, Math.min(parsed, 100));
+    }
+
+    private String normalizeCursor(String cursorParam) {
+        return (cursorParam == null || cursorParam.isBlank()) ? null : cursorParam.trim();
     }
 }

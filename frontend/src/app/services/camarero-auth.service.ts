@@ -1,6 +1,14 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { User, createUserWithEmailAndPassword, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+  User,
+  browserSessionPersistence,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithEmailAndPassword,
+  signOut
+} from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { firebaseAuth, firebaseDb } from '../firebase.config';
 
@@ -24,6 +32,8 @@ export class CamareroAuthService {
   constructor(private router: Router) {}
 
   async iniciarSesion(correo: string, password: string): Promise<void> {
+    await this.withTimeout(setPersistence(firebaseAuth, browserSessionPersistence));
+
     const credenciales = await this.withTimeout(
       signInWithEmailAndPassword(firebaseAuth, correo, password)
     );

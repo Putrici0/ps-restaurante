@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, timeout } from 'rxjs';
+import { map, Observable, timeout } from 'rxjs';
 
 export type EstadoOrdenBackend =
   | 'Pendiente'
@@ -76,6 +76,7 @@ export class OrdenesApiService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `http://${window.location.hostname}:7070`;
   private readonly requestTimeoutMs = 8000;
+  private readonly defaultPageLimit = 100;
 
   private get<T>(url: string): Observable<T> {
     return this.http.get<T>(url).pipe(timeout(this.requestTimeoutMs));
@@ -85,8 +86,18 @@ export class OrdenesApiService {
     return this.http.post<T>(url, {}).pipe(timeout(this.requestTimeoutMs));
   }
 
+  private unwrapPagedResponse<T>(response: T[] | { items: T[] }): T[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    return Array.isArray(response.items) ? response.items : [];
+  }
+
   obtenerTodas(): Observable<OrdenCocinaResponse[]> {
-    return this.get<OrdenCocinaResponse[]>(`${this.apiUrl}/ordenes`);
+    return this.get<OrdenCocinaResponse[] | { items: OrdenCocinaResponse[] }>(
+      `${this.apiUrl}/ordenes?limit=${this.defaultPageLimit}`
+    ).pipe(map((response) => this.unwrapPagedResponse(response)));
   }
 
   obtenerTableroCocina(): Observable<CocinaTableroResponse> {

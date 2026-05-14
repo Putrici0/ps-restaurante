@@ -58,6 +58,12 @@ public class OrdenService {
         return repository.findAll();
     }
 
+    public PagedResult<Orden> findPage(int limit, String cursor) {
+        List<Orden> items = repository.findPage(limit, cursor);
+        String nextCursor = items.size() == limit ? items.get(items.size() - 1).id() : null;
+        return new PagedResult<>(items, nextCursor, limit);
+    }
+
     public Optional<Orden> findById(String id) {
         return repository.findById(id);
     }

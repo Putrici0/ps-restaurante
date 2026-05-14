@@ -65,6 +65,12 @@ public class CuentaService {
         return repository.findAll();
     }
 
+    public PagedResult<Cuenta> findPage(int limit, String cursor) {
+        List<Cuenta> items = repository.findPage(limit, cursor);
+        String nextCursor = items.size() == limit ? items.get(items.size() - 1).id() : null;
+        return new PagedResult<>(items, nextCursor, limit);
+    }
+
     public Optional<Cuenta> findById(String id) {
         return repository.findById(id);
     }

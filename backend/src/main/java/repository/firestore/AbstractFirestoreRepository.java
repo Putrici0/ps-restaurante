@@ -56,6 +56,18 @@ public abstract class AbstractFirestoreRepository<T> implements Repository<T, St
     }
 
     @Override
+    public List<T> findPage(int limit, String cursor) {
+        int safeLimit = Math.max(1, Math.min(limit, 100));
+        Query query = collection.orderBy(FieldPath.documentId()).limit(safeLimit);
+
+        if (cursor != null && !cursor.isBlank()) {
+            query = query.startAfter(cursor.trim());
+        }
+
+        return buscar(query);
+    }
+
+    @Override
     public T save(T entity) {
         try {
             String id = getEntityId(entity);

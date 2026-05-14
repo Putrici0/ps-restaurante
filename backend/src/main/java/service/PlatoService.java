@@ -37,6 +37,12 @@ public class PlatoService {
         return repository.findAll();
     }
 
+    public PagedResult<Plato> findPage(int limit, String cursor) {
+        List<Plato> items = repository.findPage(limit, cursor);
+        String nextCursor = items.size() == limit ? items.get(items.size() - 1).id() : null;
+        return new PagedResult<>(items, nextCursor, limit);
+    }
+
     public List<Plato> findActivos() {
         return repository.findByEstaActivo(true);
     }

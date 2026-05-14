@@ -30,6 +30,12 @@ public class MesaService {
         return repository.findAll();
     }
 
+    public PagedResult<Mesa> findPage(int limit, String cursor) {
+        List<Mesa> items = repository.findPage(limit, cursor);
+        String nextCursor = items.size() == limit ? items.get(items.size() - 1).id() : null;
+        return new PagedResult<>(items, nextCursor, limit);
+    }
+
     public Optional<Mesa> findById(String id) {
         return repository.findById(id);
     }

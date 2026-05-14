@@ -34,6 +34,12 @@ public class ReservaService {
         return repository.findAll();
     }
 
+    public PagedResult<Reserva> findPage(int limit, String cursor) {
+        List<Reserva> items = repository.findPage(limit, cursor);
+        String nextCursor = items.size() == limit ? items.get(items.size() - 1).id() : null;
+        return new PagedResult<>(items, nextCursor, limit);
+    }
+
     public Optional<Reserva> findById(String id) {
         return repository.findById(id);
     }

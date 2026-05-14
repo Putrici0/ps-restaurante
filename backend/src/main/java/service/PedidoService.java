@@ -42,6 +42,12 @@ public class PedidoService {
         return repository.findAll();
     }
 
+    public PagedResult<Pedido> findPage(int limit, String cursor) {
+        List<Pedido> items = repository.findPage(limit, cursor);
+        String nextCursor = items.size() == limit ? items.get(items.size() - 1).id() : null;
+        return new PagedResult<>(items, nextCursor, limit);
+    }
+
     public Optional<Pedido> findById(String id) {
         return repository.findById(id);
     }

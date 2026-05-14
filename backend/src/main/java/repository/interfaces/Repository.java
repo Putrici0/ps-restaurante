@@ -5,6 +5,7 @@ import java.util.Optional;
 
 public interface Repository<T, ID> {
     List<T> findAll();
+    List<T> findPage(int limit, ID cursor);
     Optional<T>  findById(ID id);
     T save(T entity);
     T update(ID id, T entity);

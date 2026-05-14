@@ -17,8 +17,20 @@ export class MesasApiService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = `http://${window.location.hostname}:7070`;
 
+  private readonly defaultPageLimit = 100;
+
+  private unwrapPagedResponse<T>(response: T[] | { items: T[] }): T[] {
+    if (Array.isArray(response)) {
+      return response;
+    }
+
+    return Array.isArray(response.items) ? response.items : [];
+  }
+
   obtenerMesas(): Observable<MesaApi[]> {
-    return this.http.get<MesaApi[]>(`${this.apiUrl}/mesas`);
+    return this.http
+      .get<MesaApi[] | { items: MesaApi[] }>(`${this.apiUrl}/mesas?limit=${this.defaultPageLimit}`)
+      .pipe(map((response) => this.unwrapPagedResponse(response)));
   }
 
   obtenerCuentas(): Observable<CuentaApi[]> {

@@ -28,7 +28,16 @@ public class ReservaController {
                     ctx.status(201).json(creada);
                 });
 
-                get(ctx -> ctx.json(service.findAll()));
+                get(ctx -> {
+                    if (!paginationRequested(ctx.queryParam("limit"), ctx.queryParam("cursor"))) {
+                        ctx.json(service.findAll());
+                        return;
+                    }
+
+                    int limit = parseLimit(ctx.queryParam("limit"));
+                    String cursor = normalizeCursor(ctx.queryParam("cursor"));
+                    ctx.json(service.findPage(limit, cursor));
+                });
 
                 path("{id}", () -> {
 
@@ -70,5 +79,28 @@ public class ReservaController {
                 });
             });
         };
+    }
+
+    private boolean paginationRequested(String limitParam, String cursorParam) {
+        return (limitParam != null && !limitParam.isBlank())
+                || (cursorParam != null && !cursorParam.isBlank());
+    }
+
+    private int parseLimit(String limitParam) {
+        if (limitParam == null || limitParam.isBlank()) {
+            return 50;
+        }
+
+        int parsed;
+        try {
+            parsed = Integer.parseInt(limitParam.trim());
+        } catch (NumberFormatException e) {
+            return 50;
+        }
+        return Math.max(1, Math.min(parsed, 100));
+    }
+
+    private String normalizeCursor(String cursorParam) {
+        return (cursorParam == null || cursorParam.isBlank()) ? null : cursorParam.trim();
     }
 }

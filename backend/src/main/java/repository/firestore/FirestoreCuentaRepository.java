@@ -1,9 +1,11 @@
 package repository.firestore;
 
 import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.FieldPath;
 import com.google.cloud.Timestamp;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.Query;
 import com.google.cloud.firestore.QueryDocumentSnapshot;
 import com.google.cloud.firestore.QuerySnapshot;
 import model.Cuenta;
@@ -92,6 +94,30 @@ public class FirestoreCuentaRepository implements CuentaRepository {
             return cuentas;
         } catch (Exception e) {
             throw new RuntimeException("Error al listar las cuentas", e);
+        }
+    }
+
+    @Override
+    public List<Cuenta> findPage(int limit, String cursor) {
+        try {
+            int safeLimit = Math.max(1, Math.min(limit, 100));
+            Query query = db.collection(COLLECTION)
+                    .orderBy(FieldPath.documentId())
+                    .limit(safeLimit);
+
+            if (cursor != null && !cursor.isBlank()) {
+                query = query.startAfter(cursor.trim());
+            }
+
+            List<QueryDocumentSnapshot> documents = query.get().get().getDocuments();
+            List<Cuenta> cuentas = new ArrayList<>();
+            for (QueryDocumentSnapshot document : documents) {
+                cuentas.add(mapDocumentToCuenta(document));
+            }
+
+            return cuentas;
+        } catch (Exception e) {
+            throw new RuntimeException("Error al paginar las cuentas", e);
         }
     }
 
