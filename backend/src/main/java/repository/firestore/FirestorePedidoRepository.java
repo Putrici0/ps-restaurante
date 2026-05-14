@@ -8,6 +8,7 @@ import model.PedidoEstado;
 import repository.interfaces.PedidoRepository;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,37 @@ public class FirestorePedidoRepository extends AbstractFirestoreRepository<Pedid
     @Override
     public List<Pedido> findByCuenta(Cuenta cuenta) {
         return buscarPorCampo("cuenta.id", cuenta.id());
+    }
+
+    @Override
+    public List<Pedido> findByCuentaIds(List<String> cuentaIds) {
+        if (cuentaIds == null || cuentaIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<String> idsLimpios = cuentaIds.stream()
+                .filter(id -> id != null && !id.isBlank())
+                .map(String::trim)
+                .distinct()
+                .toList();
+
+        if (idsLimpios.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, Pedido> porId = new LinkedHashMap<>();
+        for (int i = 0; i < idsLimpios.size(); i += 10) {
+            int fin = Math.min(i + 10, idsLimpios.size());
+            List<String> lote = idsLimpios.subList(i, fin);
+
+            for (Pedido pedido : buscarPorCampoIn("cuenta.id", lote)) {
+                if (pedido != null && pedido.id() != null) {
+                    porId.putIfAbsent(pedido.id(), pedido);
+                }
+            }
+        }
+
+        return new ArrayList<>(porId.values());
     }
 
     @Override

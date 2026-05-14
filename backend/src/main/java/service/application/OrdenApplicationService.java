@@ -21,6 +21,7 @@ import service.domain.cocina.CocinaPrioridadService;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,30 +64,41 @@ public class OrdenApplicationService {
         this.cuentaRepository = cuentaRepository;
     }
 
-    private List<Orden> obtenerTodasLasOrdenesActivas() {
-        if (cuentaRepository == null) {
+    private List<Orden> obtenerOrdenesActivasPorEstados(List<OrdenEstado> estados) {
+        if (estados == null || estados.isEmpty()) {
             return List.of();
         }
 
-        java.util.Set<String> cuentasActivasIds = cuentaRepository.findByEstaPagada(false).stream()
-                .map(Cuenta::id)
-                .filter(id -> id != null && !id.isBlank())
-                .collect(java.util.stream.Collectors.toSet());
+        Map<String, Orden> porId = new LinkedHashMap<>();
+        for (OrdenEstado estado : estados) {
+            if (estado == null || estado == OrdenEstado.Cancelado) {
+                continue;
+            }
 
-        if (cuentasActivasIds.isEmpty()) {
-            return List.of();
+            List<Orden> ordenes = buscarOrdenesActivasPorEstado(estado);
+            for (Orden orden : ordenes) {
+                if (orden == null || orden.id() == null) {
+                    continue;
+                }
+                porId.putIfAbsent(orden.id(), orden);
+            }
         }
 
-        return ordenRepository.findByPagada(false).stream()
+        return porId.values().stream()
                 .filter(orden -> orden.ordenEstado() != OrdenEstado.Cancelado)
-                .filter(orden -> {
-                    if (orden.pedido() == null || orden.pedido().cuenta() == null) {
-                        return false;
-                    }
-                    String cuentaId = orden.pedido().cuenta().id();
-                    return cuentaId != null && cuentasActivasIds.contains(cuentaId);
-                })
+                .filter(orden -> !orden.pagada())
                 .toList();
+    }
+
+    private List<Orden> buscarOrdenesActivasPorEstado(OrdenEstado estado) {
+        try {
+            return ordenRepository.findByEstadoAndPagada(estado, false);
+        } catch (RuntimeException e) {
+            // Fallback compatible for environments without the compound index yet.
+            return ordenRepository.findByEstado(estado).stream()
+                    .filter(orden -> orden != null && !orden.pagada())
+                    .toList();
+        }
     }
 
     public CocinaTablero obtenerTableroCocinaPriorizado() {
@@ -97,7 +109,9 @@ public class OrdenApplicationService {
 
         Instant ahora = Instant.now();
 
-        List<Orden> ordenesCocina = obtenerTodasLasOrdenesActivas().stream()
+        List<Orden> ordenesCocina = obtenerOrdenesActivasPorEstados(
+                List.of(OrdenEstado.Pendiente, OrdenEstado.Preparación, OrdenEstado.Listo)
+        ).stream()
                 .filter(this::esOrdenDeCocina)
                 .toList();
 
@@ -166,33 +180,37 @@ public class OrdenApplicationService {
     }
 
     public List<Orden> obtenerBebidasActivasBarra() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(
+                List.of(OrdenEstado.Pendiente, OrdenEstado.Preparación, OrdenEstado.Listo, OrdenEstado.Entregado)
+        ).stream()
                 .filter(o -> o.plato() != null && o.plato().categoria() == Categoria.Bebida)
                 .filter(o -> o.ordenEstado() != OrdenEstado.Cancelado)
                 .toList();
     }
 
     public List<Orden> obtenerPlatosActivosSala() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(
+                List.of(OrdenEstado.Listo, OrdenEstado.Entregado)
+        ).stream()
                 .filter(o -> o.plato() != null && o.plato().categoria() != Categoria.Bebida)
                 .filter(o -> o.ordenEstado() == OrdenEstado.Listo || o.ordenEstado() == OrdenEstado.Entregado)
                 .toList();
     }
 
     public List<Orden> obtenerOrdenesPendientes() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(List.of(OrdenEstado.Pendiente)).stream()
                 .filter(o -> o.ordenEstado() == OrdenEstado.Pendiente)
                 .toList();
     }
 
     public List<Orden> obtenerOrdenesEnPreparacion() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(List.of(OrdenEstado.Preparación)).stream()
                 .filter(o -> o.ordenEstado() == OrdenEstado.Preparación)
                 .toList();
     }
 
     public List<Orden> obtenerOrdenesListas() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(List.of(OrdenEstado.Listo)).stream()
                 .filter(o -> o.ordenEstado() == OrdenEstado.Listo)
                 .toList();
     }
@@ -222,21 +240,21 @@ public class OrdenApplicationService {
     }
 
     public List<Orden> obtenerOrdenesBarraPendientes() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(List.of(OrdenEstado.Pendiente)).stream()
                 .filter(o -> o.plato() != null && o.plato().categoria() == Categoria.Bebida)
                 .filter(o -> o.ordenEstado() == OrdenEstado.Pendiente)
                 .toList();
     }
 
     public List<Orden> obtenerOrdenesBarraEnPreparacion() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(List.of(OrdenEstado.Preparación)).stream()
                 .filter(o -> o.plato() != null && o.plato().categoria() == Categoria.Bebida)
                 .filter(o -> o.ordenEstado() == OrdenEstado.Preparación)
                 .toList();
     }
 
     public List<Orden> obtenerOrdenesBarraListas() {
-        return obtenerTodasLasOrdenesActivas().stream()
+        return obtenerOrdenesActivasPorEstados(List.of(OrdenEstado.Listo)).stream()
                 .filter(o -> o.plato() != null && o.plato().categoria() == Categoria.Bebida)
                 .filter(o -> o.ordenEstado() == OrdenEstado.Listo)
                 .toList();

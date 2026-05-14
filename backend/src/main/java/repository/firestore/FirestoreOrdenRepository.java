@@ -155,6 +155,15 @@ public class FirestoreOrdenRepository extends AbstractFirestoreRepository<Orden>
     }
 
     @Override
+    public List<Orden> findByEstadoAndPagada(OrdenEstado estado, boolean pagada) {
+        return buscar(
+                collection
+                        .whereEqualTo("ordenEstado", estado.name())
+                        .whereEqualTo("pagada", pagada)
+        );
+    }
+
+    @Override
     public List<Orden> findByPagada(boolean pagada) {
         return buscarPorCampo("pagada", pagada);
     }

@@ -4,6 +4,7 @@ import dto.CuentaPagadaResumenResponse;
 import model.Cuenta;
 import model.Mesa;
 import model.Orden;
+import model.Pedido;
 import repository.interfaces.CuentaRepository;
 import repository.interfaces.OrdenRepository;
 import repository.interfaces.PedidoRepository;
@@ -87,11 +88,20 @@ public class HistorialCuentasApplicationService {
             return Map.of();
         }
 
-        Map<String, String> pedidoIdACuentaId = cuentas.stream()
-                .flatMap(cuenta -> pedidoRepository.findByCuenta(cuenta).stream()
-                        .map(pedido -> Map.entry(pedido.id(), cuenta.id())))
-                .filter(entry -> entry.getKey() != null && !entry.getKey().isBlank())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
+        Map<String, String> cuentaIdsValidos = cuentas.stream()
+                .map(Cuenta::id)
+                .filter(id -> id != null && !id.isBlank())
+                .collect(Collectors.toMap(id -> id, id -> id, (a, b) -> a));
+
+        if (cuentaIdsValidos.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, String> pedidoIdACuentaId = pedidoRepository.findByCuentaIds(List.copyOf(cuentaIdsValidos.keySet())).stream()
+                .filter(pedido -> pedido.id() != null && !pedido.id().isBlank())
+                .filter(pedido -> pedido.cuenta() != null && pedido.cuenta().id() != null && !pedido.cuenta().id().isBlank())
+                .filter(pedido -> cuentaIdsValidos.containsKey(pedido.cuenta().id()))
+                .collect(Collectors.toMap(Pedido::id, pedido -> pedido.cuenta().id(), (a, b) -> a));
 
         List<String> pedidosIds = pedidoIdACuentaId.keySet().stream().toList();
         if (pedidosIds.isEmpty()) {
