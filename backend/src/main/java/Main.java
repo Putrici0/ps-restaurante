@@ -99,7 +99,8 @@ public class Main {
 
         NotificacionApplicationService notificacionApplicationService = new NotificacionApplicationService(
                 notificacionRepository,
-                cuentaRepository
+                cuentaRepository,
+                ordenApplicationService
         );
 
         java.util.concurrent.Executors.newSingleThreadScheduledExecutor().scheduleAtFixedRate(

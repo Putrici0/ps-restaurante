@@ -163,3 +163,13 @@
   font-weight: 600 !important;
   color: #222 !important;
 }
+
+.platos-grid ::ng-deep .camarero-asignado {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #1f6a2a;
+  background: rgba(46, 214, 30, 0.12);
+  border: 1px solid rgba(46, 214, 30, 0.35);
+  border-radius: 999px;
+  padding: 2px 8px;
+}

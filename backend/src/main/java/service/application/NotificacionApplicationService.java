@@ -2,6 +2,8 @@ package service.application;
 
 import model.Cuenta;
 import model.Notificacion;
+import model.Orden;
+import model.OrdenEstado;
 import model.TipoNotificacion;
 import repository.interfaces.CuentaRepository;
 import repository.interfaces.NotificacionRepository;
@@ -13,13 +15,16 @@ import java.util.Optional;
 public class NotificacionApplicationService {
     private final NotificacionRepository notificacionRepository;
     private final CuentaRepository cuentaRepository;
+    private final OrdenApplicationService ordenApplicationService;
 
     public NotificacionApplicationService(
             NotificacionRepository notificacionRepository,
-            CuentaRepository cuentaRepository
+            CuentaRepository cuentaRepository,
+            OrdenApplicationService ordenApplicationService
     ) {
         this.notificacionRepository = notificacionRepository;
         this.cuentaRepository = cuentaRepository;
+        this.ordenApplicationService = ordenApplicationService;
     }
 
     public Notificacion crearNotificacionAtencion(String cuentaId) {
@@ -110,33 +115,30 @@ public class NotificacionApplicationService {
             String camareroUid,
             String camareroNombre
     ) {
-        Notificacion notificacion = notificacionRepository.findById(notificacionId)
-                .orElseThrow(() -> new IllegalArgumentException("La notificación no existe"));
-
-        if (notificacion.leida()) {
-            return notificacion;
-        }
-
         String nombreLimpio = camareroNombre == null || camareroNombre.isBlank()
                 ? "Camarero"
                 : camareroNombre.trim();
 
-        Notificacion actualizada = new Notificacion(
-                notificacion.id(),
-                notificacion.cuenta(),
-                notificacion.tipo(),
-                false,
-                notificacion.fecha(),
-                notificacion.ordenId(),
-                notificacion.nombreItem(),
-                notificacion.categoriaItem(),
-                true,
-                camareroUid,
-                nombreLimpio,
-                Instant.now()
-        );
-
-        return notificacionRepository.update(notificacion.id(), actualizada);
+        return notificacionRepository.marcarEnCursoSiDisponible(
+                        notificacionId,
+                        camareroUid,
+                        nombreLimpio,
+                        notificacion -> new Notificacion(
+                                notificacion.id(),
+                                notificacion.cuenta(),
+                                notificacion.tipo(),
+                                false,
+                                notificacion.fecha(),
+                                notificacion.ordenId(),
+                                notificacion.nombreItem(),
+                                notificacion.categoriaItem(),
+                                true,
+                                camareroUid,
+                                nombreLimpio,
+                                Instant.now()
+                        )
+                )
+                .orElseThrow(() -> new IllegalStateException("Esta notificación ya la ha cogido otro compañero"));
     }
 
     public Notificacion marcarNotificacionLeida(String notificacionId) {
@@ -173,6 +175,17 @@ public class NotificacionApplicationService {
             return notificacion;
         }
 
+        if (notificacion.tipo() == TipoNotificacion.Recoger) {
+            String ordenId = notificacion.ordenId();
+            if (ordenId == null || ordenId.isBlank()) {
+                ordenId = resolverOrdenIdRecoger(notificacion);
+            }
+
+            if (ordenId != null && !ordenId.isBlank()) {
+                ordenApplicationService.marcarOrdenEntregada(ordenId);
+            }
+        }
+
         Notificacion actualizada = new Notificacion(
                 notificacion.id(),
                 notificacion.cuenta(),
@@ -189,6 +202,39 @@ public class NotificacionApplicationService {
         );
 
         return notificacionRepository.update(notificacion.id(), actualizada);
+    }
+
+    private String resolverOrdenIdRecoger(Notificacion notificacion) {
+        if (notificacion == null || notificacion.cuenta() == null || notificacion.cuenta().id() == null) {
+            return null;
+        }
+
+        String cuentaId = notificacion.cuenta().id();
+        String nombreItem = notificacion.nombreItem() != null ? notificacion.nombreItem().trim() : "";
+
+        List<Orden> candidatas = ordenApplicationService.obtenerPlatosActivosSala().stream()
+                .filter(orden -> orden.ordenEstado() == OrdenEstado.Listo)
+                .filter(orden -> orden.pedido() != null
+                        && orden.pedido().cuenta() != null
+                        && cuentaId.equals(orden.pedido().cuenta().id()))
+                .toList();
+
+        if (candidatas.isEmpty()) {
+            return null;
+        }
+
+        if (!nombreItem.isBlank()) {
+            Optional<Orden> porNombre = candidatas.stream()
+                    .filter(orden -> orden.plato() != null
+                            && orden.plato().nombre() != null
+                            && nombreItem.equalsIgnoreCase(orden.plato().nombre().trim()))
+                    .findFirst();
+            if (porNombre.isPresent()) {
+                return porNombre.get().id();
+            }
+        }
+
+        return candidatas.get(0).id();
     }
 
     public Notificacion desasignarYReenviarNotificacion(String notificacionId) {

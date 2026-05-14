@@ -44,6 +44,9 @@
         [disableSecundario]="item.procesando"
         (secundario)="deshacerEntrega(item.original)"
       >
+        @if (item.camareroAsignado) {
+        <span meta class="camarero-asignado">Lo lleva: {{ item.camareroAsignado }}</span>
+        }
         {{ item.nombre }}
       </app-pedido-card>
       }

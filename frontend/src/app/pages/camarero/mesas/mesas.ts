@@ -7,6 +7,7 @@ import { Mesa, ZonaMesa } from '../../../models/mesa.model';
 import { CuentaApiService } from '../../../services/cuenta-api.service';
 import { MesasApiService } from '../../../services/mesas-api.service';
 import {NotificacionesApiService} from '../../../services/notificaciones-api.service';
+import { CamareroAuthService } from '../../../services/camarero-auth.service';
 import { CamareroHeader } from '../camarero-header/camarero-header';
 import {Notificacion} from '../../../models/notificacion.model';
 
@@ -32,6 +33,7 @@ export class MesasCamarero implements OnDestroy {
   private readonly mesasApi = inject(MesasApiService);
   private readonly cuentaApi = inject(CuentaApiService);
   private readonly notificacionesApi = inject(NotificacionesApiService);
+  private readonly camareroAuth = inject(CamareroAuthService);
   private readonly router = inject(Router);
 
   readonly zonaActiva = signal<ZonaMesa>('interior');
@@ -41,6 +43,7 @@ export class MesasCamarero implements OnDestroy {
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly accionMesaId = signal<string | null>(null);
+  readonly camareroUidActual = signal<string | null>(null);
 
   // --- ESTADO DE COBRO ---
   readonly mostrarModalCobro = signal(false);
@@ -67,6 +70,9 @@ export class MesasCamarero implements OnDestroy {
     const idsMesasConAtencion = new Set<string>();
 
     activas.forEach((n: Notificacion) => {
+      if (n.enCurso && n.camareroUid && n.camareroUid !== this.camareroUidActual()) {
+        return;
+      }
       n.cuenta?.mesas?.forEach((m: any) => idsMesasConAtencion.add(m.id));
     });
 
@@ -145,6 +151,7 @@ export class MesasCamarero implements OnDestroy {
   });
 
   constructor() {
+    this.cargarPerfilCamareroActual();
     this.recargarMesas();
     this.iniciarPolling();
   }
@@ -341,5 +348,15 @@ export class MesasCamarero implements OnDestroy {
 
   private compararMesaIds(left: string, right: string): number {
     return Number(left) - Number(right);
+  }
+
+  private async cargarPerfilCamareroActual(): Promise<void> {
+    try {
+      const perfil = await this.camareroAuth.obtenerPerfilCamareroActual();
+      this.camareroUidActual.set(perfil.uid);
+    } catch (err) {
+      console.warn('No se ha podido cargar el perfil del camarero actual.', err);
+      this.camareroUidActual.set(null);
+    }
   }
 }

@@ -1,8 +1,10 @@
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Subscription, timer, of } from 'rxjs';
+import { Subscription, timer, of, forkJoin } from 'rxjs';
 import { take, switchMap, catchError, filter } from 'rxjs/operators';
 import { OrdenCocinaResponse, OrdenesApiService } from '../../../services/ordenes-api.service';
+import { Notificacion } from '../../../models/notificacion.model';
+import { NotificacionesApiService } from '../../../services/notificaciones-api.service';
 import { CamareroHeader } from '../camarero-header/camarero-header';
 import { PedidoCard } from '../../../shared/pedido-card/pedido-card';
 
@@ -15,9 +17,11 @@ import { PedidoCard } from '../../../shared/pedido-card/pedido-card';
 })
 export class PlatosCamarero implements OnInit, OnDestroy {
   private readonly ordenesApi = inject(OrdenesApiService);
+  private readonly notificacionesApi = inject(NotificacionesApiService);
   private pollingSub?: Subscription;
 
   readonly ordenes = signal<OrdenCocinaResponse[]>([]);
+  readonly notificaciones = signal<Notificacion[]>([]);
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly procesandoOrdenId = signal<string | null>(null);
@@ -29,6 +33,7 @@ export class PlatosCamarero implements OnInit, OnDestroy {
 
   readonly ordenesVisuales = computed(() => {
     this.ahora();
+    this.notificaciones();
     return [...this.ordenes()]
       .sort((a, b) => {
         const grupoA = this.grupoOrden(a.ordenEstado);
@@ -46,6 +51,7 @@ export class PlatosCamarero implements OnInit, OnDestroy {
         tiempo: this.calcularTiempo(o.fecha),
         esEntregado: o.ordenEstado === 'Entregado',
         procesando: this.procesandoOrdenId() === o.id,
+        camareroAsignado: this.obtenerCamareroAsignado(o.id),
       }));
   });
 
@@ -62,7 +68,10 @@ export class PlatosCamarero implements OnInit, OnDestroy {
       .pipe(
         filter(() => !this.procesandoOrdenId()),
         switchMap(() =>
-          this.ordenesApi.obtenerPlatosSala().pipe(
+          forkJoin({
+            ordenes: this.ordenesApi.obtenerPlatosSala(),
+            notificaciones: this.notificacionesApi.obtenerPendientes(),
+          }).pipe(
             catchError(() => {
               this.error.set('Error de conexión');
               this.cargando.set(false);
@@ -73,7 +82,8 @@ export class PlatosCamarero implements OnInit, OnDestroy {
       )
       .subscribe((data) => {
         if (data) {
-          this.ordenes.set(data);
+          this.ordenes.set(data.ordenes);
+          this.notificaciones.set(data.notificaciones);
           this.cargando.set(false);
           this.error.set(null);
         }
@@ -135,5 +145,16 @@ export class PlatosCamarero implements OnInit, OnDestroy {
     if (estado === 'Pendiente') return 2;
     if (estado === 'Entregado') return 3;
     return 4;
+  }
+
+  private obtenerCamareroAsignado(ordenId: string): string | null {
+    const notificacion = this.notificaciones().find((n) =>
+      n.tipo === 'Recoger' &&
+      n.ordenId === ordenId &&
+      !n.leida &&
+      !!n.enCurso
+    );
+
+    return notificacion?.camareroNombre?.trim() || null;
   }
 }

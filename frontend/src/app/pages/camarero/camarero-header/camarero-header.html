@@ -26,9 +26,9 @@
       >
         🔔
 
-        @if (totalNotificaciones() > 0) {
+        @if (totalNotificacionesCampana() > 0) {
         <span class="notification-badge">
-            {{ totalNotificaciones() }}
+            {{ totalNotificacionesCampana() }}
           </span>
         }
       </button>
@@ -81,7 +81,7 @@
                   [disabled]="asignandoNotificacionId() === notificacion.id"
                   (click)="marcarCompletada(notificacion)"
                 >
-                  {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Finalizado' }}
+                  {{ asignandoNotificacionId() === notificacion.id ? 'Marcando...' : 'Entregado' }}
                 </button>
                 <button
                   type="button"

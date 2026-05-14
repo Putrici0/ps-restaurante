@@ -154,14 +154,16 @@ public class NotificacionController {
                         post(ctx -> {
                             String id = ctx.pathParam("id");
                             MarcarEnCursoBody body = ctx.bodyAsClass(MarcarEnCursoBody.class);
-
-                            Notificacion notificacion = applicationService.marcarNotificacionEnCurso(
-                                    id,
-                                    body.camareroUid,
-                                    body.camareroNombre
-                            );
-
-                            ctx.json(notificacion);
+                            try {
+                                Notificacion notificacion = applicationService.marcarNotificacionEnCurso(
+                                        id,
+                                        body.camareroUid,
+                                        body.camareroNombre
+                                );
+                                ctx.json(notificacion);
+                            } catch (IllegalStateException e) {
+                                ctx.status(409).json(new ApiError(e.getMessage()));
+                            }
                         });
                     });
 

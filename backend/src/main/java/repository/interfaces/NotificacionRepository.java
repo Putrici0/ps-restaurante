@@ -6,6 +6,7 @@ import model.Cuenta;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 
 public interface NotificacionRepository extends Repository<Notificacion, String> {
     List<Notificacion> findByCuenta(Cuenta cuenta);
@@ -19,4 +20,10 @@ public interface NotificacionRepository extends Repository<Notificacion, String>
     List<Notificacion> findEnCursoNoLeidas();
     Optional<Notificacion> findActiveAtencionByCuentaId(String cuentaId);
     Notificacion saveWithDedup(Notificacion notificacion);
+    Optional<Notificacion> marcarEnCursoSiDisponible(
+            String notificacionId,
+            String camareroUid,
+            String camareroNombre,
+            UnaryOperator<Notificacion> onSuccessBuilder
+    );
 }

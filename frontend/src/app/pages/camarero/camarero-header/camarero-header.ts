@@ -5,6 +5,7 @@ import { catchError, of, take } from 'rxjs';
 import { Notificacion } from '../../../models/notificacion.model';
 import { CamareroAuthService } from '../../../services/camarero-auth.service';
 import { NotificacionesApiService } from '../../../services/notificaciones-api.service';
+import { OrdenesApiService } from '../../../services/ordenes-api.service';
 
 type ModoAviso = 'sonido' | 'vibracion' | 'silencio';
 
@@ -20,6 +21,7 @@ export class CamareroHeader implements OnInit, OnDestroy {
   @Input() pendientesCount = 0;
 
   private readonly notificacionesApi = inject(NotificacionesApiService);
+  private readonly ordenesApi = inject(OrdenesApiService);
   private readonly camareroAuth = inject(CamareroAuthService);
   private readonly pollingMs = 4000;
   private readonly modoAvisoStorageKey = 'camarero-notificaciones-modo-aviso';
@@ -70,6 +72,13 @@ export class CamareroHeader implements OnInit, OnDestroy {
 
   readonly totalNotificaciones = computed(() =>
     this.notificacionesRecoger().length + this.notificacionesAtencion().length
+  );
+
+  readonly totalNotificacionesCampana = computed(() =>
+    this.notificaciones().filter((notificacion) =>
+      !notificacion.leida &&
+      (!notificacion.enCurso || this.esAsignadaAlCamareroActual(notificacion))
+    ).length
   );
 
   readonly textoModoAviso = computed(() => {
@@ -199,23 +208,22 @@ export class CamareroHeader implements OnInit, OnDestroy {
     this.asignandoNotificacionId.set(notificacion.id);
     this.errorNotificaciones.set(null);
 
-    this.notificacionesApi
-      .marcarComoCompletada(notificacion.id)
-      .pipe(take(1))
-      .subscribe({
-        next: (actualizada) => {
-          this.notificacionesYaAvisadas.delete(actualizada.id);
-          this.notificaciones.update((actuales) =>
-            actuales.filter((item) => item.id !== actualizada.id),
-          );
-          this.asignandoNotificacionId.set(null);
-        },
-        error: (err) => {
-          console.error(err);
-          this.errorNotificaciones.set('No se ha podido completar la notificación.');
-          this.asignandoNotificacionId.set(null);
-        },
-      });
+    if (notificacion.tipo === 'Recoger' && !!notificacion.ordenId) {
+      this.ordenesApi
+        .marcarEntregada(notificacion.ordenId)
+        .pipe(take(1))
+        .subscribe({
+          next: () => this.completarNotificacion(notificacion.id),
+          error: (err) => {
+            console.error(err);
+            this.errorNotificaciones.set('No se ha podido marcar el plato como entregado.');
+            this.asignandoNotificacionId.set(null);
+          },
+        });
+      return;
+    }
+
+    this.completarNotificacion(notificacion.id);
   }
 
   desasignarYReenviar(notificacion: Notificacion): void {
@@ -313,6 +321,26 @@ export class CamareroHeader implements OnInit, OnDestroy {
 
     const horas = Math.floor(diffMin / 60);
     return `Hace ${horas} h`;
+  }
+
+  private completarNotificacion(notificacionId: string): void {
+    this.notificacionesApi
+      .marcarComoCompletada(notificacionId)
+      .pipe(take(1))
+      .subscribe({
+        next: (actualizada) => {
+          this.notificacionesYaAvisadas.delete(actualizada.id);
+          this.notificaciones.update((actuales) =>
+            actuales.filter((item) => item.id !== actualizada.id),
+          );
+          this.asignandoNotificacionId.set(null);
+        },
+        error: (err) => {
+          console.error(err);
+          this.errorNotificaciones.set('No se ha podido completar la notificación.');
+          this.asignandoNotificacionId.set(null);
+        },
+      });
   }
 
   private cargarNotificaciones(avisarNuevas: boolean): void {

@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
+import java.util.function.UnaryOperator;
 
 public class FirestoreNotificacionRepository extends AbstractFirestoreRepository<Notificacion> implements NotificacionRepository {
     public FirestoreNotificacionRepository(Firestore db) {
@@ -198,6 +199,37 @@ public class FirestoreNotificacionRepository extends AbstractFirestoreRepository
             }).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException("Error en transacción de notificación de atención", e);
+        }
+    }
+
+    @Override
+    public Optional<Notificacion> marcarEnCursoSiDisponible(
+            String notificacionId,
+            String camareroUid,
+            String camareroNombre,
+            UnaryOperator<Notificacion> onSuccessBuilder
+    ) {
+        try {
+            return db.runTransaction(transaction -> {
+                DocumentReference docRef = collection.document(notificacionId);
+                DocumentSnapshot snapshot = transaction.get(docRef).get();
+
+                if (!snapshot.exists()) {
+                    throw new IllegalArgumentException("La notificación no existe");
+                }
+
+                Notificacion actual = mapToEntity(snapshot.getId(), snapshot.getData());
+
+                if (actual.leida() || actual.enCurso()) {
+                    return Optional.<Notificacion>empty();
+                }
+
+                Notificacion actualizada = onSuccessBuilder.apply(actual);
+                transaction.update(docRef, entityToMap(actualizada));
+                return Optional.of(actualizada);
+            }).get();
+        } catch (InterruptedException | ExecutionException e) {
+            throw new RuntimeException("Error al marcar en curso la notificación", e);
         }
     }
 

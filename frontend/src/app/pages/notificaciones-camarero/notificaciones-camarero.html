@@ -131,7 +131,7 @@
             [disabled]="actualizando() || asignandoNotificacionId() === notificacion.id"
             (click)="marcarCompletada(notificacion)"
           >
-            {{ asignandoNotificacionId() === notificacion.id ? 'Finalizando...' : 'Ya lo serví' }}
+            {{ asignandoNotificacionId() === notificacion.id ? 'Marcando...' : 'Entregado' }}
           </button>
           <button
             type="button"
