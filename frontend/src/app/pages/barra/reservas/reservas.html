@@ -1,0 +1,167 @@
+<div class="modal-overlay">
+  <div class="modal-reserva">
+    <button class="btn-volver" (click)="cerrarModal()">Volver</button>
+
+    @if (vistaActual() === 'lista') {
+      <div class="vista-lista fade-in">
+        <div class="header-reserva">
+          <h2>Próximas Visitas</h2>
+          <p>{{ fechaSeleccionada() | date:'fullDate':'':'es-ES' }}</p>
+        </div>
+
+        <div class="contenido-lista">
+          <div class="columna-reservas">
+            @for (reserva of reservasFiltradas(); track reserva.id) {
+              <div class="reserva-card" [class.cancelado]="reserva.estado === 'Cancelado'">
+                <div class="reserva-hora">
+                  <strong>{{ reserva.hora }}</strong>
+                  <small>{{ getAmPm(reserva.hora) }}</small>
+                </div>
+
+                <div class="reserva-info">
+                  <span class="nombre">{{ reserva.nombre }}</span>
+                  <span class="pax">👤 {{ reserva.comensales }} Pax | M{{ reserva.mesasIds?.join(',M') }}</span>
+                </div>
+
+                <div class="reserva-estado">
+                  <span class="dot"
+                        [class.dot-confirmado]="reserva.estado === 'Confirmado'"
+                        [class.dot-cancelado]="reserva.estado === 'Cancelado'"
+                        [class.dot-pendiente]="reserva.estado === 'Pendiente'">
+                  </span>
+                  {{ reserva.estado }}
+                </div>
+
+                <div class="reserva-acciones">
+                  @if (reserva.estado !== 'Cancelado' && reserva.id) {
+                    <button class="btn-edit-icon" (click)="editarReserva(reserva)">✎</button>
+                    <button class="btn-cancelar-icon" (click)="cancelarReserva(reserva.id!)">✕</button>
+                  }
+                  @if (reserva.estado === 'Cancelado' && reserva.id) {
+                    <button class="btn-confirmar-icon" (click)="confirmarEstadoReserva(reserva.id!)">↺</button>
+                  }
+                </div>
+              </div>
+            }
+            @if (reservasFiltradas().length === 0) {
+              <div class="no-reservas">No hay reservas para este día</div>
+            }
+          </div>
+
+          <div class="columna-gestion">
+            <div class="gestion-card">
+              <h3>Gestión de Reservas</h3>
+              <button class="btn-nueva-reserva" (click)="cambiarVista('crear')">⊕ Nueva Reserva</button>
+            </div>
+
+            <div class="calendario-card">
+              <div class="cal-header">
+                <span style="text-transform: capitalize;">{{ nombreMesActual() }} {{ anioCalendario() }}</span>
+                <div class="cal-nav">
+                  <button (click)="cambiarMes(-1)">&lt;</button>
+                  <button (click)="cambiarMes(1)">&gt;</button>
+                </div>
+              </div>
+              <div class="cal-grid">
+                <span>DOM</span><span>LUN</span><span>MAR</span><span>MIÉ</span><span>JUE</span><span>VIE</span><span>SÁB</span>
+                @for (dia of diasCalendario(); track dia.fecha) {
+                  <span
+                    [class.muted]="dia.esMuted"
+                    [class.active]="dia.fecha === fechaSeleccionada()"
+                    [class.hoy]="dia.esHoy"
+                    (click)="seleccionarFecha(dia.fecha)">
+                    {{ dia.dia }}
+                  </span>
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+
+    @else {
+      <div class="vista-crear fade-in">
+        <div class="header-reserva">
+          <h2>{{ reservaAEditar() ? 'Editar Reserva' : 'Nueva Reserva' }}</h2>
+          <p>Ingrese los detalles para confirmar la disponibilidad de mesa.</p>
+        </div>
+
+        <div class="contenido-crear">
+          <div class="form-columna">
+            <h3 class="seccion-titulo">Información del cliente</h3>
+
+            <label>Nombre del cliente</label>
+            <input type="text" [value]="nuevoNombre()" (input)="nuevoNombre.set($any($event.target).value)" placeholder="Alejandro Hernández">
+
+            <label>Teléfono</label>
+            <input type="tel" [value]="nuevoTelefono()" (input)="nuevoTelefono.set($any($event.target).value)" placeholder="608271197">
+
+            <label>Nota/Peticiones Especiales</label>
+            <textarea rows="3" [value]="nuevaNota()" (input)="nuevaNota.set($any($event.target).value)" placeholder="Trona, alergias..."></textarea>
+          </div>
+
+          <div class="form-columna">
+            <div class="header-detalles">
+              <h3 class="seccion-titulo">Detalles de la reserva</h3>
+            </div>
+
+            @if (errorReserva()) {
+              <div class="error-reserva-banner">{{ errorReserva() }}</div>
+            }
+
+            <div class="form-row-2">
+              <div>
+                <label>Fecha</label>
+                <input type="date" [value]="nuevaFecha()" (input)="nuevaFecha.set($any($event.target).value)">
+              </div>
+              <div>
+                <label>Hora</label>
+                <input type="time" [value]="nuevaHora()" (input)="nuevaHora.set($any($event.target).value)">
+              </div>
+            </div>
+
+            <div class="form-row-2 align-bottom">
+              <div class="form-comensales">
+                <label>Comensales</label>
+                <div class="contador-pax">
+                  <button type="button" (click)="decrementarComensales()">-</button>
+                  <span class="pax-numero">{{ nuevosComensales() }}</span>
+                  <button type="button" (click)="incrementarComensales()">+</button>
+                </div>
+              </div>
+
+              <div class="form-zona">
+                <label>Zona</label>
+                <div class="zonas-btn-group">
+                  <button type="button" [class.active]="nuevaZona() === 'Interior'" (click)="seleccionarZona('Interior')">Interior</button>
+                  <button type="button" [class.active]="nuevaZona() === 'Terraza'" (click)="seleccionarZona('Terraza')">Terraza</button>
+                  <button type="button" [class.active]="nuevaZona() === 'Cualquiera'" (click)="seleccionarZona('Cualquiera')">Indiferente</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-acciones">
+              <button type="button" class="btn-cancelar" (click)="cambiarVista('lista')">Cancelar</button>
+              <button type="button" class="btn-confirmar" (click)="confirmarReserva()">{{ reservaAEditar() ? 'Guardar Cambios' : 'Confirmar Reserva' }}</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+
+  @if (mostrarConfirmarBorrado()) {
+    <div class="modal-overlay modal-overlay--confirmacion">
+      <div class="modal-confirmacion">
+        <h4>Eliminar Reserva</h4>
+        <p>¿Estás seguro de que deseas eliminar esta reserva de forma permanente? Esta acción no se puede deshacer.</p>
+        <div class="modal-confirmacion__acciones">
+          <button type="button" class="btn-cancelar" (click)="mostrarConfirmarBorrado.set(false)">Cancelar</button>
+          <button type="button" class="btn-confirmar" style="background: #ff5252;" (click)="confirmarBorrado()">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+div>

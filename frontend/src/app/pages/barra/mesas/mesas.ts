@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, signal } from '@angular/core';
-import { forkJoin } from 'rxjs';
+import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
+import { forkJoin, Subscription } from 'rxjs';
 
 import { MesaDetalle } from '../../../shared/mesa-detalle/mesa-detalle';
 import { Navbar } from '../../../shared/navbar/navbar';
@@ -8,6 +8,9 @@ import { Mesa, ZonaMesa } from '../../../models/mesa.model';
 import { CuentaApiService, OrdenCuentaResponse } from '../../../services/cuenta-api.service';
 import { MesasApiService } from '../../../services/mesas-api.service';
 import { MESAS_LAYOUT } from '../../../data/mesas-layout';
+import { Reservas } from '../reservas/reservas';
+import { ReservasApiService } from '../../../services/reservas-api.service';
+import { Reserva } from '../../../models/reserva.model';
 
 type DireccionUnion = 'arriba' | 'derecha' | 'abajo' | 'izquierda';
 
@@ -19,6 +22,9 @@ interface MesaCeldaVista {
   fila: number;
   columna: number;
   vecinos: Partial<Record<DireccionUnion, string>>;
+  // NUEVO: Estados visuales de reserva
+  estadoReserva: 'ninguno' | 'reservada' | 'proxima' | 'alerta';
+  reservaNombre?: string;
 }
 
 interface ItemCobroAgrupado {
@@ -36,14 +42,19 @@ interface ItemCobroAgrupado {
 @Component({
   selector: 'app-mesas',
   standalone: true,
-  imports: [CommonModule, MesaDetalle, Navbar],
+  imports: [CommonModule, MesaDetalle, Navbar, Reservas],
   templateUrl: './mesas.html',
   styleUrl: './mesas.css',
 })
-export class Mesas {
+export class Mesas implements OnInit, OnDestroy {
   private readonly mesasApi = inject(MesasApiService);
   private readonly cuentaApi = inject(CuentaApiService);
+  private readonly reservasApi = inject(ReservasApiService); // API Inyectada
 
+  private reservasSub: Subscription | null = null;
+  private relojInterval: any;
+
+  readonly mostrarReservas = signal(false);
   readonly zona = signal<ZonaMesa>('interior');
   readonly mesaSeleccionada = signal<Mesa | null>(null);
   readonly mesas = signal<Mesa[]>([]);
@@ -52,6 +63,15 @@ export class Mesas {
   readonly accionMesaId = signal<string | null>(null);
   readonly modoEdicion = signal(false);
   readonly accionAgrupacionMesaId = signal<string | null>(null);
+
+  // NUEVO: Reloj y Reservas del día
+  readonly reservasHoy = signal<Reserva[]>([]);
+  readonly minutosActuales = signal<number>(this.horaActualMinutos());
+
+  // NUEVO: Variables Modal Advertencia Ocupar
+  readonly mostrarAvisoReservaModal = signal(false);
+  readonly avisoReservaMinutos = signal<number>(0);
+  readonly mesaPendienteOcuparId = signal<string>('');
 
   readonly mostrarModalCobro = signal(false);
   readonly cuentaCobroId = signal<string | null>(null);
@@ -78,89 +98,48 @@ export class Mesas {
     return !!mesa && mesa.grupoMesaIds.length > 1 && mesa.estado === 'libre';
   });
 
+  // (Computados de cobro se mantienen igual...)
   readonly totalCobro = computed(() => {
     const seleccion = this.seleccionCantidadPorPlato();
-
     const total = this.resumenCobro().reduce((acc, item) => {
-      if (!this.puedeCobrarItem(item)) {
-        return acc;
-      }
-
-      const cantidad = Math.max(
-        0,
-        Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length),
-      );
+      if (!this.puedeCobrarItem(item)) return acc;
+      const cantidad = Math.max(0, Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length));
       return acc + cantidad * item.precioUnitario;
     }, 0);
-
     return Number(total.toFixed(2));
   });
 
   readonly ordenesSeleccionadas = computed(() => {
     const seleccion = this.seleccionCantidadPorPlato();
     const ids: string[] = [];
-
     for (const item of this.resumenCobro()) {
-      if (!this.puedeCobrarItem(item)) {
-        continue;
-      }
-
-      const cantidad = Math.max(
-        0,
-        Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length),
-      );
+      if (!this.puedeCobrarItem(item)) continue;
+      const cantidad = Math.max(0, Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length));
       ids.push(...item.ordenesIds.slice(0, cantidad));
     }
-
     return ids;
   });
 
   readonly cambioCobro = computed(() => {
     const total = this.totalCobro();
     const recibido = this.importeRecibido();
-
-    if (this.metodoPago() !== 'EFECTIVO' || recibido == null) {
-      return null;
-    }
-
+    if (this.metodoPago() !== 'EFECTIVO' || recibido == null) return null;
     return Number((recibido - total).toFixed(2));
   });
 
   readonly faltaCobro = computed(() => {
     const total = this.totalCobro();
     const recibido = this.importeRecibido();
-
-    if (this.metodoPago() !== 'EFECTIVO' || recibido == null) {
-      return null;
-    }
-
-    if (recibido >= total) {
-      return 0;
-    }
-
+    if (this.metodoPago() !== 'EFECTIVO' || recibido == null) return null;
+    if (recibido >= total) return 0;
     return Number((total - recibido).toFixed(2));
   });
 
   readonly puedeConfirmarCobro = computed(() => {
     const total = this.totalCobro();
-
-    if (
-      total <= 0 ||
-      this.procesandoCobro() ||
-      this.eliminandoOrdenId() !== null ||
-      this.mostrarConfirmacionEliminar()
-    ) {
-      return false;
-    }
-
-    if (this.ordenesSeleccionadas().length === 0) {
-      return false;
-    }
-
-    if (this.metodoPago() === 'TARJETA') {
-      return true;
-    }
-
+    if (total <= 0 || this.procesandoCobro() || this.eliminandoOrdenId() !== null || this.mostrarConfirmacionEliminar()) return false;
+    if (this.ordenesSeleccionadas().length === 0) return false;
+    if (this.metodoPago() === 'TARJETA') return true;
     const recibido = this.importeRecibido();
     return recibido != null && recibido >= total;
   });
@@ -169,32 +148,53 @@ export class Mesas {
     this.recargarMesas();
   }
 
+  private getLocalHoy(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  ngOnInit() {
+    const hoy = this.getLocalHoy();
+    this.reservasSub = this.reservasApi.obtenerReservasPorFecha(hoy).subscribe(res => {
+      this.reservasHoy.set(res);
+    });
+
+    this.relojInterval = setInterval(() => {
+      this.minutosActuales.set(this.horaActualMinutos());
+    }, 60000); // Refresca 1 vez por minuto
+  }
+
+  ngOnDestroy() {
+    this.reservasSub?.unsubscribe();
+    if (this.relojInterval) clearInterval(this.relojInterval);
+  }
+
+  horaActualMinutos(): number {
+    const d = new Date();
+    return d.getHours() * 60 + d.getMinutes();
+  }
+
+  timeToMins(hora: string): number {
+    const [h, m] = hora.split(':').map(Number);
+    return h * 60 + m;
+  }
+
   seleccionarCelda(celda: MesaCeldaVista): void {
     const mesa = celda.mesa;
     const actual = this.mesaSeleccionada();
-
-    if (
-      actual &&
-      this.claveGrupo(actual.grupoMesaIds) === this.claveGrupo(mesa.grupoMesaIds)
-    ) {
+    if (actual && this.claveGrupo(actual.grupoMesaIds) === this.claveGrupo(mesa.grupoMesaIds)) {
       this.mesaSeleccionada.set(null);
       return;
     }
-
     this.mesaSeleccionada.set(mesa);
   }
 
-  toggleModoEdicion(): void {
-    this.modoEdicion.update((value) => !value);
-  }
+  toggleModoEdicion(): void { this.modoEdicion.update((value) => !value); }
 
   unirMesaLado(celda: MesaCeldaVista, direccion: DireccionUnion, event: MouseEvent): void {
     event.stopPropagation();
-
     const mesaIdDestino = celda.vecinos[direccion];
-    if (!mesaIdDestino || this.accionAgrupacionMesaId() !== null) {
-      return;
-    }
+    if (!mesaIdDestino || this.accionAgrupacionMesaId() !== null) return;
 
     this.error.set(null);
     this.accionAgrupacionMesaId.set(celda.mesaFisicaId);
@@ -205,7 +205,6 @@ export class Mesas {
         this.recargarMesas(celda.mesa.mesaPrincipalId ?? celda.mesa.id);
       },
       error: (err) => {
-        console.error('Error uniendo mesas:', err);
         this.accionAgrupacionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
       },
@@ -214,9 +213,7 @@ export class Mesas {
 
   separarMesaSeleccionada(): void {
     const mesa = this.mesaSeleccionada();
-    if (!mesa || mesa.grupoMesaIds.length <= 1 || this.accionAgrupacionMesaId() !== null) {
-      return;
-    }
+    if (!mesa || mesa.grupoMesaIds.length <= 1 || this.accionAgrupacionMesaId() !== null) return;
 
     const mesaId = mesa.mesaPrincipalId ?? mesa.id;
     this.error.set(null);
@@ -228,7 +225,6 @@ export class Mesas {
         this.recargarMesas(mesaId);
       },
       error: (err) => {
-        console.error('Error separando mesas:', err);
         this.accionAgrupacionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
       },
@@ -247,16 +243,7 @@ export class Mesas {
 
   etiquetaMesa(mesa: Mesa): string {
     const ids = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
-    if (ids.length <= 1) {
-      return `M${mesa.id}`;
-    }
-
-    return ids.map((id) => `M${id}`).join(' + ');
-  }
-
-  subEtiquetaMesa(mesa: Mesa): string {
-    const ids = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
-    return ids.length <= 1 ? 'Mesa individual' : `${ids.length} mesas unidas`;
+    return ids.length <= 1 ? `M${mesa.id}` : ids.map((id) => `M${id}`).join('+');
   }
 
   puedeUnirsePor(direccion: DireccionUnion, celda: MesaCeldaVista): boolean {
@@ -264,20 +251,60 @@ export class Mesas {
     return !!vecinoId && !celda.mesa.grupoMesaIds.includes(vecinoId);
   }
 
-  ocuparMesa(mesaId: string): void {
+  // NUEVO: Validador antes de Ocupar Mesa
+  solicitarOcuparMesa(mesaId: string): void {
+    const minNow = this.minutosActuales();
+    const reservas = this.reservasHoy().filter(r => r.estado === 'Confirmado');
+    const mesaLogica = this.mesas().find(m => m.id === mesaId);
+    const mesasIdsGrupo = mesaLogica ? mesaLogica.grupoMesaIds : [mesaId];
+
+    // NUEVO: Si la mesa ya está en estado reservada/próxima, ocupamos directamente
+    // (el personal está confirmando la llegada del cliente que reservó)
+    if (mesaLogica?.estado === 'reservada' || mesaLogica?.estado === 'proximamente-reservada') {
+      this.ocuparMesaFinal(mesaId);
+      return;
+    }
+
+    // Busca colisiones en la próxima hora
+    const conflict = reservas.find(r =>
+      r.mesasIds?.some(id => mesasIdsGrupo.includes(id)) &&
+      this.timeToMins(r.hora) - minNow <= 60 &&
+      this.timeToMins(r.hora) + 15 >= minNow
+    );
+
+    if (conflict) {
+      const diff = this.timeToMins(conflict.hora) - minNow;
+      if (diff <= 30 && diff >= -15) {
+        this.error.set(`Mesa bloqueada por reserva de ${conflict.nombre} a las ${conflict.hora}`);
+        return;
+      }
+      this.avisoReservaMinutos.set(diff);
+      this.mesaPendienteOcuparId.set(mesaId);
+      this.mostrarAvisoReservaModal.set(true);
+    } else {
+      this.ocuparMesaFinal(mesaId);
+    }
+  }
+
+  confirmarOcuparConAviso(): void {
+    this.mostrarAvisoReservaModal.set(false);
+    this.ocuparMesaFinal(this.mesaPendienteOcuparId());
+  }
+
+  private ocuparMesaFinal(mesaId: string): void {
     this.error.set(null);
     this.accionMesaId.set(mesaId);
 
     this.mesasApi.ocuparMesa(mesaId).subscribe({
       next: () => this.recargarMesas(mesaId),
       error: (err) => {
-        console.error('Error ocupando mesa:', err);
         this.accionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
       },
     });
   }
 
+  // El resto de métodos de cobro, eliminar, etc...
   abrirCobro(payload: { mesaId: string; cuentaId: string }): void {
     this.error.set(null);
     this.cargandoCobro.set(true);
@@ -292,7 +319,6 @@ export class Mesas {
     this.mostrarConfirmacionEliminar.set(false);
     this.itemPendienteEliminar.set(null);
     this.mostrarModalCobro.set(true);
-
     this.recargarResumenCobro();
   }
 
@@ -301,28 +327,17 @@ export class Mesas {
     const mesaId = this.mesaCobroId();
     const metodoPago = this.metodoPago();
     const ordenesSeleccionadas = this.ordenesSeleccionadas();
-    const totalOrdenesPendientes = this.resumenCobro().reduce(
-      (acc, item) => acc + item.ordenesIds.length,
-      0,
-    );
+    const totalOrdenesPendientes = this.resumenCobro().reduce((acc, item) => acc + item.ordenesIds.length, 0);
 
-    if (
-      !cuentaId ||
-      !mesaId ||
-      ordenesSeleccionadas.length === 0 ||
-      !this.puedeConfirmarCobro()
-    ) {
-      return;
-    }
+    if (!cuentaId || !mesaId || ordenesSeleccionadas.length === 0 || !this.puedeConfirmarCobro()) return;
 
     this.error.set(null);
     this.procesandoCobro.set(true);
     this.accionMesaId.set(mesaId);
 
-    const request$ =
-      ordenesSeleccionadas.length === totalOrdenesPendientes
-        ? this.mesasApi.pagarCuentaCompleta(cuentaId, metodoPago)
-        : this.mesasApi.pagarCuentaParcial(cuentaId, ordenesSeleccionadas, metodoPago);
+    const request$ = ordenesSeleccionadas.length === totalOrdenesPendientes
+      ? this.mesasApi.pagarCuentaCompleta(cuentaId, metodoPago)
+      : this.mesasApi.pagarCuentaParcial(cuentaId, ordenesSeleccionadas, metodoPago);
 
     request$.subscribe({
       next: () => {
@@ -331,7 +346,6 @@ export class Mesas {
         this.recargarMesas(mesaId);
       },
       error: (err) => {
-        console.error('Error cobrando cuenta:', err);
         this.procesandoCobro.set(false);
         this.accionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
@@ -340,15 +354,9 @@ export class Mesas {
   }
 
   eliminarUnaUnidad(item: ItemCobroAgrupado): void {
-    if (!this.puedeEliminarItem(item)) {
-      return;
-    }
-
+    if (!this.puedeEliminarItem(item)) return;
     const cantidadSolicitada = this.cantidadSeleccionada(item);
-    const cantidadAEliminar = Math.max(
-      1,
-      Math.min(cantidadSolicitada > 0 ? cantidadSolicitada : 1, item.ordenesIds.length),
-    );
+    const cantidadAEliminar = Math.max(1, Math.min(cantidadSolicitada > 0 ? cantidadSolicitada : 1, item.ordenesIds.length));
 
     this.itemPendienteEliminar.set(item);
     this.ordenesPendientesEliminar.set(item.ordenesIds.slice(0, cantidadAEliminar));
@@ -356,10 +364,7 @@ export class Mesas {
   }
 
   solicitarLiberarMesa(mesaId: string): void {
-    if (!mesaId || this.accionMesaId() !== null) {
-      return;
-    }
-
+    if (!mesaId || this.accionMesaId() !== null) return;
     this.mesaPendienteLiberarId.set(mesaId);
     this.mostrarConfirmacionLiberar.set(true);
   }
@@ -371,9 +376,7 @@ export class Mesas {
 
   confirmarLiberarMesa(): void {
     const mesaId = this.mesaPendienteLiberarId();
-    if (!mesaId) {
-      return;
-    }
+    if (!mesaId) return;
 
     this.error.set(null);
     this.accionMesaId.set(mesaId);
@@ -385,7 +388,6 @@ export class Mesas {
         this.recargarMesas(mesaId);
       },
       error: (err) => {
-        console.error('Error liberando mesa:', err);
         this.accionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
       },
@@ -411,16 +413,13 @@ export class Mesas {
     this.error.set(null);
     this.eliminandoOrdenId.set(primeraOrdenId);
 
-    forkJoin(
-      ordenesIds.map((ordenId) => this.cuentaApi.eliminarOrdenDeCuenta(cuentaId, ordenId)),
-    ).subscribe({
+    forkJoin(ordenesIds.map((ordenId) => this.cuentaApi.eliminarOrdenDeCuenta(cuentaId, ordenId))).subscribe({
       next: () => {
         this.eliminandoOrdenId.set(null);
         this.cancelarConfirmacionEliminar();
         this.recargarResumenCobro();
       },
       error: (err) => {
-        console.error('Error eliminando orden de la cuenta:', err);
         this.eliminandoOrdenId.set(null);
         this.cancelarConfirmacionEliminar();
         this.error.set(this.extraerMensaje(err));
@@ -429,12 +428,7 @@ export class Mesas {
   }
 
   puedeEliminarItem(item: ItemCobroAgrupado): boolean {
-    return (
-      item.ordenesIds.length > 0 &&
-      this.eliminandoOrdenId() === null &&
-      !this.procesandoCobro() &&
-      !this.mostrarConfirmacionEliminar()
-    );
+    return (item.ordenesIds.length > 0 && this.eliminandoOrdenId() === null && !this.procesandoCobro() && !this.mostrarConfirmacionEliminar());
   }
 
   cerrarModalCobro(): void {
@@ -456,10 +450,7 @@ export class Mesas {
 
   cambiarMetodoPago(metodo: 'EFECTIVO' | 'TARJETA'): void {
     this.metodoPago.set(metodo);
-
-    if (metodo === 'TARJETA') {
-      this.importeRecibido.set(null);
-    }
+    if (metodo === 'TARJETA') this.importeRecibido.set(null);
   }
 
   actualizarImporteRecibido(valor: string): void {
@@ -467,116 +458,75 @@ export class Mesas {
       this.importeRecibido.set(null);
       return;
     }
-
     const numero = Number(valor);
     this.importeRecibido.set(Number.isNaN(numero) ? null : numero);
   }
 
   obtenerResumenEstado(estados: string[]): string {
-    const estadosNormalizados = estados.map((estado) => {
-      if (estado === 'Preparación' || estado === 'Preparacion') {
-        return 'En preparación';
-      }
-      return estado;
-    });
-
-    const unicos = Array.from(new Set(estadosNormalizados));
-    return unicos.join(' · ');
+    const estadosNormalizados = estados.map((e) => (e === 'Preparación' || e === 'Preparacion') ? 'En preparación' : e);
+    return Array.from(new Set(estadosNormalizados)).join(' · ');
   }
 
   cantidadSeleccionada(item: ItemCobroAgrupado): number {
     const seleccion = this.seleccionCantidadPorPlato();
-    const cantidad = seleccion[item.key] ?? 0;
-    return Math.max(0, Math.min(cantidad, item.ordenesIds.length));
+    return Math.max(0, Math.min(seleccion[item.key] ?? 0, item.ordenesIds.length));
   }
 
   incrementarSeleccion(item: ItemCobroAgrupado): void {
     const actual = this.cantidadSeleccionada(item);
-    if (actual >= item.ordenesIds.length) {
-      return;
-    }
-    this.seleccionCantidadPorPlato.update((prev) => ({
-      ...prev,
-      [item.key]: actual + 1,
-    }));
+    if (actual >= item.ordenesIds.length) return;
+    this.seleccionCantidadPorPlato.update((prev) => ({ ...prev, [item.key]: actual + 1 }));
   }
 
   decrementarSeleccion(item: ItemCobroAgrupado): void {
     const actual = this.cantidadSeleccionada(item);
-    if (actual <= 0) {
-      return;
-    }
-    this.seleccionCantidadPorPlato.update((prev) => ({
-      ...prev,
-      [item.key]: actual - 1,
-    }));
+    if (actual <= 0) return;
+    this.seleccionCantidadPorPlato.update((prev) => ({ ...prev, [item.key]: actual - 1 }));
   }
 
-  itemSeleccionado(item: ItemCobroAgrupado): boolean {
-    return this.cantidadSeleccionada(item) === item.cantidad;
-  }
+  itemSeleccionado(item: ItemCobroAgrupado): boolean { return this.cantidadSeleccionada(item) === item.cantidad; }
 
   toggleSeleccionItem(item: ItemCobroAgrupado): void {
     const actual = this.cantidadSeleccionada(item);
-    this.seleccionCantidadPorPlato.update((prev) => ({
-      ...prev,
-      [item.key]: actual === item.cantidad ? 0 : item.cantidad,
-    }));
+    this.seleccionCantidadPorPlato.update((prev) => ({ ...prev, [item.key]: actual === item.cantidad ? 0 : item.cantidad }));
 
     if (this.metodoPago() === 'EFECTIVO') {
       const recibido = this.importeRecibido();
-      if (recibido != null && recibido < this.totalCobro()) {
-        this.importeRecibido.set(null);
-      }
+      if (recibido != null && recibido < this.totalCobro()) this.importeRecibido.set(null);
     }
   }
 
   seleccionarTodoCobro(): void {
     const seleccion: Record<string, number> = {};
-    for (const item of this.resumenCobro()) {
-      seleccion[item.key] = this.puedeCobrarItem(item) ? item.cantidad : 0;
-    }
+    for (const item of this.resumenCobro()) seleccion[item.key] = this.puedeCobrarItem(item) ? item.cantidad : 0;
     this.seleccionCantidadPorPlato.set(seleccion);
   }
 
   limpiarSeleccionCobro(): void {
     const seleccion: Record<string, number> = {};
-    for (const item of this.resumenCobro()) {
-      seleccion[item.key] = 0;
-    }
+    for (const item of this.resumenCobro()) seleccion[item.key] = 0;
     this.seleccionCantidadPorPlato.set(seleccion);
-    if (this.metodoPago() === 'EFECTIVO') {
-      this.importeRecibido.set(null);
-    }
+    if (this.metodoPago() === 'EFECTIVO') this.importeRecibido.set(null);
   }
 
   private recargarResumenCobro(): void {
     const cuentaId = this.cuentaCobroId();
-
-    if (!cuentaId) {
-      return;
-    }
+    if (!cuentaId) return;
 
     this.cargandoCobro.set(true);
-
     this.cuentaApi.obtenerResumenCuenta(cuentaId).subscribe({
       next: (cuentaResumen) => {
-        const ordenesPendientes = cuentaResumen.ordenes.filter(
-          (orden) => orden.ordenEstado !== 'Cancelado' && !orden.pagada,
-        );
-
+        const ordenesPendientes = cuentaResumen.ordenes.filter((orden) => orden.ordenEstado !== 'Cancelado' && !orden.pagada);
         this.totalCuentaCobro.set(Number(cuentaResumen.total));
         const resumenAgrupado = this.agruparOrdenes(ordenesPendientes);
         this.resumenCobro.set(resumenAgrupado);
+
         const seleccionInicial: Record<string, number> = {};
-        for (const item of resumenAgrupado) {
-          seleccionInicial[item.key] = 0;
-        }
+        for (const item of resumenAgrupado) seleccionInicial[item.key] = 0;
         this.seleccionCantidadPorPlato.set(seleccionInicial);
         this.cargandoCobro.set(false);
       },
       error: (err) => {
-        console.error('Error obteniendo datos del cobro:', err);
         this.cargandoCobro.set(false);
         this.cerrarModalCobro();
         this.error.set(this.extraerMensaje(err));
@@ -597,50 +547,23 @@ export class Mesas {
       const precioUnitario = Number(orden.precio ?? 0);
 
       if (!mapa.has(key)) {
-        mapa.set(key, {
-          key,
-          platoId,
-          nombre,
-          categoria,
-          precioUnitario,
-          cantidad: 0,
-          subtotal: 0,
-          estados: [],
-          ordenesIds: [],
-        });
+        mapa.set(key, { key, platoId, nombre, categoria, precioUnitario, cantidad: 0, subtotal: 0, estados: [], ordenesIds: [] });
       }
 
       const item = mapa.get(key)!;
       item.cantidad += 1;
       item.subtotal += precioUnitario;
-
-      if (orden.ordenEstado) {
-        item.estados.push(orden.ordenEstado);
-      }
-
-      if (orden.id) {
-        item.ordenesIds.push(orden.id);
-      }
+      if (orden.ordenEstado) item.estados.push(orden.ordenEstado);
+      if (orden.id) item.ordenesIds.push(orden.id);
     }
 
     return Array.from(mapa.values()).sort((a, b) => {
       const entregaA = this.puedeCobrarItem(a) ? 1 : 0;
       const entregaB = this.puedeCobrarItem(b) ? 1 : 0;
-
-      if (entregaA !== entregaB) {
-        return entregaB - entregaA;
-      }
-
+      if (entregaA !== entregaB) return entregaB - entregaA;
       const nombre = a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' });
-      if (nombre !== 0) {
-        return nombre;
-      }
-
-      return this.obtenerResumenEstado(a.estados).localeCompare(
-        this.obtenerResumenEstado(b.estados),
-        'es',
-        { sensitivity: 'base' },
-      );
+      if (nombre !== 0) return nombre;
+      return this.obtenerResumenEstado(a.estados).localeCompare(this.obtenerResumenEstado(b.estados), 'es', { sensitivity: 'base' });
     });
   }
 
@@ -666,19 +589,11 @@ export class Mesas {
         }
 
         const seleccionActual = this.mesaSeleccionada();
-
-        if (!seleccionActual) {
-          return;
-        }
-
-        const mesaRefrescada = this.buscarMesaLogicaPorId(
-          mesas,
-          seleccionActual.mesaPrincipalId ?? seleccionActual.id,
-        );
+        if (!seleccionActual) return;
+        const mesaRefrescada = this.buscarMesaLogicaPorId(mesas, seleccionActual.mesaPrincipalId ?? seleccionActual.id);
         this.mesaSeleccionada.set(mesaRefrescada);
       },
       error: (err) => {
-        console.error('Error recargando mesas:', err);
         this.cargando.set(false);
         this.accionMesaId.set(null);
         this.error.set(this.extraerMensaje(err));
@@ -691,38 +606,20 @@ export class Mesas {
     return err?.error?.message ?? 'Ha ocurrido un error al comunicar con el backend';
   }
 
-  cerrarSeleccion(event: MouseEvent): void {
-    const target = event.target as HTMLElement;
-
-    if (!target.closest('.mesa-grid-cell') && !target.closest('.sidebar-detalle')) {
-      this.mesaSeleccionada.set(null);
-    }
-  }
-
   private construirCeldasZona(zona: ZonaMesa): MesaCeldaVista[] {
-    const mesasZona = this.mesas()
-      .filter((mesa) => mesa.zona === zona)
-      .sort((a, b) => this.compararMesaIds(a.id, b.id));
-
-    const layoutZona = MESAS_LAYOUT.filter((mesa) => mesa.zona === zona);
-    const ordenMesaIds = layoutZona.map((mesa) => mesa.id);
+    const mesasZona = this.mesas().filter((m) => m.zona === zona).sort((a, b) => this.compararMesaIds(a.id, b.id));
+    const layoutZona = MESAS_LAYOUT.filter((m) => m.zona === zona);
+    const ordenMesaIds = layoutZona.map((m) => m.id);
     const indiceMesaId = new Map(ordenMesaIds.map((id, index) => [id, index]));
-    const mesasPorId = new Map(mesasZona.map((mesa) => [mesa.id, mesa]));
+    const mesasPorId = new Map(mesasZona.map((m) => [m.id, m]));
     const mesasLogicasPorClave = new Map<string, Mesa>();
 
     for (const mesa of mesasZona) {
       const grupoMesaIds = this.normalizarGrupoMesaIds(mesa.grupoMesaIds);
       const clave = this.claveGrupo(grupoMesaIds);
+      if (mesasLogicasPorClave.has(clave)) continue;
 
-      if (mesasLogicasPorClave.has(clave)) {
-        continue;
-      }
-
-      const miembros = grupoMesaIds
-        .map((id) => mesasPorId.get(id))
-        .filter((value): value is Mesa => !!value)
-        .sort((a, b) => this.compararMesaIds(a.id, b.id));
-
+      const miembros = grupoMesaIds.map((id) => mesasPorId.get(id)).filter((v): v is Mesa => !!v).sort((a, b) => this.compararMesaIds(a.id, b.id));
       const mesaPrincipalId = [...grupoMesaIds].sort((a, b) => {
         const indiceA = indiceMesaId.get(a) ?? Number.MAX_SAFE_INTEGER;
         const indiceB = indiceMesaId.get(b) ?? Number.MAX_SAFE_INTEGER;
@@ -744,21 +641,46 @@ export class Mesas {
       });
     }
 
+    const reservasActivas = this.reservasHoy().filter(r => r.estado === 'Confirmado');
+    const minNow = this.minutosActuales();
+
     return ordenMesaIds.map((mesaId, index) => {
       const mesaFisica = mesasPorId.get(mesaId);
       const grupoMesaIds = this.normalizarGrupoMesaIds(mesaFisica?.grupoMesaIds ?? [mesaId]);
-      const mesaLogica =
-        mesasLogicasPorClave.get(this.claveGrupo(grupoMesaIds)) ??
-        ({
-          id: mesaId,
-          capacidad: mesaFisica?.capacidad ?? 0,
-          zona,
-          estado: mesaFisica?.estado ?? 'libre',
-          cuentaActivaId: mesaFisica?.cuentaActivaId ?? null,
-          cuentaActiva: mesaFisica?.cuentaActiva ?? null,
-          grupoMesaIds,
-          mesaPrincipalId: mesaId,
-        } as Mesa);
+      const mesaLogicaOriginal = mesasLogicasPorClave.get(this.claveGrupo(grupoMesaIds)) ?? ({
+        id: mesaId, capacidad: mesaFisica?.capacidad ?? 0, zona, estado: mesaFisica?.estado ?? 'libre', cuentaActivaId: mesaFisica?.cuentaActivaId ?? null, cuentaActiva: mesaFisica?.cuentaActiva ?? null, grupoMesaIds, mesaPrincipalId: mesaId,
+      } as Mesa);
+
+      // Creamos una copia para no mutar el original en el Map
+      const mesaLogica = { ...mesaLogicaOriginal };
+
+      // NUEVO: Cálculo de Estado de Reserva Visual
+      let estadoReserva: 'ninguno' | 'reservada' | 'proxima' | 'alerta' = 'ninguno';
+      let reservaNombre = '';
+
+      const resRelacionada = reservasActivas.find(r => r.mesasIds?.includes(mesaId) && (this.timeToMins(r.hora) + 15 >= minNow));
+
+      if (resRelacionada) {
+        const diff = this.timeToMins(resRelacionada.hora) - minNow;
+
+        if (mesaLogica.estado === 'libre') {
+          // Si faltan 15 mins o menos (hasta 15 mins de retraso), se bloquea y se pone MORADA
+          if (diff <= 15 && diff >= -15) {
+            estadoReserva = 'reservada';
+            reservaNombre = resRelacionada.nombre;
+            mesaLogica.estado = 'reservada';
+          }
+          // Si falta entre 15 min y 1 hora, se pone NARANJA (Aviso para no sentar gente con calma)
+          else if (diff <= 60 && diff > 15) {
+            estadoReserva = 'proxima';
+            mesaLogica.estado = 'proximamente-reservada';
+          }
+        } else if (mesaLogica.estado === 'ocupada') {
+          // Si hay gente sentada y se acerca la reserva
+          if (diff <= 15) estadoReserva = 'alerta';
+          else if (diff <= 60) estadoReserva = 'proxima';
+        }
+      }
 
       const fila = Math.floor(index / 3) + 1;
       const columna = (index % 3) + 1;
@@ -776,51 +698,28 @@ export class Mesas {
           abajo: index + 3 < ordenMesaIds.length ? ordenMesaIds[index + 3] : undefined,
           izquierda: columna > 1 ? ordenMesaIds[index - 1] : undefined,
         },
+        estadoReserva,
+        reservaNombre
       };
     });
   }
 
   private buscarMesaLogicaPorId(mesas: Mesa[], mesaId: string): Mesa | null {
-    if (!mesaId) {
-      return null;
-    }
-
-    const mesaFisica = mesas.find((mesa) => mesa.id === mesaId);
-    if (!mesaFisica) {
-      return null;
-    }
+    if (!mesaId) return null;
+    const mesaFisica = mesas.find((m) => m.id === mesaId);
+    if (!mesaFisica) return null;
 
     const grupoMesaIds = this.normalizarGrupoMesaIds(mesaFisica.grupoMesaIds);
-    const miembros = grupoMesaIds
-      .map((id) => mesas.find((mesa) => mesa.id === id))
-      .filter((value): value is Mesa => !!value)
-      .sort((a, b) => this.compararMesaIds(a.id, b.id));
-
+    const miembros = grupoMesaIds.map((id) => mesas.find((m) => m.id === id)).filter((v): v is Mesa => !!v).sort((a, b) => this.compararMesaIds(a.id, b.id));
     const cuentaActiva = miembros.find((item) => item.cuentaActiva)?.cuentaActiva ?? null;
     const mesaPrincipalId = miembros[0]?.id ?? mesaFisica.id;
 
     return {
-      id: mesaPrincipalId,
-      capacidad: miembros.reduce((acc, item) => acc + item.capacidad, 0),
-      zona: mesaFisica.zona,
-      estado: cuentaActiva ? 'ocupada' : 'libre',
-      cuentaActivaId: cuentaActiva?.id ?? null,
-      cuentaActiva,
-      grupoMesaIds,
-      mesaPrincipalId,
+      id: mesaPrincipalId, capacidad: miembros.reduce((acc, item) => acc + item.capacidad, 0), zona: mesaFisica.zona, estado: cuentaActiva ? 'ocupada' : 'libre', cuentaActivaId: cuentaActiva?.id ?? null, cuentaActiva, grupoMesaIds, mesaPrincipalId,
     };
   }
 
-  private normalizarGrupoMesaIds(grupoMesaIds: string[]): string[] {
-    return Array.from(new Set(grupoMesaIds))
-      .sort((a, b) => this.compararMesaIds(a, b));
-  }
-
-  private claveGrupo(grupoMesaIds: string[]): string {
-    return this.normalizarGrupoMesaIds(grupoMesaIds).join('|');
-  }
-
-  private compararMesaIds(left: string, right: string): number {
-    return Number(left) - Number(right);
-  }
+  private normalizarGrupoMesaIds(grupoMesaIds: string[]): string[] { return Array.from(new Set(grupoMesaIds)).sort((a, b) => this.compararMesaIds(a, b)); }
+  private claveGrupo(grupoMesaIds: string[]): string { return this.normalizarGrupoMesaIds(grupoMesaIds).join('|'); }
+  private compararMesaIds(left: string, right: string): number { return Number(left) - Number(right); }
 }

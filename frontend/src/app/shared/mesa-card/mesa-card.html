@@ -2,9 +2,14 @@
   class="mesa-card"
   [class.seleccionada]="seleccionada"
   [class.ocupada]="estado === 'ocupada'"
-  [class.libre]="estado === 'libre'">
+  [class.libre]="estado === 'libre'"
+  [class.reservada]="estado === 'reservada'"
+  [class.proximamente-reservada]="estado === 'proximamente-reservada'">
   <div class="mesa-card__content">
     <div class="mesa-card__title">M{{ numero }}</div>
     <div class="mesa-card__pill">{{ capacidad }} Pax</div>
   </div>
+  @if (estado === 'reservada' || estado === 'proximamente-reservada') {
+    <div class="mesa-card__badge">RESERVADA</div>
+  }
 </div>

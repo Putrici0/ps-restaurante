@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { forkJoin, map, Observable } from 'rxjs';
+import { forkJoin, map, Observable, of } from 'rxjs';
 import {
   CuentaApi,
   ImporteCuentaApi,
@@ -9,12 +9,15 @@ import {
   OrdenCuentaApi,
 } from '../models/mesa.model';
 import { MESAS_LAYOUT } from '../data/mesas-layout';
+import { ReservasApiService } from './reservas-api.service';
+import { Reserva } from '../models/reserva.model';
 
 @Injectable({
   providedIn: 'root',
 })
 export class MesasApiService {
   private readonly http = inject(HttpClient);
+  private readonly reservasApi = inject(ReservasApiService);
   private readonly apiUrl = `http://${window.location.hostname}:7070`;
 
   private readonly defaultPageLimit = 100;
@@ -127,6 +130,11 @@ export class MesasApiService {
           .sort((a, b) => Number(a.id) - Number(b.id));
       })
     );
+  }
+
+  private timeToMins(hora: string): number {
+    const [h, m] = hora.split(':').map(Number);
+    return h * 60 + m;
   }
 
   private normalizarGrupoMesaIds(id: string, grupoMesaIds?: string[]): string[] {

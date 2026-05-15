@@ -1,0 +1,388 @@
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.modal-reserva {
+  background: #dfd1c0; /* Beige que coincide con la imagen */
+  border-radius: 20px;
+  padding: 30px;
+  width: 850px;
+  max-width: 95vw;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.fade-in {
+  animation: fadeIn 0.25s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.btn-volver {
+  position: absolute;
+  top: 25px;
+  right: 25px;
+  background: #f4f0ea;
+  border: none;
+  padding: 12px 35px;
+  font-size: 1.2rem;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #555;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  transition: transform 0.1s;
+}
+
+.btn-volver:active {
+  transform: scale(0.95);
+}
+
+.header-reserva h2 {
+  margin: 0 0 5px 0;
+  font-size: 1.6rem;
+  color: #1a1a1a;
+  font-weight: 800;
+}
+
+.header-reserva p {
+  margin: 0 0 25px 0;
+  color: #555;
+  font-size: 0.95rem;
+}
+
+.contenido-lista, .contenido-crear {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 30px;
+}
+
+/* =========================================
+   VISTA 1: LISTA DE RESERVAS
+========================================= */
+.columna-reservas {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 460px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+/* Scrollbar personalizado para que se vea bien */
+.columna-reservas::-webkit-scrollbar {
+  width: 6px;
+}
+
+.columna-reservas::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.columna-reservas::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+
+.columna-reservas::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+.reserva-card {
+  background: #efe7db;
+  border-radius: 16px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: background 0.2s;
+}
+
+.reserva-card.cancelado {
+  opacity: 0.6;
+}
+
+.reserva-hora {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+
+.reserva-hora strong { font-size: 1rem; color: #333; }
+.reserva-hora small { font-size: 0.7rem; color: #888; font-weight: 700; margin-top: -2px;}
+
+.reserva-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.reserva-info .nombre { font-weight: 800; color: #222; font-size: 0.95rem;}
+.reserva-info .pax { font-size: 0.8rem; color: #777; margin-top: 4px; font-weight: 600;}
+
+.reserva-estado {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #555;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 100px;
+}
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-confirmado { background: #2ed61e; }
+.dot-cancelado { background: #d61e1e; }
+.dot-pendiente { background: #ffc107; }
+
+.reserva-acciones {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-cancelar-icon, .btn-confirmar-icon, .btn-edit-icon {
+  background: #fff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  font-weight: bold;
+  transition: transform 0.1s;
+}
+
+.btn-cancelar-icon { color: #ff5252; }
+.btn-confirmar-icon { color: #2ed61e; }
+.btn-edit-icon { color: #2196F3; }
+
+.btn-cancelar-icon:active, .btn-confirmar-icon:active, .btn-edit-icon:active {
+  transform: scale(0.9);
+}
+
+.no-reservas {
+  padding: 40px;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  background: #efe7db;
+  border-radius: 16px;
+}
+
+.columna-gestion {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.gestion-card, .calendario-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+
+.gestion-card { text-align: center; }
+.gestion-card h3 { margin: 0 0 15px 0; font-size: 1.1rem; color: #333; }
+
+.btn-nueva-reserva {
+  background: #8e684c;
+  color: #fff;
+  border: none;
+  padding: 12px;
+  border-radius: 25px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  width: 100%;
+  transition: background 0.2s;
+}
+
+.btn-nueva-reserva:hover { background: #7a5840; }
+
+.calendario-card { padding: 20px; }
+.cal-header { display: flex; justify-content: space-between; font-weight: 800; margin-bottom: 15px; color: #333;}
+.cal-nav button { background: none; border: none; cursor: pointer; font-weight: bold; color: #555;}
+.cal-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; font-size: 0.8rem; font-weight: 700; color: #555;
+}
+.cal-grid span {
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 26px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+.cal-grid span:hover:not(.muted) { background: #f0f0f0; }
+.cal-grid .muted { color: #ccc; cursor: default; }
+.cal-grid .active { background: #8e684c !important; color: white !important; }
+.cal-grid .hoy { border: 1px solid #8e684c; color: #8e684c; font-weight: 800; }
+
+/* =========================================
+   VISTA 2: CREAR RESERVA
+========================================= */
+.seccion-titulo {
+  font-size: 0.95rem;
+  color: #666;
+  margin: 0 0 15px 0;
+  font-weight: 600;
+}
+
+.header-detalles {
+  display: flex;
+  justify-content: space-between;
+}
+
+.form-columna {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-columna label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+  color: #2f2f2f;
+}
+
+.form-columna input, .form-columna textarea, .form-columna select {
+  width: 100%;
+  padding: 12px 15px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  background: #efe7db;
+  margin-bottom: 18px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: #333;
+  outline: none;
+  transition: border 0.2s;
+}
+
+.form-columna input:focus, .form-columna textarea:focus, .form-columna select:focus {
+  border-color: #c9bba8;
+}
+
+.form-columna textarea {
+  resize: none;
+}
+
+.form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.align-bottom {
+  align-items: end;
+}
+
+.contador-pax {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.contador-pax button {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: #efe7db;
+  color: #555;
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.contador-pax button:active { background: #dfd5c5; }
+
+.pax-numero {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #333;
+  width: 20px;
+  text-align: center;
+}
+
+.zonas-btn-group {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.zonas-btn-group button {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid transparent;
+  background: #efe7db;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.zonas-btn-group button.active {
+  background: #f4f0ea;
+  border-color: #c9bba8;
+  color: #333;
+}
+
+.form-acciones {
+  display: flex;
+  gap: 15px;
+  margin-top: 2.5rem;
+}
+
+.form-acciones button {
+  flex: 1;
+  padding: 14px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 800;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.btn-cancelar { background: #ff5252; color: white; }
+.btn-confirmar { background: #2ed61e; color: white; }
+
+.btn-cancelar:active, .btn-confirmar:active { transform: scale(0.98); }
+
+/* BANNER ERROR AUTO-UNION */
+.error-reserva-banner {
+  background: #ffebee;
+  color: #c62828;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  border: 1px solid #ffcdd2;
+}

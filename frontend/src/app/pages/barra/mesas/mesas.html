@@ -3,73 +3,33 @@
 <div class="mesas-page">
   <div class="mesas-topbar" [class.panel-abierto]="!!mesaSeleccionada()">
     <div class="tabs-zona">
-      <button
-        type="button"
-        [class.active]="zona() === 'interior'"
-        (click)="cambiarZona('interior')">
-        Interior
-      </button>
-
-      <button
-        type="button"
-        [class.active]="zona() === 'terraza'"
-        (click)="cambiarZona('terraza')">
-        Terraza
-      </button>
+      <button type="button" [class.active]="zona() === 'interior'" (click)="cambiarZona('interior')">Interior</button>
+      <button type="button" [class.active]="zona() === 'terraza'" (click)="cambiarZona('terraza')">Terraza</button>
     </div>
-
     <div></div>
-
     <div class="mesas-topbar-right">
       <div class="acciones-edicion">
-        <button
-          type="button"
-          class="btn-edicion"
-          [class.active]="modoEdicion()"
-          (click)="toggleModoEdicion()"
-          [disabled]="accionAgrupacionMesaId() !== null">
-          {{ modoEdicion() ? 'SALIR' : 'EDITAR' }}
-        </button>
-
+        <button type="button" class="btn-edicion btn-edicion--secondary" (click)="mostrarReservas.set(true)" [disabled]="accionAgrupacionMesaId() !== null">RESERVAS</button>
+        <button type="button" class="btn-edicion" [class.active]="modoEdicion()" (click)="toggleModoEdicion()" [disabled]="accionAgrupacionMesaId() !== null">{{ modoEdicion() ? 'SALIR' : 'EDITAR' }}</button>
         @if (modoEdicion()) {
-          <button
-            type="button"
-            class="btn-edicion btn-edicion--secondary"
-            (click)="separarMesaSeleccionada()"
-            [disabled]="!puedeSepararSeleccion() || accionAgrupacionMesaId() !== null">
-            SEPARAR
-          </button>
+          <button type="button" class="btn-edicion btn-edicion--secondary" (click)="separarMesaSeleccionada()" [disabled]="!puedeSepararSeleccion() || accionAgrupacionMesaId() !== null">SEPARAR</button>
         }
       </div>
-
       <div class="estado-legend">
-        <span class="legend-item">
-          <span class="legend-dot legend-dot--ocupada"></span>
-          Ocupado
-        </span>
-
-        <span class="legend-item">
-          <span class="legend-dot legend-dot--reservada"></span>
-          Reservado
-        </span>
-
-        <span class="legend-item">
-          <span class="legend-dot legend-dot--libre"></span>
-          Libre
-        </span>
+        <span class="legend-item"><span class="legend-dot legend-dot--ocupada"></span>Ocupado</span>
+        <span class="legend-item"><span class="legend-dot legend-dot--reservada"></span>Reservado</span>
+        <span class="legend-item"><span class="legend-dot legend-dot--libre"></span>Libre</span>
       </div>
     </div>
   </div>
 
-  @if (error()) {
-    <p class="error">{{ error() }}</p>
-  }
+  @if (error()) { <p class="error">{{ error() }}</p> }
 
   @if (cargando()) {
     <p>Cargando mesas...</p>
   } @else {
     <div class="mesas-layout" [class.panel-abierto]="!!mesaSeleccionada()">
-      <section class="grid-mesas">
+      <section class="grid-mesas" [class.grid-mesas--terraza]="zona() === 'terraza'">
         @for (celda of celdasActuales(); track celda.mesaFisicaId) {
           <div
             class="mesa-grid-cell"
@@ -78,41 +38,18 @@
             [class.mesa-grid-cell--seleccionada]="esMesaSeleccionada(celda.mesa)"
             [class.mesa-grid-cell--ocupada]="celda.mesa.estado === 'ocupada'"
             [class.mesa-grid-cell--libre]="celda.mesa.estado === 'libre'"
+            [class.mesa-grid-cell--reservada]="celda.mesa.estado === 'reservada'"
+            [class.mesa-grid-cell--proximamente-reservada]="celda.mesa.estado === 'proximamente-reservada'"
+            [class.mesa-grid-cell--alerta]="celda.estadoReserva === 'alerta'"
+            [class.mesa-grid-cell--proxima]="celda.estadoReserva === 'proxima'"
             [class.mesa-grid-cell--editando]="modoEdicion()"
             (click)="seleccionarCelda(celda)">
+
             @if (modoEdicion()) {
-              @if (puedeUnirsePor('arriba', celda)) {
-                <button
-                  type="button"
-                  class="union-btn union-btn--arriba"
-                  (click)="unirMesaLado(celda, 'arriba', $event)">
-                  +
-                </button>
-              }
-              @if (puedeUnirsePor('derecha', celda)) {
-                <button
-                  type="button"
-                  class="union-btn union-btn--derecha"
-                  (click)="unirMesaLado(celda, 'derecha', $event)">
-                  +
-                </button>
-              }
-              @if (puedeUnirsePor('abajo', celda)) {
-                <button
-                  type="button"
-                  class="union-btn union-btn--abajo"
-                  (click)="unirMesaLado(celda, 'abajo', $event)">
-                  +
-                </button>
-              }
-              @if (puedeUnirsePor('izquierda', celda)) {
-                <button
-                  type="button"
-                  class="union-btn union-btn--izquierda"
-                  (click)="unirMesaLado(celda, 'izquierda', $event)">
-                  +
-                </button>
-              }
+              @if (puedeUnirsePor('arriba', celda)) { <button type="button" class="union-btn union-btn--arriba" (click)="unirMesaLado(celda, 'arriba', $event)">+</button> }
+              @if (puedeUnirsePor('derecha', celda)) { <button type="button" class="union-btn union-btn--derecha" (click)="unirMesaLado(celda, 'derecha', $event)">+</button> }
+              @if (puedeUnirsePor('abajo', celda)) { <button type="button" class="union-btn union-btn--abajo" (click)="unirMesaLado(celda, 'abajo', $event)">+</button> }
+              @if (puedeUnirsePor('izquierda', celda)) { <button type="button" class="union-btn union-btn--izquierda" (click)="unirMesaLado(celda, 'izquierda', $event)">+</button> }
             }
 
             @if (!celda.esFantasma) {
@@ -129,6 +66,16 @@
                 <div class="mesa-fantasma__meta">Unida a {{ etiquetaMesa(celda.mesa) }}</div>
               </div>
             }
+
+            @if(celda.estadoReserva === 'reservada') {
+              <div class="badge-estado badge-reservada">{{ celda.reservaNombre }}</div>
+            }
+            @if(celda.estadoReserva === 'proxima') {
+              <div class="badge-estado badge-proxima">⏳ Res. Próxima</div>
+            }
+            @if(celda.estadoReserva === 'alerta') {
+              <div class="badge-estado badge-alerta">⚠️ Aviso Cuenta!</div>
+            }
           </div>
         }
       </section>
@@ -138,7 +85,7 @@
           <app-mesa-detalle
             [mesa]="mesaSel"
             [accionEnCurso]="accionMesaId() === mesaSel.id || procesandoCobro() || eliminandoOrdenId() !== null"
-            (ocupar)="ocuparMesa($event)"
+            (ocupar)="solicitarOcuparMesa($event)"
             (liberar)="solicitarLiberarMesa($event)"
             (cobrar)="abrirCobro($event)">
           </app-mesa-detalle>
@@ -151,204 +98,73 @@
     <div class="modal-overlay" (click)="cerrarModalCobro()">
       <div class="modal-cobro" (click)="$event.stopPropagation()">
         <h3>Confirmar cobro</h3>
-
         @if (cargandoCobro()) {
           <p class="modal-texto">Cargando resumen de la cuenta...</p>
         } @else {
-          <p class="modal-texto">
-            Selecciona los productos que quieres cobrar de la mesa
-            <strong>{{ mesaCobroId() }}</strong>.
-          </p>
-
+          <p class="modal-texto">Selecciona los productos que quieres cobrar de la mesa <strong>{{ mesaCobroId() }}</strong>.</p>
           <div class="modal-cobro-layout">
             <div class="modal-cobro-columna modal-cobro-columna--izquierda">
               <div class="modal-resumen">
                 <h4>Selecciona productos a cobrar</h4>
-
                 @if (resumenCobro().length === 0) {
                   <p class="modal-resumen-vacio">No hay productos en esta cuenta.</p>
                 } @else {
                   <div class="modal-resumen-acciones">
-                    <button
-                      type="button"
-                      class="btn-seleccion"
-                      (click)="seleccionarTodoCobro()"
-                      [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                      Seleccionar todo
-                    </button>
-
-                    <button
-                      type="button"
-                      class="btn-seleccion"
-                      (click)="limpiarSeleccionCobro()"
-                      [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                      Limpiar
-                    </button>
+                    <button type="button" class="btn-seleccion" (click)="seleccionarTodoCobro()" [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">Seleccionar todo</button>
+                    <button type="button" class="btn-seleccion" (click)="limpiarSeleccionCobro()" [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">Limpiar</button>
                   </div>
-
                   <div class="modal-resumen-lista">
                     @for (item of resumenCobro(); track item.key) {
-                      <div
-                        class="modal-resumen-item modal-resumen-item--seleccionable"
-                        [class.modal-resumen-item--bloqueado]="!puedeCobrarItem(item)">
-                        <div class="modal-resumen-item__check">
-                          <button
-                            type="button"
-                            class="btn-seleccion-item"
-                            [class.active]="itemSeleccionado(item)"
-                            (click)="toggleSeleccionItem(item)"
-                            [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                            {{ itemSeleccionado(item) ? '✓' : '' }}
-                          </button>
-                        </div>
-
+                      <div class="modal-resumen-item modal-resumen-item--seleccionable" [class.modal-resumen-item--bloqueado]="!puedeCobrarItem(item)">
+                        <div class="modal-resumen-item__check"><button type="button" class="btn-seleccion-item" [class.active]="itemSeleccionado(item)" (click)="toggleSeleccionItem(item)" [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">{{ itemSeleccionado(item) ? '✓' : '' }}</button></div>
                         <div class="modal-resumen-item__info">
                           <strong>{{ item.nombre || 'Producto' }}</strong>
-
-                          <div class="modal-resumen-item__meta">
-                            {{ cantidadSeleccionada(item) }} / {{ item.cantidad }} x
-                            {{ item.precioUnitario | currency:'EUR':'symbol':'1.2-2' }}
-                          </div>
-
+                          <div class="modal-resumen-item__meta">{{ cantidadSeleccionada(item) }} / {{ item.cantidad }} x {{ item.precioUnitario | currency:'EUR':'symbol':'1.2-2' }}</div>
                           <div class="modal-resumen-item__qty">
-                            <button
-                              type="button"
-                              class="btn-cantidad"
-                              (click)="decrementarSeleccion(item)"
-                              [disabled]="cantidadSeleccionada(item) <= 0 || procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                              -
-                            </button>
-                            <button
-                              type="button"
-                              class="btn-cantidad"
-                              (click)="incrementarSeleccion(item)"
-                              [disabled]="cantidadSeleccionada(item) >= item.cantidad || procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                              +
-                            </button>
+                            <button type="button" class="btn-cantidad" (click)="decrementarSeleccion(item)" [disabled]="cantidadSeleccionada(item) <= 0 || procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">-</button>
+                            <button type="button" class="btn-cantidad" (click)="incrementarSeleccion(item)" [disabled]="cantidadSeleccionada(item) >= item.cantidad || procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">+</button>
                           </div>
-
-                          <small class="modal-resumen-item__estado">
-                            Estado:
-                            {{ item.estados.length ? obtenerResumenEstado(item.estados) : 'Sin estado' }}
-                          </small>
-
-                          <div class="modal-resumen-item__acciones">
-                            <button
-                              type="button"
-                              class="btn-eliminar-x"
-                              (click)="eliminarUnaUnidad(item)"
-                              [disabled]="!puedeEliminarItem(item)"
-                              [attr.aria-label]="'Eliminar una unidad de ' + item.nombre"
-                              title="Eliminar una unidad">
-                              {{ eliminandoOrdenId() === item.ordenesIds[0] ? '...' : '×' }}
-                            </button>
-                          </div>
+                          <small class="modal-resumen-item__estado">Estado: {{ item.estados.length ? obtenerResumenEstado(item.estados) : 'Sin estado' }}</small>
+                          <div class="modal-resumen-item__acciones"><button type="button" class="btn-eliminar-x" (click)="eliminarUnaUnidad(item)" [disabled]="!puedeEliminarItem(item)" title="Eliminar una unidad">{{ eliminandoOrdenId() === item.ordenesIds[0] ? '...' : '×' }}</button></div>
                         </div>
-
-                        <div class="modal-resumen-item__subtotal">
-                          {{ (cantidadSeleccionada(item) * item.precioUnitario) | currency:'EUR':'symbol':'1.2-2' }}
-                        </div>
+                        <div class="modal-resumen-item__subtotal">{{ (cantidadSeleccionada(item) * item.precioUnitario) | currency:'EUR':'symbol':'1.2-2' }}</div>
                       </div>
                     }
                   </div>
                 }
               </div>
             </div>
-
             <div class="modal-cobro-columna modal-cobro-columna--derecha">
               <div class="modal-metodo-pago">
                 <h4>Método de pago</h4>
-
                 <div class="modal-metodo-pago__opciones">
-                  <button
-                    type="button"
-                    class="modal-metodo-pago__btn"
-                    [class.active]="metodoPago() === 'EFECTIVO'"
-                    (click)="cambiarMetodoPago('EFECTIVO')"
-                    [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                    Efectivo
-                  </button>
-
-                  <button
-                    type="button"
-                    class="modal-metodo-pago__btn"
-                    [class.active]="metodoPago() === 'TARJETA'"
-                    (click)="cambiarMetodoPago('TARJETA')"
-                    [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                    Tarjeta
-                  </button>
+                  <button type="button" class="modal-metodo-pago__btn" [class.active]="metodoPago() === 'EFECTIVO'" (click)="cambiarMetodoPago('EFECTIVO')" [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">Efectivo</button>
+                  <button type="button" class="modal-metodo-pago__btn" [class.active]="metodoPago() === 'TARJETA'" (click)="cambiarMetodoPago('TARJETA')" [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">Tarjeta</button>
                 </div>
               </div>
-
               @if (metodoPago() === 'EFECTIVO') {
                 <div class="modal-efectivo">
                   <h4>Pago en efectivo</h4>
-
                   <label for="importeRecibido">Importe recibido</label>
-                  <input
-                    id="importeRecibido"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    [value]="importeRecibido() ?? ''"
-                    (input)="actualizarImporteRecibido($any($event.target).value)"
-                    [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()"
-                    placeholder="Introduce el importe recibido" />
-
-                  @if (importeRecibido() != null && faltaCobro() != null && faltaCobro()! > 0) {
-                    <p class="modal-efectivo__error">
-                      Faltan {{ faltaCobro() | currency:'EUR':'symbol':'1.2-2' }}
-                    </p>
-                  }
-
-                  @if (importeRecibido() != null && cambioCobro() != null && cambioCobro()! >= 0) {
-                    <p class="modal-efectivo__cambio">
-                      Cambio:
-                      <strong>{{ cambioCobro() | currency:'EUR':'symbol':'1.2-2' }}</strong>
-                    </p>
-                  }
+                  <input id="importeRecibido" type="number" min="0" step="0.01" [value]="importeRecibido() ?? ''" (input)="actualizarImporteRecibido($any($event.target).value)" [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()" placeholder="Introduce el importe recibido" />
+                  @if (importeRecibido() != null && faltaCobro() != null && faltaCobro()! > 0) { <p class="modal-efectivo__error">Faltan {{ faltaCobro() | currency:'EUR':'symbol':'1.2-2' }}</p> }
+                  @if (importeRecibido() != null && cambioCobro() != null && cambioCobro()! >= 0) { <p class="modal-efectivo__cambio">Cambio: <strong>{{ cambioCobro() | currency:'EUR':'symbol':'1.2-2' }}</strong></p> }
                 </div>
               }
-
               @if (metodoPago() === 'TARJETA') {
                 <div class="modal-tarjeta">
                   <h4>Pago con tarjeta</h4>
-                  <p>
-                    Pago simulado por datáfono. Al confirmar, la operación se marcará como autorizada.
-                  </p>
+                  <p>Pago simulado por datáfono. Al confirmar, la operación se marcará como autorizada.</p>
                 </div>
               }
-
               <div class="modal-total">
                 <span>Total seleccionado</span>
-                <strong>
-                  {{ totalCobro() == null ? '0,00 €' : (totalCobro() | currency:'EUR':'symbol':'1.2-2') }}
-                </strong>
+                <strong>{{ totalCobro() == null ? '0,00 €' : (totalCobro() | currency:'EUR':'symbol':'1.2-2') }}</strong>
               </div>
-
-              <p class="modal-aviso">
-                Si seleccionas todos los productos, la cuenta quedará pagada completa.
-                Si seleccionas solo algunos, se registrará un pago parcial.
-              </p>
-
+              <p class="modal-aviso">Si seleccionas todos los productos, la cuenta quedará pagada completa. Si seleccionas solo algunos, se registrará un pago parcial.</p>
               <div class="modal-acciones">
-                <button
-                  type="button"
-                  class="modal-btn modal-btn--secundario"
-                  (click)="cerrarModalCobro()"
-                  [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">
-                  Cancelar
-                </button>
-
-                <button
-                  type="button"
-                  class="modal-btn modal-btn--principal"
-                  (click)="confirmarCobro()"
-                  [disabled]="!puedeConfirmarCobro()">
-                  <span class="modal-btn__label">
-                    {{ procesandoCobro() ? 'Cobrando...' : 'Confirmar pago' }}
-                  </span>
-                </button>
+                <button type="button" class="modal-btn modal-btn--secundario" (click)="cerrarModalCobro()" [disabled]="procesandoCobro() || eliminandoOrdenId() !== null || mostrarConfirmacionEliminar()">Cancelar</button>
+                <button type="button" class="modal-btn modal-btn--principal" (click)="confirmarCobro()" [disabled]="!puedeConfirmarCobro()"><span class="modal-btn__label">{{ procesandoCobro() ? 'Cobrando...' : 'Confirmar pago' }}</span></button>
               </div>
             </div>
           </div>
@@ -361,33 +177,11 @@
     <div class="modal-overlay modal-overlay--confirmacion" (click)="cancelarConfirmacionEliminar()">
       <div class="modal-confirmacion" (click)="$event.stopPropagation()">
         <h4>Eliminar producto</h4>
-
-        <p>
-          Vas a eliminar {{ ordenesPendientesEliminar().length }} unidad{{ ordenesPendientesEliminar().length === 1 ? '' : 'es' }} de
-          <strong>"{{ itemPendienteEliminar()?.nombre }}"</strong>
-          del recibo.
-        </p>
-
-        <p class="modal-confirmacion__texto-secundario">
-          Esta acción es manual y reducirá la cuenta.
-        </p>
-
+        <p>Vas a eliminar {{ ordenesPendientesEliminar().length }} unidad(es) de <strong>"{{ itemPendienteEliminar()?.nombre }}"</strong> del recibo.</p>
+        <p class="modal-confirmacion__texto-secundario">Esta acción es manual y reducirá la cuenta.</p>
         <div class="modal-confirmacion__acciones">
-          <button
-            type="button"
-            class="modal-btn modal-btn--secundario"
-            (click)="cancelarConfirmacionEliminar()"
-            [disabled]="eliminandoOrdenId() !== null">
-            Cancelar
-          </button>
-
-          <button
-            type="button"
-            class="modal-btn modal-btn--danger"
-            (click)="confirmarEliminarUnidad()"
-            [disabled]="eliminandoOrdenId() !== null">
-            {{ eliminandoOrdenId() !== null ? 'Eliminando...' : 'Eliminar' }}
-          </button>
+          <button type="button" class="modal-btn modal-btn--secundario" (click)="cancelarConfirmacionEliminar()" [disabled]="eliminandoOrdenId() !== null">Cancelar</button>
+          <button type="button" class="modal-btn modal-btn--danger" (click)="confirmarEliminarUnidad()" [disabled]="eliminandoOrdenId() !== null">{{ eliminandoOrdenId() !== null ? 'Eliminando...' : 'Eliminar' }}</button>
         </div>
       </div>
     </div>
@@ -397,33 +191,31 @@
     <div class="modal-overlay modal-overlay--confirmacion" (click)="cancelarConfirmacionLiberar()">
       <div class="modal-confirmacion" (click)="$event.stopPropagation()">
         <h4>Liberar mesa</h4>
-
-        <p>
-          Se cancelaran todos los productos de la cuenta y la mesa quedara libre.
-        </p>
-
-        <p class="modal-confirmacion__texto-secundario">
-          Usa esta accion solo para corregir errores.
-        </p>
-
+        <p>Se cancelaran todos los productos de la cuenta y la mesa quedara libre.</p>
+        <p class="modal-confirmacion__texto-secundario">Usa esta accion solo para corregir errores.</p>
         <div class="modal-confirmacion__acciones">
-          <button
-            type="button"
-            class="modal-btn modal-btn--secundario"
-            (click)="cancelarConfirmacionLiberar()"
-            [disabled]="accionMesaId() !== null">
-            Cancelar
-          </button>
-
-          <button
-            type="button"
-            class="modal-btn modal-btn--danger"
-            (click)="confirmarLiberarMesa()"
-            [disabled]="accionMesaId() !== null">
-            {{ accionMesaId() !== null ? 'Liberando...' : 'Confirmar liberacion' }}
-          </button>
+          <button type="button" class="modal-btn modal-btn--secundario" (click)="cancelarConfirmacionLiberar()" [disabled]="accionMesaId() !== null">Cancelar</button>
+          <button type="button" class="modal-btn modal-btn--danger" (click)="confirmarLiberarMesa()" [disabled]="accionMesaId() !== null">{{ accionMesaId() !== null ? 'Liberando...' : 'Confirmar liberacion' }}</button>
         </div>
       </div>
     </div>
+  }
+
+  @if (mostrarAvisoReservaModal()) {
+    <div class="modal-overlay modal-overlay--confirmacion">
+      <div class="modal-confirmacion">
+        <h4>⚠️ Mesa con reserva próxima</h4>
+        <p>Esta mesa tiene una reserva asignada en <strong>{{ avisoReservaMinutos() }} minutos</strong>.</p>
+        <p class="modal-confirmacion__texto-secundario">¿Estás seguro de que deseas sentar clientes de paso (Walk-ins)? Asegúrate de que terminen a tiempo.</p>
+        <div class="modal-confirmacion__acciones">
+          <button type="button" class="modal-btn modal-btn--secundario" (click)="mostrarAvisoReservaModal.set(false)">Cancelar</button>
+          <button type="button" class="modal-btn modal-btn--danger" (click)="confirmarOcuparConAviso()">Sí, Ocupar Mesa</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  @if (mostrarReservas()) {
+    <app-reservas (cerrar)="mostrarReservas.set(false)"></app-reservas>
   }
 </div>

@@ -96,6 +96,15 @@
       [disabled]="accionEnCurso">
       Ocupar mesa
     </button>
+  } @else if (mesa.estado === 'reservada' || mesa.estado === 'proximamente-reservada') {
+    <button
+      type="button"
+      class="accion-principal"
+      style="background: #a566ca; color: white;"
+      (click)="ocupar.emit(mesa.id)"
+      [disabled]="accionEnCurso">
+      Ocupar (Reserva)
+    </button>
   } @else {
     <button
       type="button"

@@ -32,6 +32,14 @@
   background: #c71919;
 }
 
+.mesa-card.reservada {
+  background: #a566ca;
+}
+
+.mesa-card.proximamente-reservada {
+  background: #FF9800;
+}
+
 .mesa-card.seleccionada {
   border-color: #4a4a4a;
   box-shadow:
@@ -67,4 +75,17 @@
   font-weight: 700;
   min-width: 54px;
   text-align: center;
+}
+
+.mesa-card__badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: white;
+  color: #333;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }

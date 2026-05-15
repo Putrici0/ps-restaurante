@@ -149,13 +149,36 @@
 
 .grid-mesas {
   width: 100%;
-  max-width: 1020px;
+  max-width: 1060px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(3, 300px);
   justify-content: center;
   gap: 50px 80px;
   padding: 8px;
+}
+
+/* TERRAZA STAGGERED 3-2-3 */
+.grid-mesas--terraza {
+  grid-template-columns: repeat(6, 140px); /* Rejilla de 6 para permitir centrado */
+  gap: 50px 30px;
+}
+
+.grid-mesas--terraza .mesa-grid-cell {
+  grid-column: span 2;
+}
+
+/* Fila 2 (mesas 4 y 5): Centradas */
+.grid-mesas--terraza .mesa-grid-cell:nth-child(4) {
+  grid-column: 2 / span 2;
+}
+.grid-mesas--terraza .mesa-grid-cell:nth-child(5) {
+  grid-column: 4 / span 2;
+}
+
+/* Asegurar que la fila 3 empiece en columna 1 */
+.grid-mesas--terraza .mesa-grid-cell:nth-child(6) {
+  grid-column: 1 / span 2;
 }
 
 .mesa-grid-cell {
@@ -910,3 +933,46 @@
   font-size: 0.92rem;
   color: #555;
 }
+
+/* NUEVOS ESTILOS DE RESERVAS EN EL PLANO */
+.mesa-grid-cell--reservada .mesa-visual {
+  background: #a566ca !important; /* Morado para reservadas */
+}
+
+.mesa-grid-cell--proximamente-reservada .mesa-visual {
+  background: #FF9800 !important; /* Naranja para reserva próxima */
+}
+
+/* Indicadores de atención para mesas ocupadas que caducan */
+.mesa-grid-cell--proxima .mesa-visual {
+  box-shadow: 0 0 0 4px #ffc107;
+}
+
+.mesa-grid-cell--alerta .mesa-visual {
+  box-shadow: 0 0 0 4px #ff5252;
+  animation: pulse-danger 1.5s infinite;
+}
+
+@keyframes pulse-danger {
+  0% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0.7); }
+  70% { box-shadow: 0 0 0 8px rgba(255, 82, 82, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 82, 82, 0); }
+}
+
+/* Etiquetas (Badges) visuales sobre la mesa */
+.badge-estado {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: white;
+  z-index: 5;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.badge-reservada { background: #6a1b9a; }
+.badge-proxima { background: #ff9800; }
+.badge-alerta { background: #d32f2f; }

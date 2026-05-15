@@ -1,4 +1,4 @@
-export type EstadoMesa = 'libre' | 'ocupada';
+export type EstadoMesa = 'libre' | 'ocupada' | 'reservada' | 'proximamente-reservada';
 export type ZonaMesa = 'interior' | 'terraza';
 
 export interface MesaApi {
