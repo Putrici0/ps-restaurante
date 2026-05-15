@@ -37,10 +37,25 @@ import service.application.PedidoApplicationService;
 import util.ApiError;
 import util.MesaSeeder;
 import util.PlatoSeeder;
+import controller.TiqueController;
+import io.github.cdimascio.dotenv.Dotenv;
+import service.TiqueEmailService;
 
 public class Main {
 
     public static void main(String[] args) {
+        Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
+
+        if (dotenv.get("EMAIL_FROM") == null) {
+            dotenv = Dotenv.configure().directory("..").ignoreIfMissing().load();
+        }
+        if (dotenv.get("EMAIL_FROM") != null) {
+            dotenv.entries().forEach(entry -> System.setProperty(entry.getKey(), entry.getValue()));
+            System.out.println("✅ Variables de entorno cargadas desde .env (Email: " + dotenv.get("EMAIL_FROM") + ")");
+        } else {
+            System.out.println("⚠️ No se encontró el archivo .env o faltan variables.");
+        }
+
         FirebaseConfig.init();
         Firestore db = FirestoreClientProvider.getFirestore();
 
@@ -67,6 +82,7 @@ public class Main {
         PedidoService pedidoService = new PedidoService(pedidoRepository, cuentaRepository);
         OrdenService ordenService = new OrdenService(ordenRepository, pedidoRepository, platoRepository);
         NotificacionService notificacionService = new NotificacionService(notificacionRepository, cuentaRepository);
+        TiqueEmailService tiqueEmailService = new TiqueEmailService();
 
         MesaApplicationService mesaApplicationService = new MesaApplicationService(
                 mesaRepository,
@@ -130,6 +146,8 @@ public class Main {
                 notificacionApplicationService
         );
 
+        TiqueController tiqueController = new TiqueController(tiqueEmailService);
+
         Javalin app = Javalin.create(config -> {
             config.jsonMapper(new JavalinJackson(objectMapper, false));
             config.bundledPlugins.enableCors(cors -> cors.addRule(rule -> rule.anyHost()));
@@ -144,6 +162,7 @@ public class Main {
             config.routes.apiBuilder(pedidoController.routes());
             config.routes.apiBuilder(ordenController.routes());
             config.routes.apiBuilder(notificacionController.routes());
+            config.routes.apiBuilder(tiqueController.routes());
 
             config.routes.exception(IllegalArgumentException.class, (e, ctx) -> {
                 ctx.status(400);

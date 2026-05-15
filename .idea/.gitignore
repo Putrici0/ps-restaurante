@@ -13,6 +13,6 @@ target/
 *.iml
 **/target/
 *.class
-
+.env
 backend/src/main/resources/firebase-key.json
 firebase-key.json

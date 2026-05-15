@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { forkJoin } from 'rxjs';
+import jsPDF from 'jspdf';
 
 import { Navbar } from '../../../shared/navbar/navbar';
 import {
@@ -38,6 +39,7 @@ interface PagoDetalleAgrupado {
 })
 export class HistorialComponent {
   private readonly cuentaApi = inject(CuentaApiService);
+  private readonly apiUrl = `http://${window.location.hostname}:7070`;
 
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
@@ -54,6 +56,11 @@ export class HistorialComponent {
   readonly cuentaDetalle = signal<CuentaDetalleResponse | null>(null);
   readonly ordenesDetalle = signal<OrdenCuentaResponse[]>([]);
   readonly totalDetalle = signal<number>(0);
+
+  readonly mostrarModalCorreo = signal(false);
+  readonly correoTique = signal('');
+  readonly errorCorreoTique = signal<string | null>(null);
+  readonly enviandoTique = signal(false);
 
   readonly cuentasFiltradas = computed(() => {
     const filtroMesa = this.mesaFiltro().trim().toLowerCase();
@@ -178,6 +185,159 @@ export class HistorialComponent {
       },
     });
   }
+  descargarTique(): void {
+    const pdf = this.construirPdfTique();
+    pdf.save(this.obtenerNombreArchivoTique());
+  }
+  enviarTique(): void {
+    this.correoTique.set('');
+    this.errorCorreoTique.set(null);
+    this.mostrarModalCorreo.set(true);
+  }
+  actualizarCorreoTique(valor: string): void {
+    this.correoTique.set(valor);
+    this.errorCorreoTique.set(null);
+  }
+  cerrarModalCorreo(): void {
+    if (this.enviandoTique()) {
+      return;
+    }
+    this.mostrarModalCorreo.set(false);
+    this.correoTique.set('');
+    this.errorCorreoTique.set(null);
+  }
+  confirmarEnvioTique(): void {
+    const correo = this.correoTique().trim();
+    if (!correo) {
+      this.errorCorreoTique.set('Introduce un correo.');
+      return;
+    }
+    if (!this.esCorreoValido(correo)) {
+      this.errorCorreoTique.set('Correo no válido.');
+      return;
+    }
+    this.enviandoTique.set(true);
+    this.errorCorreoTique.set(null);
+    const pdf = this.construirPdfTique();
+    const pdfBase64 = pdf.output('datauristring');
+    fetch(`${this.apiUrl}/tiques/enviar`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        correo,
+        nombreArchivo: this.obtenerNombreArchivoTique(),
+        pdfBase64,
+      }),
+    })
+      .then(async (respuesta) => {
+        if (!respuesta.ok) {
+          const error = await respuesta.json().catch(() => null);
+          throw new Error(error?.error ?? error?.message ?? 'No se pudo enviar el tique');
+        }
+        return respuesta.json();
+      })
+      .then(() => {
+        this.enviandoTique.set(false);
+        this.cerrarModalCorreo();
+        alert(`Tique enviado correctamente a ${correo}`);
+      })
+      .catch((error) => {
+        console.error('Error enviando tique:', error);
+        this.enviandoTique.set(false);
+        this.errorCorreoTique.set(error.message ?? 'No se pudo enviar el tique');
+      });
+  }
+  private construirPdfTique(): jsPDF {
+    const pdf = new jsPDF();
+    const margenIzq = 14;
+    const margenDer = 196;
+    let y = 18;
+    const saltarPaginaSiHaceFalta = () => {
+      if (y > 280) {
+        pdf.addPage();
+        y = 18;
+      }
+    };
+    const escribirTexto = (
+      texto: string,
+      x = margenIzq,
+      salto = 7,
+      opciones?: { negrita?: boolean; tamano?: number },
+    ) => {
+      pdf.setFontSize(opciones?.tamano ?? 11);
+      pdf.setFont('helvetica', opciones?.negrita ? 'bold' : 'normal');
+      const lineas = pdf.splitTextToSize(texto, margenDer - margenIzq);
+      for (const linea of lineas) {
+        saltarPaginaSiHaceFalta();
+        pdf.text(linea, x, y);
+        y += salto;
+      }
+    };
+    const escribirImporte = (texto: string, importe: number) => {
+      saltarPaginaSiHaceFalta();
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(texto, margenIzq, y);
+      pdf.text(`${importe.toFixed(2)} €`, margenDer, y, { align: 'right' });
+      y += 7;
+    };
+    const cuenta = this.cuentaDetalle();
+    escribirTexto('TIQUE - PS RESTAURANTE', margenIzq, 9, {
+      negrita: true,
+      tamano: 17,
+    });
+    escribirTexto(`Mesa: ${this.obtenerMesaDetalle()}`);
+    escribirTexto(`Fecha: ${new Date().toLocaleString('es-ES')}`);
+    if (cuenta?.fechaPago) {
+      escribirTexto(`Fecha de pago: ${this.formatearFecha(cuenta.fechaPago)}`);
+    }
+    escribirTexto(`Método de pago: ${this.obtenerMetodoPagoDetalle()}`);
+    y += 4;
+    pdf.line(margenIzq, y, margenDer, y);
+    y += 9;
+    escribirTexto('Productos', margenIzq, 8, { negrita: true, tamano: 13 });
+    for (const item of this.detalleAgrupado()) {
+      escribirImporte(`${item.cantidad}x ${item.nombre}`, item.subtotal);
+    }
+    y += 4;
+    pdf.line(margenIzq, y, margenDer, y);
+    y += 9;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13);
+    pdf.text('TOTAL', margenIzq, y);
+    pdf.text(`${this.totalDetalle().toFixed(2)} €`, margenDer, y, { align: 'right' });
+    y += 12;
+    const pagos = this.pagosDetalle();
+    if (pagos.length > 0) {
+      escribirTexto('Pagos', margenIzq, 8, { negrita: true, tamano: 13 });
+      for (const pago of pagos) {
+        escribirTexto(
+          `Pago ${pago.numero} - Método: ${pago.metodoPago}${
+            pago.fechaPago ? ` - ${this.formatearFecha(pago.fechaPago)}` : ''
+          }`,
+          margenIzq,
+          7,
+          { negrita: true },
+        );
+        for (const item of pago.items) {
+          escribirImporte(`  ${item.cantidad}x ${item.nombre}`, item.subtotal);
+        }
+        escribirImporte('  Total pago', pago.total);
+        y += 4;
+      }
+    }
+    return pdf;
+  }
+  private obtenerNombreArchivoTique(): string {
+    const mesa = this.obtenerMesaDetalle();
+    const fecha = new Date().toISOString().slice(0, 10);
+    return `tique-mesa-${mesa}-${fecha}.pdf`;
+  }
+  private esCorreoValido(correo: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
+  }
 
   cerrarDetalle(): void {
     this.mostrarDetalle.set(false);
@@ -185,6 +345,7 @@ export class HistorialComponent {
     this.cuentaDetalle.set(null);
     this.ordenesDetalle.set([]);
     this.totalDetalle.set(0);
+    this.cerrarModalCorreo();
   }
 
   formatearFecha(fechaIso: string): string {

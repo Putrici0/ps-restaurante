@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import jsPDF from 'jspdf';
 import { catchError, forkJoin, of, take } from 'rxjs';
 import { Header } from '../../../shared/header/header';
 import {
@@ -58,6 +59,11 @@ export class BillPage implements OnInit, OnDestroy {
   readonly vistaPago = signal<'ninguna' | 'seleccion' | 'tarjeta'>('ninguna');
   readonly seleccionCantidadPorPlato = signal<Record<string, number>>({});
   readonly avisoPago = signal<string | null>(null);
+
+  readonly mostrarModalCorreo = signal(false);
+  readonly correoTique = signal('');
+  readonly errorCorreoTique = signal<string | null>(null);
+  readonly enviandoTique = signal(false);
 
   numeroTarjeta = '';
   nombreCompleto = '';
@@ -221,6 +227,65 @@ export class BillPage implements OnInit, OnDestroy {
       !this.cuentaCerrada() &&
       this.itemsPendientes().length > 0
     );
+  });
+  readonly totalCuenta = computed(() => {
+    return this.ordenes().reduce((acc, o) => acc + Number(o.precio), 0);
+  });
+  readonly itemsAgrupadosParaTique = computed(() => {
+    const ordenesNoCanceladas = this.ordenes().filter(o => o.ordenEstado !== 'Cancelado');
+    const mapa = new Map<string, any>();
+    for (const orden of ordenesNoCanceladas) {
+      const plato = orden.plato;
+      const platoId = plato.id;
+      const nombre = plato.nombre;
+      const precioUnitario = Number(orden.precio);
+      if (!mapa.has(platoId)) {
+        mapa.set(platoId, {
+          nombre,
+          cantidad: 0,
+          subtotal: 0,
+        });
+      }
+      const item = mapa.get(platoId);
+      item.cantidad += 1;
+      item.subtotal += precioUnitario;
+    }
+    return Array.from(mapa.values());
+  });
+  readonly pagosAgrupadosParaTique = computed(() => {
+    const ordenesPagadas = this.ordenes().filter(o => o.pagada && o.ordenEstado !== 'Cancelado');
+    const mapa = new Map<string, any[]>();
+    for (const orden of ordenesPagadas) {
+      const fechaPago = orden.fechaPago ?? 'SIN_FECHA';
+      const metodoPago = orden.metodoPago ?? 'SIN_METODO';
+      const clave = `${fechaPago}-${metodoPago}`;
+      if (!mapa.has(clave)) {
+        mapa.set(clave, []);
+      }
+      mapa.get(clave)!.push(orden);
+    }
+    return Array.from(mapa.entries()).map(([clave, ordenesPago], index) => {
+      const fechaPago = ordenesPago[0].fechaPago ?? '';
+      const metodoPago = ordenesPago[0].metodoPago ?? '-';
+      const itemsMapa = new Map<string, any>();
+      for (const o of ordenesPago) {
+        const pId = o.plato.id;
+        if (!itemsMapa.has(pId)) {
+          itemsMapa.set(pId, { nombre: o.plato.nombre, cantidad: 0, subtotal: 0 });
+        }
+        const it = itemsMapa.get(pId);
+        it.cantidad += 1;
+        it.subtotal += Number(o.precio);
+      }
+      return {
+        clave,
+        numero: index + 1,
+        fechaPago,
+        metodoPago,
+        total: ordenesPago.reduce((acc, o) => acc + Number(o.precio), 0),
+        items: Array.from(itemsMapa.values())
+      };
+    });
   });
 
   ngOnInit(): void {
@@ -404,6 +469,137 @@ export class BillPage implements OnInit, OnDestroy {
     const img = event.target as HTMLImageElement;
     img.src =
       'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=1200&auto=format&fit=crop';
+  }
+
+  descargarTique(): void {
+    const pdf = this.construirPdfTique();
+    pdf.save(this.obtenerNombreArchivoTique());
+  }
+  enviarTique(): void {
+    this.correoTique.set('');
+    this.errorCorreoTique.set(null);
+    this.mostrarModalCorreo.set(true);
+  }
+  actualizarCorreoTique(valor: string): void {
+    this.correoTique.set(valor);
+    this.errorCorreoTique.set(null);
+  }
+  cerrarModalCorreo(): void {
+    if (this.enviandoTique()) {
+      return;
+    }
+    this.mostrarModalCorreo.set(false);
+    this.correoTique.set('');
+    this.errorCorreoTique.set(null);
+  }
+  confirmarEnvioTique(): void {
+    const correo = this.correoTique().trim();
+    if (!correo) {
+      this.errorCorreoTique.set('Introduce un correo.');
+      return;
+    }
+    if (!this.esCorreoValido(correo)) {
+      this.errorCorreoTique.set('Correo no válido.');
+      return;
+    }
+    this.enviandoTique.set(true);
+    this.errorCorreoTique.set(null);
+    const pdf = this.construirPdfTique();
+    const pdfBase64 = pdf.output('datauristring');
+    fetch('http://localhost:7070/tiques/enviar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        correo,
+        nombreArchivo: this.obtenerNombreArchivoTique(),
+        pdfBase64,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const err = await res.json().catch(() => null);
+          throw new Error(err?.message ?? 'No se pudo enviar el tique');
+        }
+        return res.json();
+      })
+      .then(() => {
+        this.enviandoTique.set(false);
+        this.cerrarModalCorreo();
+        alert(`Tique enviado correctamente a ${correo}`);
+      })
+      .catch((err) => {
+        this.enviandoTique.set(false);
+        this.errorCorreoTique.set(err.message ?? 'No se pudo enviar el tique');
+      });
+  }
+  private construirPdfTique(): jsPDF {
+    const pdf = new jsPDF();
+    const margenIzq = 14;
+    const margenDer = 196;
+    let y = 18;
+    const saltarPaginaSiHaceFalta = () => {
+      if (y > 280) { pdf.addPage(); y = 18; }
+    };
+    const escribirTexto = (t: string, x = margenIzq, salto = 7, op?: any) => {
+      pdf.setFontSize(op?.tamano ?? 11);
+      pdf.setFont('helvetica', op?.negrita ? 'bold' : 'normal');
+      const lineas = pdf.splitTextToSize(t, margenDer - margenIzq);
+      for (const l of lineas) {
+        saltarPaginaSiHaceFalta();
+        pdf.text(l, x, y);
+        y += salto;
+      }
+    };
+    const escribirImporte = (t: string, imp: number) => {
+      saltarPaginaSiHaceFalta();
+      pdf.setFontSize(11); pdf.setFont('helvetica', 'normal');
+      pdf.text(t, margenIzq, y);
+      pdf.text(`${imp.toFixed(2)} €`, margenDer, y, { align: 'right' });
+      y += 7;
+    };
+    escribirTexto('TIQUE - PS RESTAURANTE', margenIzq, 9, { negrita: true, tamano: 17 });
+    escribirTexto(`Mesa: ${this.mesaId}`);
+    escribirTexto(`Fecha: ${new Date().toLocaleString('es-ES')}`);
+    const cuenta = this.cuentaActiva();
+    if (cuenta?.fechaPago) {
+      escribirTexto(`Fecha de pago: ${this.formatearFecha(cuenta.fechaPago)}`);
+    }
+    y += 4; pdf.line(margenIzq, y, margenDer, y); y += 9;
+    escribirTexto('Productos', margenIzq, 8, { negrita: true, tamano: 13 });
+    for (const item of this.itemsAgrupadosParaTique()) {
+      escribirImporte(`${item.cantidad}x ${item.nombre}`, item.subtotal);
+    }
+    y += 4; pdf.line(margenIzq, y, margenDer, y); y += 9;
+    pdf.setFont('helvetica', 'bold'); pdf.setFontSize(13);
+    pdf.text('TOTAL', margenIzq, y);
+    pdf.text(`${this.totalCuenta().toFixed(2)} €`, margenDer, y, { align: 'right' });
+    y += 12;
+    const pagos = this.pagosAgrupadosParaTique();
+    if (pagos.length > 0) {
+      escribirTexto('Pagos', margenIzq, 8, { negrita: true, tamano: 13 });
+      for (const pago of pagos) {
+        escribirTexto(`Pago ${pago.numero} - Método: ${pago.metodoPago}${pago.fechaPago ? ` - ${this.formatearFecha(pago.fechaPago)}` : ''}`, margenIzq, 7, { negrita: true });
+        for (const item of pago.items) {
+          escribirImporte(`  ${item.cantidad}x ${item.nombre}`, item.subtotal);
+        }
+        escribirImporte('  Total pago', pago.total);
+        y += 4;
+      }
+    }
+    return pdf;
+  }
+  private obtenerNombreArchivoTique(): string {
+    const fecha = new Date().toISOString().slice(0, 10);
+    return `tique-mesa-${this.mesaId}-${fecha}.pdf`;
+  }
+  private esCorreoValido(correo: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
+  }
+  formatearFecha(fechaIso: string): string {
+    const fecha = new Date(fechaIso);
+    return new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+    }).format(fecha);
   }
 
   trackByItemAgrupado(_: number, item: ItemCuentaAgrupado): string {

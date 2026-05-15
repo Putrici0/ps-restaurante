@@ -71,6 +71,16 @@
                 La cuenta esta completamente pagada.
               </p>
             }
+            <div class="confirmacion-acciones-finales">
+            <button type="button" class="confirmacion-accion-final" (click)="descargarTique()">
+              Descargar tique
+            </button>
+            <button type="button" class="confirmacion-accion-final" (click)="enviarTique()">
+              Enviar tique
+            </button>
+          </div>
+
+
 
             <button
               type="button"
@@ -304,6 +314,42 @@
           }
         </button>
       </section>
+    </div>
+  }
+
+  @if (mostrarModalCorreo()) {
+    <div class="payment-overlay" (click)="cerrarModalCorreo()">
+      <div class="correo-modal" (click)="$event.stopPropagation()">
+        <div class="correo-modal__header">
+          <h3>Enviar tique por correo</h3>
+          <button type="button" class="correo-modal__cerrar" (click)="cerrarModalCorreo()">✕</button>
+        </div>
+        <p class="correo-modal__texto">
+          Introduce el correo al que quieres enviar el tique de tu mesa.
+        </p>
+        <label class="correo-modal__label" for="correoTique">
+          Correo electrónico
+        </label>
+        <input
+          id="correoTique"
+          class="correo-modal__input"
+          type="email"
+          placeholder="correo@ejemplo.com"
+          [value]="correoTique()"
+          (input)="actualizarCorreoTique($any($event.target).value)"
+        />
+        @if (errorCorreoTique()) {
+          <p class="correo-modal__error">{{ errorCorreoTique() }}</p>
+        }
+        <div class="correo-modal__acciones">
+          <button type="button" class="correo-modal__cancelar" (click)="cerrarModalCorreo()">
+            Cancelar
+          </button>
+          <button type="button" class="correo-modal__enviar" (click)="confirmarEnvioTique()">
+            {{ enviandoTique() ? 'Enviando...' : 'Enviar tique' }}
+          </button>
+        </div>
+      </div>
     </div>
   }
 </section>

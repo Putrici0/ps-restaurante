@@ -94,7 +94,15 @@
         } @else {
           <div class="historial-modal__header">
             <h3>Detalle de la cuenta</h3>
-            <button type="button" (click)="cerrarDetalle()">✕</button>
+            <div class="historial-modal__acciones">
+              <button type="button" class="historial-modal__accion" (click)="descargarTique()">
+                Descargar tique
+              </button>
+              <button type="button" class="historial-modal__accion" (click)="enviarTique()">
+                Compartir tique
+              </button>
+              <button type="button" class="historial-modal__cerrar" (click)="cerrarDetalle()">✕</button>
+            </div>
           </div>
 
           <div class="historial-modal__meta">
@@ -165,6 +173,57 @@
             </div>
           </div>
         }
+      </div>
+    </div>
+  }
+
+  @if (mostrarModalCorreo()) {
+    <div class="historial-correo-overlay" (click)="cerrarModalCorreo()">
+      <div class="historial-correo-modal" (click)="$event.stopPropagation()">
+        <div class="historial-correo-modal__header">
+          <h3>Enviar tique por correo</h3>
+          <button type="button" class="historial-modal__cerrar" (click)="cerrarModalCorreo()">✕</button>
+        </div>
+
+        <p class="historial-correo-modal__texto">
+          Introduce el correo al que quieres enviar el tique.
+        </p>
+
+        <label class="historial-correo-modal__label" for="correoTiqueHistorial">
+          Correo
+        </label>
+        <input
+          id="correoTiqueHistorial"
+          type="email"
+          class="historial-correo-modal__input"
+          [value]="correoTique()"
+          (input)="actualizarCorreoTique($any($event.target).value)"
+          [disabled]="enviandoTique()"
+          autocomplete="email"
+        />
+
+        @if (errorCorreoTique()) {
+          <p class="historial-correo-modal__error">{{ errorCorreoTique() }}</p>
+        }
+
+        <div class="historial-correo-modal__acciones">
+          <button
+            type="button"
+            class="historial-correo-modal__cancelar"
+            (click)="cerrarModalCorreo()"
+            [disabled]="enviandoTique()"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            class="historial-correo-modal__enviar"
+            (click)="confirmarEnvioTique()"
+            [disabled]="enviandoTique()"
+          >
+            {{ enviandoTique() ? 'Enviando...' : 'Enviar tique' }}
+          </button>
+        </div>
       </div>
     </div>
   }
