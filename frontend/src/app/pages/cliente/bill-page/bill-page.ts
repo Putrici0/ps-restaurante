@@ -73,6 +73,7 @@ export class BillPage implements OnInit, OnDestroy {
   readonly cuentaIdTicketSnapshot = signal<string | null>(null);
   readonly fechaPagoTicketSnapshot = signal<string | null>(null);
   readonly metodoPagoTicketSnapshot = signal<string | null>(null);
+  readonly ordenesPagoActualTicketIds = signal<string[] | null>(null);
 
   numeroTarjeta = '';
   nombreCompleto = '';
@@ -268,7 +269,13 @@ export class BillPage implements OnInit, OnDestroy {
     return Array.from(mapa.values());
   });
   readonly pagosAgrupadosParaTique = computed(() => {
-    const ordenesPagadas = this.ordenesParaTicket().filter(o => o.pagada && o.ordenEstado !== 'Cancelado');
+    const idsPagoActual = this.mostrarConfirmacionPago() ? this.ordenesPagoActualTicketIds() : null;
+    const filtroIds = idsPagoActual ? new Set(idsPagoActual) : null;
+    const ordenesPagadas = this.ordenesParaTicket().filter(o =>
+      o.pagada &&
+      o.ordenEstado !== 'Cancelado' &&
+      (!filtroIds || filtroIds.has(o.id))
+    );
     const mapa = new Map<string, any[]>();
     for (const orden of ordenesPagadas) {
       const fechaPago = orden.fechaPago ?? 'SIN_FECHA';
@@ -463,7 +470,7 @@ export class BillPage implements OnInit, OnDestroy {
       next: (cuentaPagada) => {
         const importePagado = this.totalSeleccionado();
         const cuentaActual = this.cuentaActiva();
-        const fechaPago = cuentaPagada?.fechaPago ?? cuentaActual?.fechaPago ?? null;
+        const fechaPago = cuentaPagada?.fechaPago ?? cuentaActual?.fechaPago ?? new Date().toISOString();
         const metodoPago = cuentaPagada?.metodoPago ?? 'TARJETA';
         const ordenesSnapshot = this.ordenes().map((o) => {
           if (o.ordenEstado === 'Cancelado') {
@@ -483,6 +490,7 @@ export class BillPage implements OnInit, OnDestroy {
           };
         });
         this.ordenesTicketSnapshot.set(ordenesSnapshot);
+        this.ordenesPagoActualTicketIds.set([...ordenesSeleccionadas]);
         this.mesasTicketSnapshot.set((cuentaActual?.mesas ?? []).map((m) => m.id).filter(Boolean));
         this.cuentaIdTicketSnapshot.set(cuentaPagada?.id ?? cuentaActual?.id ?? null);
         this.fechaPagoTicketSnapshot.set(fechaPago);
