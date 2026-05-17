@@ -40,6 +40,7 @@ interface PagoDetalleAgrupado {
 export class HistorialComponent {
   private readonly cuentaApi = inject(CuentaApiService);
   private readonly apiUrl = `http://${window.location.hostname}:7070`;
+  private toastTimeoutRef?: number;
 
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
@@ -61,6 +62,9 @@ export class HistorialComponent {
   readonly correoTique = signal('');
   readonly errorCorreoTique = signal<string | null>(null);
   readonly enviandoTique = signal(false);
+  readonly showToast = signal(false);
+  readonly toastMessage = signal('');
+  readonly toastTipo = signal<'ok' | 'error'>('ok');
 
   readonly cuentasFiltradas = computed(() => {
     const filtroMesa = this.mesaFiltro().trim().toLowerCase();
@@ -234,19 +238,19 @@ export class HistorialComponent {
       .then(async (respuesta) => {
         if (!respuesta.ok) {
           const error = await respuesta.json().catch(() => null);
-          throw new Error(error?.error ?? error?.message ?? 'No se pudo enviar el tique');
+          throw new Error(error?.error ?? error?.message ?? 'No se pudo enviar el ticket');
         }
         return respuesta.json();
       })
       .then(() => {
         this.enviandoTique.set(false);
         this.cerrarModalCorreo();
-        alert(`Tique enviado correctamente a ${correo}`);
+        this.mostrarToast(`Ticket enviado correctamente a ${correo}`, 'ok');
       })
       .catch((error) => {
-        console.error('Error enviando tique:', error);
+        console.error('Error enviando ticket:', error);
         this.enviandoTique.set(false);
-        this.errorCorreoTique.set(error.message ?? 'No se pudo enviar el tique');
+        this.errorCorreoTique.set(error.message ?? 'No se pudo enviar el ticket');
       });
   }
   private construirPdfTique(): jsPDF {
@@ -254,6 +258,10 @@ export class HistorialComponent {
     const margenIzq = 14;
     const margenDer = 196;
     let y = 18;
+    const ahora = new Date();
+    const cuenta = this.cuentaDetalle();
+    const mesaTexto = this.obtenerMesaDetalle();
+    const identificador = `TK-${ahora.getFullYear()}${String(ahora.getMonth() + 1).padStart(2, '0')}${String(ahora.getDate()).padStart(2, '0')}-${cuenta?.id?.slice(-6).toUpperCase() ?? 'SINID'}`;
     const saltarPaginaSiHaceFalta = () => {
       if (y > 280) {
         pdf.addPage();
@@ -283,17 +291,18 @@ export class HistorialComponent {
       pdf.text(`${importe.toFixed(2)} €`, margenDer, y, { align: 'right' });
       y += 7;
     };
-    const cuenta = this.cuentaDetalle();
-    escribirTexto('TIQUE - PS RESTAURANTE', margenIzq, 9, {
+    escribirTexto('RESTAURANTE EJEMPLO', margenIzq, 8, {
       negrita: true,
-      tamano: 17,
+      tamano: 15,
     });
-    escribirTexto(`Mesa: ${this.obtenerMesaDetalle()}`);
-    escribirTexto(`Fecha: ${new Date().toLocaleString('es-ES')}`);
+    escribirTexto('TICKET');
+    escribirTexto(`No. ticket: ${identificador}`);
+    escribirTexto(`Fecha: ${ahora.toLocaleDateString('es-ES')}  Hora: ${ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`);
+    escribirTexto(`Mesa(s): ${mesaTexto}`);
     if (cuenta?.fechaPago) {
       escribirTexto(`Fecha de pago: ${this.formatearFecha(cuenta.fechaPago)}`);
     }
-    escribirTexto(`Método de pago: ${this.obtenerMetodoPagoDetalle()}`);
+    escribirTexto(`Metodo de pago: ${this.obtenerMetodoPagoDetalle()}`);
     y += 4;
     pdf.line(margenIzq, y, margenDer, y);
     y += 9;
@@ -314,7 +323,7 @@ export class HistorialComponent {
       escribirTexto('Pagos', margenIzq, 8, { negrita: true, tamano: 13 });
       for (const pago of pagos) {
         escribirTexto(
-          `Pago ${pago.numero} - Método: ${pago.metodoPago}${
+          `Pago ${pago.numero} - Metodo: ${pago.metodoPago}${
             pago.fechaPago ? ` - ${this.formatearFecha(pago.fechaPago)}` : ''
           }`,
           margenIzq,
@@ -328,12 +337,16 @@ export class HistorialComponent {
         y += 4;
       }
     }
+    y += 4;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text('Gracias por su visita', 105, y, { align: 'center' });
     return pdf;
   }
   private obtenerNombreArchivoTique(): string {
     const mesa = this.obtenerMesaDetalle();
     const fecha = new Date().toISOString().slice(0, 10);
-    return `tique-mesa-${mesa}-${fecha}.pdf`;
+    return `ticket-mesa-${mesa}-${fecha}.pdf`;
   }
   private esCorreoValido(correo: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
@@ -346,6 +359,10 @@ export class HistorialComponent {
     this.ordenesDetalle.set([]);
     this.totalDetalle.set(0);
     this.cerrarModalCorreo();
+    if (this.toastTimeoutRef) {
+      window.clearTimeout(this.toastTimeoutRef);
+    }
+    this.showToast.set(false);
   }
 
   formatearFecha(fechaIso: string): string {
@@ -488,4 +505,19 @@ export class HistorialComponent {
 
     return err?.error?.message ?? 'Ha ocurrido un error al comunicar con el backend';
   }
+
+  private mostrarToast(mensaje: string, tipo: 'ok' | 'error'): void {
+    this.toastMessage.set(mensaje);
+    this.toastTipo.set(tipo);
+    this.showToast.set(true);
+
+    if (this.toastTimeoutRef) {
+      window.clearTimeout(this.toastTimeoutRef);
+    }
+
+    this.toastTimeoutRef = window.setTimeout(() => {
+      this.showToast.set(false);
+    }, 2600);
+  }
 }
+

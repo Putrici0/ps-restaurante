@@ -41,6 +41,7 @@ export class BillPage implements OnInit, OnDestroy {
 
   private intervaloRefresco?: number;
   private avisoPagoTimeoutRef?: number;
+  private toastTimeoutRef?: number;
   private readonly mesaId = this.route.snapshot.paramMap.get('id') ?? '';
 
   readonly cargando = signal(true);
@@ -64,6 +65,14 @@ export class BillPage implements OnInit, OnDestroy {
   readonly correoTique = signal('');
   readonly errorCorreoTique = signal<string | null>(null);
   readonly enviandoTique = signal(false);
+  readonly showToast = signal(false);
+  readonly toastMessage = signal('');
+  readonly toastTipo = signal<'ok' | 'error'>('ok');
+  readonly ordenesTicketSnapshot = signal<OrdenCuentaResponse[] | null>(null);
+  readonly mesasTicketSnapshot = signal<string[] | null>(null);
+  readonly cuentaIdTicketSnapshot = signal<string | null>(null);
+  readonly fechaPagoTicketSnapshot = signal<string | null>(null);
+  readonly metodoPagoTicketSnapshot = signal<string | null>(null);
 
   numeroTarjeta = '';
   nombreCompleto = '';
@@ -75,7 +84,7 @@ export class BillPage implements OnInit, OnDestroy {
   });
 
   readonly sinCuentaActiva = computed(() => {
-    return !this.cargando() && this.cuentaActiva() === null;
+    return !this.cargando() && this.cuentaActiva() === null && !this.mostrarConfirmacionPago();
   });
 
   readonly itemsPendientes = computed(() => {
@@ -229,10 +238,16 @@ export class BillPage implements OnInit, OnDestroy {
     );
   });
   readonly totalCuenta = computed(() => {
-    return this.ordenes().reduce((acc, o) => acc + Number(o.precio), 0);
+    return this.ordenesParaTicket().reduce((acc, o) => acc + Number(o.precio), 0);
+  });
+  readonly ordenesParaTicket = computed(() => {
+    if (this.mostrarConfirmacionPago() && this.ordenesTicketSnapshot()) {
+      return this.ordenesTicketSnapshot()!;
+    }
+    return this.ordenes();
   });
   readonly itemsAgrupadosParaTique = computed(() => {
-    const ordenesNoCanceladas = this.ordenes().filter(o => o.ordenEstado !== 'Cancelado');
+    const ordenesNoCanceladas = this.ordenesParaTicket().filter(o => o.ordenEstado !== 'Cancelado');
     const mapa = new Map<string, any>();
     for (const orden of ordenesNoCanceladas) {
       const plato = orden.plato;
@@ -253,7 +268,7 @@ export class BillPage implements OnInit, OnDestroy {
     return Array.from(mapa.values());
   });
   readonly pagosAgrupadosParaTique = computed(() => {
-    const ordenesPagadas = this.ordenes().filter(o => o.pagada && o.ordenEstado !== 'Cancelado');
+    const ordenesPagadas = this.ordenesParaTicket().filter(o => o.pagada && o.ordenEstado !== 'Cancelado');
     const mapa = new Map<string, any[]>();
     for (const orden of ordenesPagadas) {
       const fechaPago = orden.fechaPago ?? 'SIN_FECHA';
@@ -304,6 +319,9 @@ export class BillPage implements OnInit, OnDestroy {
     }
     if (this.avisoPagoTimeoutRef) {
       window.clearTimeout(this.avisoPagoTimeoutRef);
+    }
+    if (this.toastTimeoutRef) {
+      window.clearTimeout(this.toastTimeoutRef);
     }
   }
 
@@ -442,8 +460,33 @@ export class BillPage implements OnInit, OnDestroy {
         );
 
     request$.pipe(take(1)).subscribe({
-      next: () => {
+      next: (cuentaPagada) => {
         const importePagado = this.totalSeleccionado();
+        const cuentaActual = this.cuentaActiva();
+        const fechaPago = cuentaPagada?.fechaPago ?? cuentaActual?.fechaPago ?? null;
+        const metodoPago = cuentaPagada?.metodoPago ?? 'TARJETA';
+        const ordenesSnapshot = this.ordenes().map((o) => {
+          if (o.ordenEstado === 'Cancelado') {
+            return { ...o };
+          }
+          const fuePagadaEnEstaOperacion =
+            ordenesSeleccionadas.length === totalOrdenesPendientes ||
+            ordenesSeleccionadas.includes(o.id);
+          if (!fuePagadaEnEstaOperacion) {
+            return { ...o };
+          }
+          return {
+            ...o,
+            pagada: true,
+            metodoPago: metodoPago as 'EFECTIVO' | 'TARJETA',
+            fechaPago,
+          };
+        });
+        this.ordenesTicketSnapshot.set(ordenesSnapshot);
+        this.mesasTicketSnapshot.set((cuentaActual?.mesas ?? []).map((m) => m.id).filter(Boolean));
+        this.cuentaIdTicketSnapshot.set(cuentaPagada?.id ?? cuentaActual?.id ?? null);
+        this.fechaPagoTicketSnapshot.set(fechaPago);
+        this.metodoPagoTicketSnapshot.set(metodoPago);
         this.procesandoPago.set(false);
         this.mostrarConfirmacionPago.set(true);
         this.ultimoPagoImporte.set(importePagado);
@@ -518,18 +561,18 @@ export class BillPage implements OnInit, OnDestroy {
       .then(async (res) => {
         if (!res.ok) {
           const err = await res.json().catch(() => null);
-          throw new Error(err?.message ?? 'No se pudo enviar el tique');
+          throw new Error(err?.message ?? 'No se pudo enviar el ticket');
         }
         return res.json();
       })
       .then(() => {
         this.enviandoTique.set(false);
         this.cerrarModalCorreo();
-        alert(`Tique enviado correctamente a ${correo}`);
+        this.mostrarToast(`Ticket enviado correctamente a ${correo}`, 'ok');
       })
       .catch((err) => {
         this.enviandoTique.set(false);
-        this.errorCorreoTique.set(err.message ?? 'No se pudo enviar el tique');
+        this.errorCorreoTique.set(err.message ?? 'No se pudo enviar el ticket');
       });
   }
   private construirPdfTique(): jsPDF {
@@ -537,6 +580,19 @@ export class BillPage implements OnInit, OnDestroy {
     const margenIzq = 14;
     const margenDer = 196;
     let y = 18;
+    const ahora = new Date();
+    const cuenta = this.cuentaActiva();
+    const mesas = this.mostrarConfirmacionPago()
+      ? (this.mesasTicketSnapshot() ?? [])
+      : (cuenta?.mesas ?? []).map((mesa) => mesa.id).filter(Boolean);
+    const mesaTexto = mesas.length > 0 ? mesas.join(', ') : this.mesaId;
+    const cuentaIdTicket = this.mostrarConfirmacionPago()
+      ? this.cuentaIdTicketSnapshot()
+      : cuenta?.id;
+    const identificador = `TK-${ahora.getFullYear()}${String(ahora.getMonth() + 1).padStart(2, '0')}${String(ahora.getDate()).padStart(2, '0')}-${cuentaIdTicket?.slice(-6).toUpperCase() ?? 'SINID'}`;
+    const metodoPago = this.mostrarConfirmacionPago()
+      ? (this.metodoPagoTicketSnapshot() ?? this.pagosAgrupadosParaTique()[0]?.metodoPago ?? '-')
+      : (this.pagosAgrupadosParaTique()[0]?.metodoPago ?? '-');
     const saltarPaginaSiHaceFalta = () => {
       if (y > 280) { pdf.addPage(); y = 18; }
     };
@@ -557,12 +613,17 @@ export class BillPage implements OnInit, OnDestroy {
       pdf.text(`${imp.toFixed(2)} €`, margenDer, y, { align: 'right' });
       y += 7;
     };
-    escribirTexto('TIQUE - PS RESTAURANTE', margenIzq, 9, { negrita: true, tamano: 17 });
-    escribirTexto(`Mesa: ${this.mesaId}`);
-    escribirTexto(`Fecha: ${new Date().toLocaleString('es-ES')}`);
-    const cuenta = this.cuentaActiva();
-    if (cuenta?.fechaPago) {
-      escribirTexto(`Fecha de pago: ${this.formatearFecha(cuenta.fechaPago)}`);
+    escribirTexto('RESTAURANTE EJEMPLO', margenIzq, 8, { negrita: true, tamano: 15 });
+    escribirTexto('TICKET');
+    escribirTexto(`Nº ticket: ${identificador}`);
+    escribirTexto(`Fecha: ${ahora.toLocaleDateString('es-ES')}  Hora: ${ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`);
+    escribirTexto(`Mesa(s): ${mesaTexto}`);
+    escribirTexto(`Método de pago: ${metodoPago}`);
+    const fechaPagoTicket = this.mostrarConfirmacionPago()
+      ? this.fechaPagoTicketSnapshot()
+      : cuenta?.fechaPago;
+    if (fechaPagoTicket) {
+      escribirTexto(`Fecha de pago: ${this.formatearFecha(fechaPagoTicket)}`);
     }
     y += 4; pdf.line(margenIzq, y, margenDer, y); y += 9;
     escribirTexto('Productos', margenIzq, 8, { negrita: true, tamano: 13 });
@@ -586,11 +647,15 @@ export class BillPage implements OnInit, OnDestroy {
         y += 4;
       }
     }
+    y += 4;
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text('Gracias por su visita', 105, y, { align: 'center' });
     return pdf;
   }
   private obtenerNombreArchivoTique(): string {
     const fecha = new Date().toISOString().slice(0, 10);
-    return `tique-mesa-${this.mesaId}-${fecha}.pdf`;
+    return `ticket-mesa-${this.mesaId}-${fecha}.pdf`;
   }
   private esCorreoValido(correo: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
@@ -831,6 +896,20 @@ export class BillPage implements OnInit, OnDestroy {
 
     this.avisoPagoTimeoutRef = window.setTimeout(() => {
       this.avisoPago.set(null);
+    }, 2600);
+  }
+
+  private mostrarToast(mensaje: string, tipo: 'ok' | 'error'): void {
+    this.toastMessage.set(mensaje);
+    this.toastTipo.set(tipo);
+    this.showToast.set(true);
+
+    if (this.toastTimeoutRef) {
+      window.clearTimeout(this.toastTimeoutRef);
+    }
+
+    this.toastTimeoutRef = window.setTimeout(() => {
+      this.showToast.set(false);
     }, 2600);
   }
 }

@@ -96,10 +96,10 @@
             <h3>Detalle de la cuenta</h3>
             <div class="historial-modal__acciones">
               <button type="button" class="historial-modal__accion" (click)="descargarTique()">
-                Descargar tique
+                Descargar ticket
               </button>
               <button type="button" class="historial-modal__accion" (click)="enviarTique()">
-                Compartir tique
+                Compartir ticket
               </button>
               <button type="button" class="historial-modal__cerrar" (click)="cerrarDetalle()">✕</button>
             </div>
@@ -181,12 +181,12 @@
     <div class="historial-correo-overlay" (click)="cerrarModalCorreo()">
       <div class="historial-correo-modal" (click)="$event.stopPropagation()">
         <div class="historial-correo-modal__header">
-          <h3>Enviar tique por correo</h3>
+          <h3>Enviar ticket por correo</h3>
           <button type="button" class="historial-modal__cerrar" (click)="cerrarModalCorreo()">✕</button>
         </div>
 
         <p class="historial-correo-modal__texto">
-          Introduce el correo al que quieres enviar el tique.
+          Introduce el correo al que quieres enviar el ticket.
         </p>
 
         <label class="historial-correo-modal__label" for="correoTiqueHistorial">
@@ -221,9 +221,20 @@
             (click)="confirmarEnvioTique()"
             [disabled]="enviandoTique()"
           >
-            {{ enviandoTique() ? 'Enviando...' : 'Enviar tique' }}
+            {{ enviandoTique() ? 'Enviando...' : 'Enviar ticket' }}
           </button>
         </div>
+      </div>
+    </div>
+  }
+
+  @if (showToast()) {
+    <div class="mobile-toast" role="status" aria-live="polite">
+      <div class="mobile-toast__card" [class.mobile-toast__card--error]="toastTipo() === 'error'">
+        <span class="mobile-toast__icon" [class.mobile-toast__icon--error]="toastTipo() === 'error'">
+          {{ toastTipo() === 'ok' ? '✓' : '!' }}
+        </span>
+        <span class="mobile-toast__text">{{ toastMessage() }}</span>
       </div>
     </div>
   }
