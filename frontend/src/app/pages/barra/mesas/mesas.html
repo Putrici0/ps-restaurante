@@ -101,7 +101,7 @@
         @if (cargandoCobro()) {
           <p class="modal-texto">Cargando resumen de la cuenta...</p>
         } @else {
-          <p class="modal-texto">Selecciona los productos que quieres cobrar de la mesa <strong>{{ mesaCobroId() }}</strong>.</p>
+          <p class="modal-texto">Selecciona los productos que quieres cobrar de la(s) mesa(s) <strong>{{ mesasCobroTexto() }}</strong>.</p>
           <div class="modal-cobro-layout">
             <div class="modal-cobro-columna modal-cobro-columna--izquierda">
               <div class="modal-resumen">
@@ -215,7 +215,53 @@
     </div>
   }
 
+  @if (mostrarConfirmacionCobroTicket()) {
+    <div class="modal-overlay modal-overlay--confirmacion" (click)="cerrarConfirmacionCobroTicket()">
+      <div class="modal-confirmacion modal-confirmacion--ticket" (click)="$event.stopPropagation()">
+        <h4>Pago registrado</h4>
+        <p>El pago se ha registrado correctamente. Puedes descargar o enviar el ticket ahora.</p>
+        <div class="modal-confirmacion__acciones">
+          <button type="button" class="modal-btn modal-btn--secundario" (click)="descargarTicketCobro()">
+            Descargar ticket
+          </button>
+          <button type="button" class="modal-btn modal-btn--principal" (click)="cerrarConfirmacionCobroTicket()">
+            Cerrar
+          </button>
+        </div>
+
+        <div class="modal-ticket-correo">
+          <label for="correoTicketCobro">Enviar ticket por correo</label>
+          <input
+            id="correoTicketCobro"
+            type="email"
+            placeholder="correo@ejemplo.com"
+            [value]="correoTicketCobro()"
+            (input)="actualizarCorreoTicketCobro($any($event.target).value)"
+            [disabled]="enviandoTicketCobro()"
+          />
+          @if (errorCorreoTicketCobro()) {
+            <p class="modal-ticket-correo__error">{{ errorCorreoTicketCobro() }}</p>
+          }
+          <button
+            type="button"
+            class="modal-btn modal-btn--principal"
+            (click)="enviarTicketCobro()"
+            [disabled]="enviandoTicketCobro()"
+          >
+            {{ enviandoTicketCobro() ? 'Enviando...' : 'Enviar ticket' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
   @if (mostrarReservas()) {
     <app-reservas (cerrar)="mostrarReservas.set(false)"></app-reservas>
+  }
+
+  @if (showToast()) {
+    <div class="toast" [class.toast--error]="toastTipo() === 'error'">
+      {{ toastMessage() }}
+    </div>
   }
 </div>

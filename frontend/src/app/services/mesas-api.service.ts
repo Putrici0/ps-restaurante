@@ -48,8 +48,8 @@ export class MesasApiService {
     return this.http.get<OrdenCuentaApi[]>(`${this.apiUrl}/cuentas/${cuentaId}/ordenes`);
   }
 
-  pagarCuentaCompleta(cuentaId: string, metodoPago: 'EFECTIVO' | 'TARJETA') {
-    return this.http.post(`${this.apiUrl}/cuentas/${cuentaId}/pagar-total`, {
+  pagarCuentaCompleta(cuentaId: string, metodoPago: 'EFECTIVO' | 'TARJETA'): Observable<CuentaApi> {
+    return this.http.post<CuentaApi>(`${this.apiUrl}/cuentas/${cuentaId}/pagar-total`, {
       metodoPago
     });
   }
@@ -58,8 +58,8 @@ export class MesasApiService {
     cuentaId: string,
     ordenIds: string[],
     metodoPago: 'EFECTIVO' | 'TARJETA'
-  ) {
-    return this.http.post(`${this.apiUrl}/cuentas/${cuentaId}/pagar-parcial`, {
+  ): Observable<CuentaApi> {
+    return this.http.post<CuentaApi>(`${this.apiUrl}/cuentas/${cuentaId}/pagar-parcial`, {
       ordenIds,
       metodoPago,
     });

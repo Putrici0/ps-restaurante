@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, signal, OnInit, OnDestroy } from '@angular/core';
 import { forkJoin, Subscription } from 'rxjs';
+import jsPDF from 'jspdf';
 
 import { MesaDetalle } from '../../../shared/mesa-detalle/mesa-detalle';
 import { Navbar } from '../../../shared/navbar/navbar';
@@ -39,6 +40,12 @@ interface ItemCobroAgrupado {
   ordenesIds: string[];
 }
 
+interface ItemTicketCobro {
+  nombre: string;
+  cantidad: number;
+  subtotal: number;
+}
+
 @Component({
   selector: 'app-mesas',
   standalone: true,
@@ -50,9 +57,11 @@ export class Mesas implements OnInit, OnDestroy {
   private readonly mesasApi = inject(MesasApiService);
   private readonly cuentaApi = inject(CuentaApiService);
   private readonly reservasApi = inject(ReservasApiService); // API Inyectada
+  private readonly apiUrl = `http://${window.location.hostname}:7070`;
 
   private reservasSub: Subscription | null = null;
   private relojInterval: any;
+  private toastTimeoutRef?: number;
 
   readonly mostrarReservas = signal(false);
   readonly zona = signal<ZonaMesa>('interior');
@@ -89,8 +98,28 @@ export class Mesas implements OnInit, OnDestroy {
   readonly ordenesPendientesEliminar = signal<string[]>([]);
   readonly mostrarConfirmacionLiberar = signal(false);
   readonly mesaPendienteLiberarId = signal<string | null>(null);
+  readonly mostrarConfirmacionCobroTicket = signal(false);
+  readonly enviandoTicketCobro = signal(false);
+  readonly correoTicketCobro = signal('');
+  readonly errorCorreoTicketCobro = signal<string | null>(null);
+  readonly ticketCobroMesaId = signal<string | null>(null);
+  readonly ticketCobroCuentaId = signal<string | null>(null);
+  readonly ticketCobroMetodoPago = signal<'EFECTIVO' | 'TARJETA'>('EFECTIVO');
+  readonly ticketCobroFechaPago = signal<string | null>(null);
+  readonly ticketCobroItems = signal<ItemTicketCobro[]>([]);
+  readonly ticketCobroTotal = signal(0);
+  readonly showToast = signal(false);
+  readonly toastMessage = signal('');
+  readonly toastTipo = signal<'ok' | 'error'>('ok');
 
   readonly seleccionCantidadPorPlato = signal<Record<string, number>>({});
+  readonly mesasCobroTexto = computed(() => {
+    const mesaId = this.mesaCobroId();
+    if (!mesaId) {
+      return '-';
+    }
+    return this.obtenerTextoGrupoMesas(mesaId);
+  });
 
   readonly celdasActuales = computed(() => this.construirCeldasZona(this.zona()));
   readonly puedeSepararSeleccion = computed(() => {
@@ -167,6 +196,7 @@ export class Mesas implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.reservasSub?.unsubscribe();
     if (this.relojInterval) clearInterval(this.relojInterval);
+    if (this.toastTimeoutRef) clearTimeout(this.toastTimeoutRef);
   }
 
   horaActualMinutos(): number {
@@ -330,6 +360,19 @@ export class Mesas implements OnInit, OnDestroy {
     const totalOrdenesPendientes = this.resumenCobro().reduce((acc, item) => acc + item.ordenesIds.length, 0);
 
     if (!cuentaId || !mesaId || ordenesSeleccionadas.length === 0 || !this.puedeConfirmarCobro()) return;
+    const itemsTicket = this.resumenCobro()
+      .map((item) => {
+        const cantidadSeleccionada = this.cantidadSeleccionada(item);
+        if (cantidadSeleccionada <= 0) return null;
+        return {
+          nombre: item.nombre,
+          cantidad: cantidadSeleccionada,
+          subtotal: Number((cantidadSeleccionada * item.precioUnitario).toFixed(2)),
+        } as ItemTicketCobro;
+      })
+      .filter((item): item is ItemTicketCobro => item !== null);
+    const totalTicket = Number(this.totalCobro().toFixed(2));
+    const fechaTicket = new Date().toISOString();
 
     this.error.set(null);
     this.procesandoCobro.set(true);
@@ -340,9 +383,20 @@ export class Mesas implements OnInit, OnDestroy {
       : this.mesasApi.pagarCuentaParcial(cuentaId, ordenesSeleccionadas, metodoPago);
 
     request$.subscribe({
-      next: () => {
+      next: (cuentaPagada) => {
         this.procesandoCobro.set(false);
-        this.cerrarModalCobro();
+        this.ticketCobroMesaId.set(mesaId);
+        this.ticketCobroCuentaId.set(cuentaPagada?.id ?? cuentaId);
+        this.ticketCobroMetodoPago.set(metodoPago);
+        this.ticketCobroFechaPago.set(cuentaPagada?.fechaPago ?? fechaTicket);
+        this.ticketCobroItems.set(itemsTicket);
+        this.ticketCobroTotal.set(totalTicket);
+        this.correoTicketCobro.set('');
+        this.errorCorreoTicketCobro.set(null);
+        setTimeout(() => {
+          this.mostrarConfirmacionCobroTicket.set(true);
+        }, 0);
+        this.mostrarToast('Cobro registrado correctamente.', 'ok');
         this.recargarMesas(mesaId);
       },
       error: (err) => {
@@ -446,6 +500,200 @@ export class Mesas implements OnInit, OnDestroy {
     this.mostrarConfirmacionEliminar.set(false);
     this.itemPendienteEliminar.set(null);
     this.ordenesPendientesEliminar.set([]);
+  }
+
+  cerrarConfirmacionCobroTicket(): void {
+    if (this.enviandoTicketCobro()) return;
+    this.mostrarConfirmacionCobroTicket.set(false);
+    this.correoTicketCobro.set('');
+    this.errorCorreoTicketCobro.set(null);
+    this.cerrarModalCobro();
+  }
+
+  descargarTicketCobro(): void {
+    const pdf = this.construirPdfTicketCobro();
+    pdf.save(this.obtenerNombreArchivoTicketCobro());
+  }
+
+  actualizarCorreoTicketCobro(valor: string): void {
+    this.correoTicketCobro.set(valor);
+    this.errorCorreoTicketCobro.set(null);
+  }
+
+  enviarTicketCobro(): void {
+    const correo = this.correoTicketCobro().trim();
+    if (!correo) {
+      this.errorCorreoTicketCobro.set('Introduce un correo.');
+      return;
+    }
+    if (!this.esCorreoValido(correo)) {
+      this.errorCorreoTicketCobro.set('Correo no valido.');
+      return;
+    }
+
+    this.enviandoTicketCobro.set(true);
+    this.errorCorreoTicketCobro.set(null);
+    const pdf = this.construirPdfTicketCobro();
+    const pdfBase64 = pdf.output('datauristring');
+
+    fetch(`${this.apiUrl}/tiques/enviar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        correo,
+        nombreArchivo: this.obtenerNombreArchivoTicketCobro(),
+        pdfBase64,
+      }),
+    })
+      .then(async (respuesta) => {
+        if (!respuesta.ok) {
+          const error = await respuesta.json().catch(() => null);
+          throw new Error(error?.error ?? error?.message ?? 'No se pudo enviar el ticket');
+        }
+        return respuesta.json();
+      })
+      .then(() => {
+        this.enviandoTicketCobro.set(false);
+        this.mostrarToast(`Ticket enviado correctamente a ${correo}`, 'ok');
+        this.cerrarConfirmacionCobroTicket();
+      })
+      .catch((error) => {
+        this.enviandoTicketCobro.set(false);
+        this.errorCorreoTicketCobro.set(error.message ?? 'No se pudo enviar el ticket');
+      });
+  }
+
+  private construirPdfTicketCobro(): jsPDF {
+    const pdf = new jsPDF();
+    const margenIzq = 14;
+    const margenDer = 196;
+    let y = 18;
+    const ahora = new Date();
+    const mesa = this.obtenerMesasTextoTicketCobro();
+    const cuentaId = this.ticketCobroCuentaId();
+    const identificador = `TK-${ahora.getFullYear()}${String(ahora.getMonth() + 1).padStart(2, '0')}${String(ahora.getDate()).padStart(2, '0')}-${cuentaId?.slice(-6).toUpperCase() ?? 'SINID'}`;
+
+    const saltarPaginaSiHaceFalta = () => {
+      if (y > 280) {
+        pdf.addPage();
+        y = 18;
+      }
+    };
+
+    const escribirTexto = (
+      texto: string,
+      x = margenIzq,
+      salto = 7,
+      opciones?: { negrita?: boolean; tamano?: number },
+    ) => {
+      pdf.setFontSize(opciones?.tamano ?? 11);
+      pdf.setFont('helvetica', opciones?.negrita ? 'bold' : 'normal');
+      const lineas = pdf.splitTextToSize(texto, margenDer - margenIzq);
+      for (const linea of lineas) {
+        saltarPaginaSiHaceFalta();
+        pdf.text(linea, x, y);
+        y += salto;
+      }
+    };
+
+    const escribirImporte = (texto: string, importe: number) => {
+      saltarPaginaSiHaceFalta();
+      pdf.setFontSize(11);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(texto, margenIzq, y);
+      pdf.text(`${importe.toFixed(2)} €`, margenDer, y, { align: 'right' });
+      y += 7;
+    };
+
+    escribirTexto('RESTAURANTE EJEMPLO', margenIzq, 8, { negrita: true, tamano: 15 });
+    escribirTexto('TICKET');
+    escribirTexto(`No. ticket: ${identificador}`);
+    escribirTexto(`Fecha: ${ahora.toLocaleDateString('es-ES')}  Hora: ${ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`);
+    escribirTexto(`Mesa(s): ${mesa}`);
+    escribirTexto(`Metodo de pago: ${this.ticketCobroMetodoPago()}`);
+    if (this.ticketCobroFechaPago()) {
+      escribirTexto(`Fecha de pago: ${this.formatearFecha(this.ticketCobroFechaPago()!)}`);
+    }
+
+    y += 4;
+    pdf.line(margenIzq, y, margenDer, y);
+    y += 9;
+
+    escribirTexto('Productos', margenIzq, 8, { negrita: true, tamano: 13 });
+    for (const item of this.ticketCobroItems()) {
+      escribirImporte(`${item.cantidad}x ${item.nombre}`, item.subtotal);
+    }
+
+    y += 4;
+    pdf.line(margenIzq, y, margenDer, y);
+    y += 9;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13);
+    pdf.text('TOTAL', margenIzq, y);
+    pdf.text(`${this.ticketCobroTotal().toFixed(2)} €`, margenDer, y, { align: 'right' });
+    y += 12;
+
+    const fechaPago = this.ticketCobroFechaPago();
+    const metodoPago = this.ticketCobroMetodoPago();
+    escribirTexto('Pagos', margenIzq, 8, { negrita: true, tamano: 13 });
+    escribirTexto(
+      `Pago 1 - Metodo: ${metodoPago}${fechaPago ? ` - ${this.formatearFecha(fechaPago)}` : ''}`,
+      margenIzq,
+      7,
+      { negrita: true },
+    );
+    for (const item of this.ticketCobroItems()) {
+      escribirImporte(`  ${item.cantidad}x ${item.nombre}`, item.subtotal);
+    }
+    escribirImporte('  Total pago', this.ticketCobroTotal());
+    y += 4;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text('Gracias por su visita', 105, y, { align: 'center' });
+    return pdf;
+  }
+
+  private obtenerNombreArchivoTicketCobro(): string {
+    const mesa = this.ticketCobroMesaId() ?? 'sin-mesa';
+    const fecha = new Date().toISOString().slice(0, 10);
+    return `ticket-mesa-${mesa}-${fecha}.pdf`;
+  }
+
+  private obtenerMesasTextoTicketCobro(): string {
+    const mesaId = this.ticketCobroMesaId();
+    if (!mesaId) {
+      return '-';
+    }
+    return this.obtenerTextoGrupoMesas(mesaId);
+  }
+
+  private obtenerTextoGrupoMesas(mesaId: string): string {
+    const mesa = this.mesas().find((m) => m.id === mesaId);
+    if (!mesa) {
+      return mesaId;
+    }
+
+    const ids = (mesa.grupoMesaIds?.length ? mesa.grupoMesaIds : [mesa.id])
+      .filter(Boolean)
+      .sort((a, b) => Number(a) - Number(b));
+
+    return ids.join(', ');
+  }
+
+  private esCorreoValido(correo: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo);
+  }
+
+  private formatearFecha(fechaIso: string): string {
+    const fecha = new Date(fechaIso);
+    return new Intl.DateTimeFormat('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(fecha);
   }
 
   cambiarMetodoPago(metodo: 'EFECTIVO' | 'TARJETA'): void {
@@ -722,4 +970,18 @@ export class Mesas implements OnInit, OnDestroy {
   private normalizarGrupoMesaIds(grupoMesaIds: string[]): string[] { return Array.from(new Set(grupoMesaIds)).sort((a, b) => this.compararMesaIds(a, b)); }
   private claveGrupo(grupoMesaIds: string[]): string { return this.normalizarGrupoMesaIds(grupoMesaIds).join('|'); }
   private compararMesaIds(left: string, right: string): number { return Number(left) - Number(right); }
+
+  private mostrarToast(mensaje: string, tipo: 'ok' | 'error'): void {
+    this.toastMessage.set(mensaje);
+    this.toastTipo.set(tipo);
+    this.showToast.set(true);
+
+    if (this.toastTimeoutRef) {
+      clearTimeout(this.toastTimeoutRef);
+    }
+
+    this.toastTimeoutRef = window.setTimeout(() => {
+      this.showToast.set(false);
+    }, 2600);
+  }
 }
