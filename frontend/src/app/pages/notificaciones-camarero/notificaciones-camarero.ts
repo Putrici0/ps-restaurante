@@ -35,6 +35,7 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
 
   readonly notificacionesRecoger = computed(() =>
     this.notificaciones()
+      .filter((notificacion) => this.esVisibleParaCamareroActual(notificacion))
       .filter((notificacion) => notificacion.tipo === 'Recoger')
       .sort((a, b) => {
         const prioridadA = this.esAsignadaAlCamareroActual(a) ? 1 : 0;
@@ -50,6 +51,7 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
 
   readonly notificacionesAtencion = computed(() =>
     this.notificaciones()
+      .filter((notificacion) => this.esVisibleParaCamareroActual(notificacion))
       .filter((notificacion) => notificacion.tipo === 'Atencion')
       .sort((a, b) => {
         const prioridadA = this.esAsignadaAlCamareroActual(a) ? 1 : 0;
@@ -358,14 +360,17 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
           const pendientes = notificaciones.filter(
             (notificacion) => !notificacion.leida,
           );
+          const visibles = pendientes.filter((notificacion) =>
+            this.esVisibleParaCamareroActual(notificacion),
+          );
 
           this.notificaciones.set(pendientes);
           this.cargando.set(false);
 
           if (avisarNuevas) {
-            this.procesarAvisosNuevos(pendientes);
+            this.procesarAvisosNuevos(visibles);
           } else {
-            pendientes.forEach((notificacion) =>
+            visibles.forEach((notificacion) =>
               this.notificacionesConAviso.add(notificacion.id),
             );
           }
@@ -464,6 +469,14 @@ export class NotificacionesCamarero implements OnInit, OnDestroy {
   private esAsignadaAlCamareroActual(notificacion: Notificacion): boolean {
     const uidActual = this.camareroUidActual();
     return !!uidActual && !!notificacion.enCurso && notificacion.camareroUid === uidActual;
+  }
+
+  private esVisibleParaCamareroActual(notificacion: Notificacion): boolean {
+    if (!notificacion.enCurso) {
+      return true;
+    }
+
+    return this.esAsignadaAlCamareroActual(notificacion);
   }
 
   private fechaMs(fechaIso: string | null | undefined): number {

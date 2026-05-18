@@ -60,9 +60,34 @@ export class NotificacionesApiService {
       .pipe(timeout(this.requestTimeoutMs));
   }
 
+  obtenerAsignacionesActivas(): Observable<Notificacion[]> {
+    return this.http
+      .get<Notificacion[]>(`${this.apiUrl}/notificaciones/asignaciones-activas`)
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
   marcarComoCompletada(id: string): Observable<Notificacion> {
     return this.http
       .post<Notificacion>(`${this.apiUrl}/notificaciones/${id}/completada`, {})
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
+  asignarResponsableMesa(
+    cuentaId: string,
+    camareroUid: string | null,
+    camareroNombre: string,
+  ): Observable<Notificacion> {
+    return this.http
+      .post<Notificacion>(`${this.apiUrl}/notificaciones/asignacion/${cuentaId}/tomar`, {
+        camareroUid,
+        camareroNombre,
+      })
+      .pipe(timeout(this.requestTimeoutMs));
+  }
+
+  liberarResponsableMesa(cuentaId: string): Observable<Notificacion> {
+    return this.http
+      .post<Notificacion>(`${this.apiUrl}/notificaciones/asignacion/${cuentaId}/liberar`, {})
       .pipe(timeout(this.requestTimeoutMs));
   }
 }

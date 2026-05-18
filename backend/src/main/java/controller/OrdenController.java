@@ -199,7 +199,7 @@ public class OrdenController {
                             String id = ctx.pathParam("id");
                             Orden orden = applicationService.marcarOrdenEntregada(id);
 
-                            notificacionApplicationService.eliminarNotificacionesRecogerDeOrden(orden.id());
+                            notificacionApplicationService.marcarNotificacionesRecogerComoLeidasDeOrden(orden.id());
 
                             ctx.json(orden);
                         });

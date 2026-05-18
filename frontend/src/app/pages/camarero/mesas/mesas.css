@@ -164,6 +164,16 @@
   margin-top: 3px;
 }
 
+.mesa-owner {
+  margin-top: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  padding: 0 4px;
+  line-height: 1.1;
+}
+
 .error-banner {
   background-color: #cb1e10;
   color: white;
@@ -173,6 +183,17 @@
   font-weight: 600;
   font-size: 0.8rem;
   text-align: center;
+}
+
+.assigned-summary {
+  margin: 0 16px 12px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #3f3127;
+}
+
+.assigned-summary span {
+  font-weight: 600;
 }
 
 /* --- MODAL --- */
@@ -203,6 +224,12 @@
 .modal-title { font-size: 2rem; font-weight: 800; margin: 8px 0; color: #2f2118; }
 .modal-pax { background-color: #cfa98b; padding: 3px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; }
 .modal-group { margin-top: 6px; font-size: 0.75rem; font-weight: 700; color: #5a4635; }
+.modal-responsable {
+  margin: 8px 0 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4f3d2f;
+}
 .divider { width: 100%; border: 0; border-top: 1px solid rgba(0,0,0,0.1); margin: 16px 0; }
 
 .modal-actions {

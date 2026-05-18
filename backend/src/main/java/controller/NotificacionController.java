@@ -61,6 +61,13 @@ public class NotificacionController {
                     });
                 });
 
+                path("asignaciones-activas", () -> {
+                    get(ctx -> {
+                        List<Notificacion> activas = applicationService.obtenerAsignacionesMesaActivas();
+                        ctx.json(activas);
+                    });
+                });
+
                 path("cuenta/{cuentaId}", () -> {
                     get(ctx -> {
                         String cuentaId = ctx.pathParam("cuentaId");
@@ -125,6 +132,29 @@ public class NotificacionController {
                     });
                 });
 
+                path("asignacion/{cuentaId}", () -> {
+                    path("tomar", () -> {
+                        post(ctx -> {
+                            String cuentaId = ctx.pathParam("cuentaId");
+                            MarcarEnCursoBody body = ctx.bodyAsClass(MarcarEnCursoBody.class);
+                            Notificacion notificacion = applicationService.asignarResponsableMesa(
+                                    cuentaId,
+                                    body.camareroUid,
+                                    body.camareroNombre
+                            );
+                            ctx.json(notificacion);
+                        });
+                    });
+
+                    path("liberar", () -> {
+                        post(ctx -> {
+                            String cuentaId = ctx.pathParam("cuentaId");
+                            Notificacion notificacion = applicationService.liberarResponsableMesa(cuentaId);
+                            ctx.json(notificacion);
+                        });
+                    });
+                });
+
                 path("{id}", () -> {
 
                     get(ctx -> {
@@ -146,8 +176,8 @@ public class NotificacionController {
                             return;
                         }
 
-                        service.delete(id);
-                        ctx.status(204);
+                        Notificacion notificacion = applicationService.marcarNotificacionLeida(id);
+                        ctx.json(notificacion);
                     });
 
                     path("en-curso", () -> {

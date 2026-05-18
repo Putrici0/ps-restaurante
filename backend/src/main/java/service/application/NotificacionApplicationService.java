@@ -9,10 +9,13 @@ import repository.interfaces.CuentaRepository;
 import repository.interfaces.NotificacionRepository;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class NotificacionApplicationService {
+    private static final String MARCADOR_ASIGNACION_MESA = "__ASIGNACION_MESA__";
     private final NotificacionRepository notificacionRepository;
     private final CuentaRepository cuentaRepository;
     private final OrdenApplicationService ordenApplicationService;
@@ -36,6 +39,9 @@ public class NotificacionApplicationService {
             return activa.get();
         }
 
+        AsignacionMesa asignacion = resolverAsignacionMesa(cuentaId).orElse(null);
+        boolean enCurso = asignacion != null && asignacion.activa;
+
         Notificacion notificacion = new Notificacion(
                 null,
                 cuenta,
@@ -45,10 +51,10 @@ public class NotificacionApplicationService {
                 null,
                 null,
                 null,
-                false,
-                null,
-                null,
-                null
+                enCurso,
+                asignacion != null ? asignacion.camareroUid : null,
+                asignacion != null ? asignacion.camareroNombre : null,
+                enCurso ? Instant.now() : null
         );
 
         return notificacionRepository.saveWithDedup(notificacion);
@@ -67,6 +73,9 @@ public class NotificacionApplicationService {
         Cuenta cuenta = cuentaRepository.findById(cuentaId)
                 .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
 
+        AsignacionMesa asignacion = resolverAsignacionMesa(cuentaId).orElse(null);
+        boolean enCurso = asignacion != null && asignacion.activa;
+
         Notificacion notificacion = new Notificacion(
                 null,
                 cuenta,
@@ -76,10 +85,10 @@ public class NotificacionApplicationService {
                 ordenId,
                 nombreItem,
                 categoriaItem,
-                false,
-                null,
-                null,
-                null
+                enCurso,
+                asignacion != null ? asignacion.camareroUid : null,
+                asignacion != null ? asignacion.camareroNombre : null,
+                enCurso ? Instant.now() : null
         );
 
         return notificacionRepository.save(notificacion);
@@ -99,6 +108,17 @@ public class NotificacionApplicationService {
 
     public List<Notificacion> obtenerTodasLasAtencionesActivas() {
         return notificacionRepository.findByTipoAndLeida(TipoNotificacion.Atencion, false);
+    }
+
+    public List<Notificacion> obtenerAsignacionesMesaActivas() {
+        return notificacionRepository.findByTipoNotificacion(TipoNotificacion.Atencion).stream()
+                .filter(this::esMarcadorAsignacionMesa)
+                .filter(n -> n.cuenta() != null && n.cuenta().id() != null && !n.cuenta().id().isBlank())
+                .collect(Collectors.groupingBy(n -> n.cuenta().id()))
+                .values().stream()
+                .map(this::masRecientePorAsignacion)
+                .filter(n -> n.enCurso() && n.camareroUid() != null && !n.camareroUid().isBlank())
+                .toList();
     }
 
     public void limpiarNotificacionesEstancadas() {
@@ -263,14 +283,135 @@ public class NotificacionApplicationService {
         return notificacionRepository.update(notificacion.id(), actualizada);
     }
 
-    public void eliminarNotificacionesRecogerDeOrden(String ordenId) {
+    public Notificacion asignarResponsableMesa(
+            String cuentaId,
+            String camareroUid,
+            String camareroNombre
+    ) {
+        Cuenta cuenta = cuentaRepository.findById(cuentaId)
+                .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
+
+        String nombreLimpio = camareroNombre == null || camareroNombre.isBlank()
+                ? "Camarero"
+                : camareroNombre.trim();
+
+        // Registro silencioso de asignación (no aparece en pendientes)
+        Notificacion marcador = new Notificacion(
+                null,
+                cuenta,
+                TipoNotificacion.Atencion,
+                true,
+                Instant.now(),
+                null,
+                null,
+                MARCADOR_ASIGNACION_MESA,
+                true,
+                camareroUid,
+                nombreLimpio,
+                Instant.now()
+        );
+        Notificacion guardada = notificacionRepository.save(marcador);
+
+        // Las notificaciones abiertas de esta cuenta pasan a ese responsable
+        notificacionRepository.findByCuentaId(cuentaId).stream()
+                .filter(n -> !n.leida())
+                .forEach(n -> {
+                    Notificacion actualizada = new Notificacion(
+                            n.id(),
+                            n.cuenta(),
+                            n.tipo(),
+                            false,
+                            n.fecha(),
+                            n.ordenId(),
+                            n.nombreItem(),
+                            n.categoriaItem(),
+                            true,
+                            camareroUid,
+                            nombreLimpio,
+                            Instant.now()
+                    );
+                    notificacionRepository.update(n.id(), actualizada);
+                });
+
+        return guardada;
+    }
+
+    public Notificacion liberarResponsableMesa(String cuentaId) {
+        Cuenta cuenta = cuentaRepository.findById(cuentaId)
+                .orElseThrow(() -> new IllegalArgumentException("La cuenta no existe"));
+
+        // Registro silencioso de desasignación (no aparece en pendientes)
+        Notificacion marcador = new Notificacion(
+                null,
+                cuenta,
+                TipoNotificacion.Atencion,
+                true,
+                Instant.now(),
+                null,
+                null,
+                MARCADOR_ASIGNACION_MESA,
+                false,
+                null,
+                null,
+                Instant.now()
+        );
+        Notificacion guardada = notificacionRepository.save(marcador);
+
+        // Las notificaciones abiertas vuelven al pool compartido
+        notificacionRepository.findByCuentaId(cuentaId).stream()
+                .filter(n -> !n.leida())
+                .forEach(n -> {
+                    Notificacion actualizada = new Notificacion(
+                            n.id(),
+                            n.cuenta(),
+                            n.tipo(),
+                            false,
+                            Instant.now(),
+                            n.ordenId(),
+                            n.nombreItem(),
+                            n.categoriaItem(),
+                            false,
+                            null,
+                            null,
+                            null
+                    );
+                    notificacionRepository.update(n.id(), actualizada);
+                });
+
+        return guardada;
+    }
+
+    public void marcarNotificacionesRecogerComoLeidasDeOrden(String ordenId) {
         if (ordenId == null || ordenId.isBlank()) {
             return;
         }
 
         notificacionRepository.findByOrdenId(ordenId).stream()
+                .filter(notificacion -> !notificacion.leida())
                 .filter(notificacion -> notificacion.tipo() == TipoNotificacion.Recoger)
-                .forEach(notificacion -> notificacionRepository.deleteById(notificacion.id()));
+                .forEach(notificacion -> {
+                    Notificacion actualizada = new Notificacion(
+                            notificacion.id(),
+                            notificacion.cuenta(),
+                            notificacion.tipo(),
+                            true,
+                            notificacion.fecha(),
+                            notificacion.ordenId(),
+                            notificacion.nombreItem(),
+                            notificacion.categoriaItem(),
+                            notificacion.enCurso(),
+                            notificacion.camareroUid(),
+                            notificacion.camareroNombre(),
+                            notificacion.fechaEnCurso()
+                    );
+
+                    notificacionRepository.update(notificacion.id(), actualizada);
+                });
+    }
+
+    @Deprecated
+    public void eliminarNotificacionesRecogerDeOrden(String ordenId) {
+        marcarNotificacionesRecogerComoLeidasDeOrden(ordenId);
     }
 
     public void marcarNotificacionesRecogerComoLeidasDeCuenta(String cuentaId) {
@@ -299,5 +440,47 @@ public class NotificacionApplicationService {
 
                     notificacionRepository.update(notificacion.id(), actualizada);
                 });
+    }
+
+    private Optional<AsignacionMesa> resolverAsignacionMesa(String cuentaId) {
+        return notificacionRepository.findByCuentaId(cuentaId).stream()
+                .filter(n -> n.tipo() == TipoNotificacion.Atencion)
+                .filter(this::esMarcadorAsignacionMesa)
+                .filter(n -> n.fechaEnCurso() != null || n.fecha() != null)
+                .sorted(Comparator.comparing(
+                        (Notificacion n) -> n.fechaEnCurso() != null ? n.fechaEnCurso() : n.fecha()
+                ).reversed())
+                .findFirst()
+                .map(n -> new AsignacionMesa(
+                        n.enCurso(),
+                        n.camareroUid(),
+                        n.camareroNombre()
+                ));
+    }
+
+    private boolean esMarcadorAsignacionMesa(Notificacion notificacion) {
+        return notificacion != null
+                && notificacion.leida()
+                && MARCADOR_ASIGNACION_MESA.equals(notificacion.categoriaItem());
+    }
+
+    private Notificacion masRecientePorAsignacion(List<Notificacion> notificaciones) {
+        return notificaciones.stream()
+                .max(Comparator.comparing(
+                        (Notificacion n) -> n.fechaEnCurso() != null ? n.fechaEnCurso() : n.fecha()
+                ))
+                .orElseThrow();
+    }
+
+    private static class AsignacionMesa {
+        private final boolean activa;
+        private final String camareroUid;
+        private final String camareroNombre;
+
+        private AsignacionMesa(boolean activa, String camareroUid, String camareroNombre) {
+            this.activa = activa;
+            this.camareroUid = camareroUid;
+            this.camareroNombre = camareroNombre;
+        }
     }
 }

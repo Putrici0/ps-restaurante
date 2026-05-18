@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { Subscription, timer } from 'rxjs';
+import { Subscription, forkJoin, take, timer } from 'rxjs';
 
 import { Mesa, ZonaMesa } from '../../../models/mesa.model';
 import { CuentaApiService } from '../../../services/cuenta-api.service';
@@ -40,9 +40,11 @@ export class MesasCamarero implements OnDestroy {
   readonly mesaSeleccionada = signal<Mesa | null>(null);
   readonly mesas = signal<Mesa[]>([]);
   readonly notificacionesAtencion = signal<Notificacion[]>([]);
+  readonly asignacionesActivas = signal<Notificacion[]>([]);
   readonly cargando = signal(true);
   readonly error = signal<string | null>(null);
   readonly accionMesaId = signal<string | null>(null);
+  readonly accionAtencionMesaId = signal<string | null>(null);
   readonly camareroUidActual = signal<string | null>(null);
 
   // --- ESTADO DE COBRO ---
@@ -115,6 +117,16 @@ export class MesasCamarero implements OnDestroy {
     );
   });
 
+  readonly misMesasAsignadas = computed(() =>
+    this.mesasFiltradas().filter((mesa) => {
+      const atencion = this.obtenerAsignacionResponsableDeMesa(mesa);
+      return !!atencion?.enCurso && atencion.camareroUid === this.camareroUidActual();
+    }),
+  );
+  readonly misMesasAsignadasTexto = computed(() =>
+    this.misMesasAsignadas().map((mesa) => this.etiquetaMesa(mesa)).join(', '),
+  );
+
   readonly totalCobro = computed(() => {
     const seleccionadas = new Set(this.ordenesSeleccionadas());
     const total = this.resumenCobro().reduce((acc, item) => {
@@ -185,6 +197,89 @@ export class MesasCamarero implements OnDestroy {
 
   toggleContrasena(): void {
     this.mostrarContrasenaModal.update(v => !v);
+  }
+
+  async asignarmeAtencionMesa(mesa: Mesa): Promise<void> {
+    if (this.accionAtencionMesaId()) {
+      return;
+    }
+    if (!mesa.cuentaActiva?.id) {
+      this.error.set('La mesa debe tener una cuenta activa para asignar responsable.');
+      return;
+    }
+
+    this.error.set(null);
+    this.accionAtencionMesaId.set(mesa.id);
+
+    try {
+      const perfil = await this.camareroAuth.obtenerPerfilCamareroActual();
+      this.notificacionesApi
+        .asignarResponsableMesa(mesa.cuentaActiva.id, perfil.uid, perfil.nombreCompleto)
+        .pipe(take(1))
+        .subscribe({
+          next: () => {
+            forkJoin({
+              notifs: this.notificacionesApi.obtenerActivas(),
+              asignaciones: this.notificacionesApi.obtenerAsignacionesActivas(),
+            }).pipe(take(1)).subscribe({
+              next: ({ notifs, asignaciones }) => {
+                this.notificacionesAtencion.set(notifs);
+                this.asignacionesActivas.set(asignaciones);
+                this.accionAtencionMesaId.set(null);
+              },
+              error: (err) => {
+                console.error('Error refrescando atenciones:', err);
+                this.accionAtencionMesaId.set(null);
+              },
+            });
+          },
+          error: (err) => {
+            console.error('Error asignando responsable de mesa:', err);
+            this.error.set('No se ha podido asignar el responsable de esta mesa.');
+            this.accionAtencionMesaId.set(null);
+          },
+        });
+    } catch (err) {
+      console.error(err);
+      this.error.set('No se ha podido identificar al camarero actual.');
+      this.accionAtencionMesaId.set(null);
+    }
+  }
+
+  desasignarAtencionMesa(mesa: Mesa): void {
+    if (!mesa.cuentaActiva?.id || this.accionAtencionMesaId()) {
+      return;
+    }
+
+    this.error.set(null);
+    this.accionAtencionMesaId.set(mesa.id);
+
+    this.notificacionesApi
+      .liberarResponsableMesa(mesa.cuentaActiva.id)
+      .pipe(take(1))
+      .subscribe({
+        next: () => {
+          forkJoin({
+            notifs: this.notificacionesApi.obtenerActivas(),
+            asignaciones: this.notificacionesApi.obtenerAsignacionesActivas(),
+          }).pipe(take(1)).subscribe({
+            next: ({ notifs, asignaciones }) => {
+              this.notificacionesAtencion.set(notifs);
+              this.asignacionesActivas.set(asignaciones);
+              this.accionAtencionMesaId.set(null);
+            },
+            error: (err) => {
+              console.error('Error refrescando atenciones:', err);
+              this.accionAtencionMesaId.set(null);
+            },
+          });
+        },
+        error: (err) => {
+          console.error('Error desasignando atencion:', err);
+          this.error.set('No se ha podido cancelar el responsable de la mesa.');
+          this.accionAtencionMesaId.set(null);
+        },
+      });
   }
 
   verCuenta(mesa: Mesa): void {
@@ -261,9 +356,15 @@ export class MesasCamarero implements OnDestroy {
     }
     this.error.set(null);
 
-    this.notificacionesApi.obtenerActivas().subscribe({
-      next: (notifs: Notificacion[]) => this.notificacionesAtencion.set(notifs),
-      error: (err: any) => console.error('Error cargando notificaciones activas:', err)
+    forkJoin({
+      notifs: this.notificacionesApi.obtenerActivas(),
+      asignaciones: this.notificacionesApi.obtenerAsignacionesActivas(),
+    }).subscribe({
+      next: ({ notifs, asignaciones }) => {
+        this.notificacionesAtencion.set(notifs);
+        this.asignacionesActivas.set(asignaciones);
+      },
+      error: (err: any) => console.error('Error cargando estado de atenciones:', err),
     });
 
     this.mesasApi.cargarMesasParaVista().subscribe({
@@ -305,6 +406,63 @@ export class MesasCamarero implements OnDestroy {
 
   esMesaAgrupada(mesa: Mesa): boolean {
     return this.normalizarGrupoMesaIds(mesa.grupoMesaIds).length > 1;
+  }
+
+  responsableMesaTexto(mesa: Mesa): string {
+    const atencion = this.obtenerAsignacionResponsableDeMesa(mesa);
+    if (!atencion) {
+      return 'Sin responsable asignado';
+    }
+    if (!atencion.enCurso) {
+      return 'Sin responsable asignado';
+    }
+    const nombre = atencion.camareroNombre?.trim() || 'Camarero';
+    return `Responsable: ${nombre}`;
+  }
+
+  responsableMesaCorto(mesa: Mesa): string {
+    const atencion = this.obtenerAsignacionResponsableDeMesa(mesa);
+    if (!atencion) {
+      return 'Sin responsable';
+    }
+    if (!atencion.enCurso) {
+      return 'Sin responsable';
+    }
+    return atencion.camareroNombre?.trim() || 'Responsable asignado';
+  }
+
+  puedeAsignarmeMesa(mesa: Mesa): boolean {
+    const atencion = this.obtenerAsignacionResponsableDeMesa(mesa);
+    if (!mesa.cuentaActiva?.id || !!this.accionAtencionMesaId()) {
+      return false;
+    }
+    return !atencion || !atencion.enCurso;
+  }
+
+  puedeDesasignarMesa(mesa: Mesa): boolean {
+    const atencion = this.obtenerAsignacionResponsableDeMesa(mesa);
+    return !!atencion && !!atencion.enCurso && !this.accionAtencionMesaId();
+  }
+
+  private obtenerAtencionActivaDeMesa(mesa: Mesa): Notificacion | null {
+    const idsGrupo = new Set(this.normalizarGrupoMesaIds(mesa.grupoMesaIds));
+    const notificacion = this.notificacionesAtencion().find((n) => {
+      if (n.tipo !== 'Atencion' || n.leida) {
+        return false;
+      }
+      const mesasNotificacion = n.cuenta?.mesas ?? [];
+      return mesasNotificacion.some((m) => idsGrupo.has(String(m.id)));
+    });
+    return notificacion ?? null;
+  }
+
+  private obtenerAsignacionResponsableDeMesa(mesa: Mesa): Notificacion | null {
+    const idsGrupo = new Set(this.normalizarGrupoMesaIds(mesa.grupoMesaIds));
+    const asignacion = this.asignacionesActivas().find((n) => {
+      const mesasNotificacion = n.cuenta?.mesas ?? [];
+      return mesasNotificacion.some((m) => idsGrupo.has(String(m.id)));
+    });
+    return asignacion ?? null;
   }
 
   private buscarMesaLogicaPorId(mesas: Mesa[], mesaId: string): Mesa | null {

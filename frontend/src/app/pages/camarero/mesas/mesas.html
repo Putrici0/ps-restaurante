@@ -14,6 +14,13 @@
     </div>
   </div>
 
+  <div class="assigned-summary">
+    Mis mesas asignadas: <strong>{{ misMesasAsignadas().length }}</strong>
+    @if (misMesasAsignadas().length > 0) {
+      <span>({{ misMesasAsignadasTexto() }})</span>
+    }
+  </div>
+
   @if (error()) {
     <div class="error-banner">{{ error() }}</div>
   }
@@ -28,6 +35,7 @@
             }
             <span class="mesa-id">{{ etiquetaMesa(mesa) }}</span>
             <span class="mesa-pax">{{ mesa.capacidad || 4 }} Pax</span>
+            <span class="mesa-owner">{{ responsableMesaCorto(mesa) }}</span>
             @if (esMesaAgrupada(mesa)) {
               <span class="mesa-group">{{ mesa.grupoMesaIds.length }} mesas unidas</span>
             }
@@ -47,6 +55,7 @@
         @if (esMesaAgrupada(mesaSel)) {
           <span class="modal-group">{{ mesaSel.grupoMesaIds.length }} mesas unidas</span>
         }
+        <p class="modal-responsable">{{ responsableMesaTexto(mesaSel) }}</p>
 
         <hr class="divider">
 
@@ -86,6 +95,18 @@
               <span class="contrasena-label">Sin cuenta activa</span>
             </div>
           }
+
+          <button class="action-btn"
+                  [disabled]="!puedeAsignarmeMesa(mesaSel)"
+                  (click)="asignarmeAtencionMesa(mesaSel)">
+            {{ accionAtencionMesaId() === mesaSel.id ? 'ASIGNANDO...' : 'Atender yo' }}
+          </button>
+
+          <button class="action-btn"
+                  [disabled]="!puedeDesasignarMesa(mesaSel)"
+                  (click)="desasignarAtencionMesa(mesaSel)">
+            {{ accionAtencionMesaId() === mesaSel.id ? 'CANCELANDO...' : 'Cancelar responsable' }}
+          </button>
         </div>
 
         <hr class="divider">
