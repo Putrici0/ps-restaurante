@@ -41,6 +41,8 @@ import controller.TiqueController;
 import io.github.cdimascio.dotenv.Dotenv;
 import service.TiqueEmailService;
 
+import java.io.File;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -127,6 +129,14 @@ public class Main {
         HistorialCuentasApplicationService historialCuentasApplicationService =
                 new HistorialCuentasApplicationService(cuentaRepository, pedidoRepository, ordenRepository);
 
+        util.SyntheticDataGenerator generator = new util.SyntheticDataGenerator(platoRepository.findAll());
+        String statsPath = "backend/src/main/resources/historico_sintetico.json";
+        File statsFile = new File(statsPath);
+        if (!statsFile.exists()) {
+            System.out.println("No se detectó histórico de estadísticas. Generando datos iniciales...");
+            generator.generarYExportar(30, statsPath);
+        }
+
         PlatoController platoController = new PlatoController(platoService);
         MesaController mesaController = new MesaController(mesaService, mesaApplicationService);
         ReservaController reservaController = new ReservaController(reservaService);
@@ -154,6 +164,22 @@ public class Main {
 
             config.routes.get("/", ctx -> ctx.result("API del restaurante funcionando"));
             config.routes.get("/health", ctx -> ctx.result("OK"));
+
+            config.routes.get("/debug/generate-stats-data", ctx -> {
+                int days = ctx.queryParamAsClass("days", Integer.class).getOrDefault(30);
+                String path = "backend/src/main/resources/historico_sintetico.json";
+                generator.generarYExportar(days, path);
+                ctx.result("Generados datos de los últimos " + days + " días en " + path);
+            });
+
+            config.routes.get("/debug/get-stats-data", ctx -> {
+                File file = new File("backend/src/main/resources/historico_sintetico.json");
+                if (!file.exists()) {
+                    ctx.status(404).result("El archivo no existe. Generalo primero con /debug/generate-stats-data");
+                    return;
+                }
+                ctx.contentType("application/json").result(new java.io.FileInputStream(file));
+            });
 
             config.routes.apiBuilder(platoController.routes());
             config.routes.apiBuilder(mesaController.routes());

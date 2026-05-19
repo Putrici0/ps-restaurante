@@ -1,0 +1,474 @@
+<div class="analytics-container">
+  <!-- Top Navigation / Filters Bar -->
+  <nav class="top-nav">
+    <div class="nav-left">
+      <div class="logo-area">
+        <img src="public/logo.png" alt="Logo" class="mini-logo">
+        <div class="title-meta">
+          <h2>Business Intelligence</h2>
+          <span class="status" [class.syncing]="loading">
+            <span class="dot"></span> {{ loading ? 'Sanitizando registros...' : 'Estrategia activa' }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-right">
+      <div class="filter-group">
+        <div class="filter-pills">
+          <button [class.active]="filtroActual === '1'" (click)="cambiarFiltro('1')">Hoy</button>
+          <button [class.active]="filtroActual === '7'" (click)="cambiarFiltro('7')">Semana</button>
+          <button [class.active]="filtroActual === '30'" (click)="cambiarFiltro('30')">Mes</button>
+          <button [class.active]="filtroActual === 'custom'" (click)="cambiarFiltro('custom')">Personalizado</button>
+        </div>
+      </div>
+
+      <div class="date-picker-group" *ngIf="filtroActual === 'custom'">
+        <input type="date" [(ngModel)]="fechaInicioPersonalizada" (change)="procesarYMostrar()">
+        <span>al</span>
+        <input type="date" [(ngModel)]="fechaFinPersonalizada" (change)="procesarYMostrar()">
+      </div>
+
+      <div class="divider"></div>
+      <div class="filter-group">
+        <div class="custom-select">
+          <select (change)="cambiarCategoria($any($event.target).value)" [value]="categoriaActual">
+            <option *ngFor="let cat of categorias" [value]="cat">{{ cat }}</option>
+          </select>
+          <i class="fas fa-filter"></i>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Loading State -->
+  <div class="loading-overlay" *ngIf="loading">
+    <div class="spinner"></div>
+    <p>Sanitizando y procesando registros financieros...</p>
+  </div>
+
+  <!-- Main Content Area -->
+  <main class="content-area" *ngIf="!loading">
+
+    <!-- Error State -->
+    <div class="error-banner" *ngIf="error">
+      <i class="fas fa-exclamation-triangle"></i> {{ error }}
+    </div>
+
+    <!-- Insight Banner -->
+    <section class="insights-banner" *ngIf="insights.length > 0">
+      <div class="insight-icon"><i class="fas fa-brain"></i></div>
+      <div class="insight-list">
+        <div class="insight-item" *ngFor="let insight of insights">
+          <i class="fas fa-check-circle"></i> {{ insight }}
+        </div>
+      </div>
+    </section>
+
+    <!-- KPI Section -->
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <span class="label">Ingresos Brutos</span>
+          <h3 class="value">{{ kpis.ventas.value | currency:'EUR' }}</h3>
+          <span class="trend" [class.up]="kpis.ventas.positive" [class.down]="!kpis.ventas.positive">
+            {{ kpis.ventas.trend | number:'1.1-1' }}% <i class="fas" [class.fa-arrow-up]="kpis.ventas.positive"
+                                                         [class.fa-arrow-down]="!kpis.ventas.positive"></i>
+          </span>
+        </div>
+        <div class="kpi-viz"><i class="fas fa-chart-line"></i></div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <span class="label">Ingresos Netos (base)</span>
+          <h3 class="value">{{ kpis.ventasNeto.value | currency:'EUR' }}</h3>
+          <span class="trend" [class.up]="kpis.ventasNeto.positive" [class.down]="!kpis.ventasNeto.positive">
+            {{ kpis.ventasNeto.trend | number:'1.1-1' }}%
+          </span>
+        </div>
+        <div class="kpi-viz"><i class="fas fa-coins"></i></div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <span class="label">IVA Soportado (10%)</span>
+          <h3 class="value">{{ kpis.iva.value | currency:'EUR' }}</h3>
+          <span class="trend" [class.up]="kpis.iva.positive" [class.down]="!kpis.iva.positive">
+            {{ kpis.iva.trend | number:'1.1-1' }}%
+          </span>
+        </div>
+        <div class="kpi-viz"><i class="fas fa-file-invoice-dollar"></i></div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <span class="label">Ticket Medio (ATP)</span>
+          <h3 class="value">{{ kpis.ticketMedio.value | currency:'EUR' }}</h3>
+          <span class="trend" [class.up]="kpis.ticketMedio.positive" [class.down]="!kpis.ticketMedio.positive">
+            {{ kpis.ticketMedio.trend | number:'1.1-1' }}% vs prev
+          </span>
+        </div>
+        <div class="kpi-viz"><i class="fas fa-wallet"></i></div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <span class="label">Rotación de Mesa</span>
+          <h3 class="value">{{ kpis.turnover.value | number:'1.0-0' }} <small>min</small></h3>
+          <span class="hint">Tiempo medio de estancia</span>
+        </div>
+        <div class="kpi-viz"><i class="fas fa-sync-alt"></i></div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-info">
+          <span class="label">Eficiencia Cocina</span>
+          <h3 class="value">{{ kpis.cocina.value | number:'1.1-1' }} <small>min</small></h3>
+          <span class="badge" [class.success]="kpis.cocina.value < 12" [class.warning]="kpis.cocina.value >= 12">
+            {{ kpis.cocina.value < 12 ? 'Óptima' : 'Mejorable' }}
+          </span>
+        </div>
+        <div class="kpi-viz"><i class="fas fa-fire"></i></div>
+      </div>
+    </section>
+
+    <!-- Behavioral Charts -->
+    <div class="behavioral-grid">
+      <div class="viz-card">
+        <div class="viz-header">
+          <h3>Evolución de Ventas</h3>
+          <p>Tendencia de ingresos diarios en el periodo seleccionado.</p>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas #salesChart></canvas>
+        </div>
+      </div>
+
+      <div class="viz-card">
+        <div class="viz-header">
+          <h3>Eficiencia Operativa (Heatmap)</h3>
+          <p>Volumen de actividad por día y hora (Apilado por días).</p>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas #heatmapChart></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Staff Analysis Section -->
+    <div class="matrix-grid">
+      <div class="viz-card">
+        <div class="viz-header">
+          <h3>Eficiencia Operativa del Equipo</h3>
+          <p>Volumen de pedidos (Barras) vs Velocidad Media (Línea Roja).</p>
+        </div>
+        <div class="canvas-wrapper">
+          <canvas #staffChart></canvas>
+        </div>
+      </div>
+
+      <div class="staff-performance-grid">
+        <div class="perf-card fastest" *ngIf="staffStats.fastest">
+          <div class="perf-icon"><i class="fas fa-bolt"></i></div>
+          <div class="perf-data">
+            <span class="p-label">Más Veloz</span>
+            <h4 class="p-name">{{ staffStats.fastest.nombre }}</h4>
+            <span class="p-val">{{ staffStats.fastest.avgSpeed | number:'1.1-1' }} min/servicio</span>
+          </div>
+        </div>
+
+        <div class="perf-card top-seller" *ngIf="staffStats.topSeller">
+          <div class="perf-icon"><i class="fas fa-trophy"></i></div>
+          <div class="perf-data">
+            <span class="p-label">MVP Facturación</span>
+            <h4 class="p-name">{{ staffStats.topSeller.nombre }}</h4>
+            <span class="p-val">{{ staffStats.topSeller.revenue | currency:'EUR' }} generados</span>
+          </div>
+        </div>
+
+        <div class="perf-card busiest" *ngIf="staffStats.busiest">
+          <div class="perf-icon"><i class="fas fa-hands-helping"></i></div>
+          <div class="perf-data">
+            <span class="p-label">Mayor Carga de Trabajo</span>
+            <h4 class="p-name">{{ staffStats.busiest.nombre }}</h4>
+            <span class="p-val">{{ staffStats.busiest.count }} pedidos gestionados</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recommendations Section -->
+    <section class="recommendations-section">
+      <div class="section-header">
+        <i class="fas fa-brain"></i>
+        <div class="header-text">
+          <h3>Ingeniería de Menú y Plan de Acción</h3>
+          <p>Análisis de rentabilidad vs popularidad para optimizar la carta.</p>
+        </div>
+      </div>
+
+      <div class="strategic-context">
+        <!-- Matrix Visualization -->
+        <div class="matrix-viz">
+          <div class="viz-card no-shadow">
+            <div class="viz-header compact">
+              <h4>Matriz de Posicionamiento</h4>
+              <div class="quadrant-legend">
+                <span class="q-badge estrella">Estrella</span>
+                <span class="q-badge caballo">Caballo</span>
+                <span class="q-badge puzzle">Puzzle</span>
+                <span class="q-badge perro">Perro</span>
+              </div>
+            </div>
+            <div class="canvas-wrapper compact">
+              <canvas #dishesChart></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Matrix Guide -->
+        <div class="matrix-guide">
+          <div class="guide-item estrella">
+            <div class="g-icon"><i class="fas fa-star"></i></div>
+            <div class="g-info">
+              <h5>Estrellas</h5>
+              <p>Platos con alta demanda y alto margen. Son tus pilares financieros.</p>
+            </div>
+          </div>
+          <div class="guide-item caballo">
+            <div class="g-icon"><i class="fas fa-horse"></i></div>
+            <div class="g-info">
+              <h5>Caballos de Batalla</h5>
+              <p>Populares pero con margen bajo. Atraen tráfico pero generan poco beneficio neto.</p>
+            </div>
+          </div>
+          <div class="guide-item puzzle">
+            <div class="g-icon"><i class="fas fa-puzzle-piece"></i></div>
+            <div class="g-info">
+              <h5>Puzzles</h5>
+              <p>Rentables pero difíciles de vender. Necesitan promoción o cambio de nombre.</p>
+            </div>
+          </div>
+          <div class="guide-item perro">
+            <div class="g-icon"><i class="fas fa-dog"></i></div>
+            <div class="g-info">
+              <h5>Perros</h5>
+              <p>Baja demanda y bajo margen. Ocupan espacio valioso en la carta y cocina.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider-text">Propuestas de Optimización Estratégica</div>
+
+      <!-- Skeleton Loader -->
+      <div class="recs-grid" *ngIf="loadingRecs">
+        <div class="rec-card skeleton" *ngFor="let i of [1,2,3,4]">
+          <div class="skeleton-type"></div>
+          <div class="rec-content">
+            <div class="skeleton-title"></div>
+            <div class="skeleton-text"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="recs-grid" *ngIf="!loadingRecs && groupedRecommendations.length > 0">
+        <div class="rec-card" *ngFor="let group of groupedRecommendations" [ngClass]="group.color">
+          <div class="rec-type">{{ group.type }}</div>
+          <div class="rec-content">
+            <p class="action-text"><strong>Acción:</strong> {{ group.action }}</p>
+            <div class="dish-pills">
+              <span class="dish-pill" *ngFor="let dish of group.dishes">{{ dish }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Staff Profitability Simulator Pro -->
+    <section class="simulator-section pro">
+      <div class="section-header">
+        <div class="header-main">
+          <i class="fas fa-calculator"></i>
+          <div class="header-text">
+            <h3>Centro de Simulación de Rentabilidad</h3>
+            <p>Ajuste dinámico de costes, horas y comisiones por miembro del equipo.</p>
+          </div>
+        </div>
+        <div class="team-summary-bar">
+          <div class="summary-item">
+            <span class="s-label">Ingresos Totales</span>
+            <span class="s-val">{{ teamTotals.revenue | currency:'EUR' }}</span>
+          </div>
+          <div class="summary-item">
+            <span class="s-label">Coste Total Est.</span>
+            <span class="s-val">{{ teamTotals.cost | currency:'EUR' }}</span>
+          </div>
+          <div class="summary-item highlight">
+            <span class="s-label">Margen Neto Global</span>
+            <span class="s-val">{{ teamTotals.margin | currency:'EUR' }}</span>
+          </div>
+          <div class="summary-item roi">
+            <span class="s-label">ROI Equipo</span>
+            <span class="s-val">{{ teamTotals.avgRoi | number:'1.0-0' }}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="simulator-controls-pro">
+        <div class="control-card">
+          <div class="c-header">Configuración Global</div>
+          <div class="c-body">
+            <div class="input-range-group">
+              <label>Tarifa Base: <span>{{ staffHourlyRate }}€/h</span></label>
+              <input type="range" [(ngModel)]="staffHourlyRate" (input)="aplicarTarifaGlobal()" min="8" max="30"
+                     step="0.5">
+            </div>
+            <div class="input-range-group">
+              <label>Comisión Ventas: <span>{{ globalCommission }}%</span></label>
+              <input type="range" [(ngModel)]="globalCommission" (input)="actualizarSimulacionStaff()" min="0" max="10"
+                     step="0.1">
+            </div>
+          </div>
+        </div>
+        <div class="simulator-hint">
+          <i class="fas fa-magic"></i>
+          <p>Los cambios en los controles individuales de cada camarero anularán la configuración global para ese perfil
+            específico.</p>
+        </div>
+      </div>
+
+      <div class="simulator-grid pro">
+        <div class="sim-card pro" *ngFor="let s of simulatedStaffProfitability">
+          <div class="sim-header">
+            <div class="staff-avatar">{{ s.nombre.charAt(0) }}</div>
+            <div class="staff-meta">
+              <h4>{{ s.nombre }}</h4>
+              <span class="staff-tag">{{ s.count }} pedidos gestionados</span>
+            </div>
+            <div class="roi-circular">
+              <span class="roi-label">ROI</span>
+              <span class="roi-val" [class.neg]="s.roi < 100">{{ s.roi | number:'1.0-0' }}%</span>
+            </div>
+          </div>
+
+          <div class="sim-body">
+            <!-- Individual Sliders -->
+            <div class="individual-controls">
+              <div class="mini-range">
+                <label>Tarifa: <strong>{{ staffConfigs[s.uid].rate }}€/h</strong></label>
+                <input type="range" [value]="staffConfigs[s.uid].rate"
+                       (input)="ajustarStaffIndividual(s.uid, 'rate', $any($event.target).value)" min="8" max="30"
+                       step="0.5">
+              </div>
+              <div class="mini-range">
+                <label>Horas: <strong>{{ staffConfigs[s.uid].hours }}h</strong></label>
+                <input type="range" [value]="staffConfigs[s.uid].hours"
+                       (input)="ajustarStaffIndividual(s.uid, 'hours', $any($event.target).value)" min="1" max="300"
+                       step="1">
+              </div>
+            </div>
+
+            <div class="cost-breakdown">
+              <div class="b-item"><span>Coste Laboral</span><span>{{ s.laborCost | currency:'EUR' }}</span></div>
+              <div class="b-item"><span>Comisiones</span><span>{{ s.commissionCost | currency:'EUR' }}</span></div>
+              <div class="b-item total"><span>Coste Total Empresa</span><span>{{ s.totalCost | currency:'EUR' }}</span>
+              </div>
+            </div>
+
+            <!-- Desglose de Nómina España -->
+            <div class="payroll-breakdown">
+              <div class="p-header">Desglose Nómina (Estimado)</div>
+              <div class="p-item"><span>Sueldo Bruto</span><span>{{ s.payroll.sueldoBruto | currency:'EUR' }}</span>
+              </div>
+              <div class="p-item"><span>SS Empresa (31.5%)</span><span>{{ s.payroll.ssEmpresa | currency:'EUR' }}</span>
+              </div>
+              <div class="p-item">
+                <span>SS Trabajador (6.45%)</span><span>-{{ s.payroll.ssTrabajador | currency:'EUR' }}</span></div>
+              <div class="p-item"><span>IRPF (12%)</span><span>-{{ s.payroll.irpf | currency:'EUR' }}</span></div>
+              <div class="p-item net"><span>Sueldo Neto</span><span>{{ s.payroll.sueldoNeto | currency:'EUR' }}</span>
+              </div>
+            </div>
+
+            <div class="profit-highlight">
+              <span class="ph-label">Margen Neto Generado</span>
+              <div class="ph-val-group">
+                <span class="ph-val">{{ s.netProfit | currency:'EUR' }}</span>
+                <i class="fas" [class.fa-caret-up]="s.netProfit > 0" [class.fa-caret-down]="s.netProfit <= 0"></i>
+              </div>
+              <div class="profit-bar-bg">
+                <div class="profit-bar-fill" [style.width.%]="(s.revenue > 0 ? (s.netProfit / s.revenue) * 100 : 0)"
+                     [class.neg]="s.netProfit < 0"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sim-footer pro">
+            <span class="eff-stat"><i
+              class="fas fa-tachometer-alt"></i> {{ s.avgSpeed | number:'1.1-1' }} min/ped</span>
+            <span class="eff-stat"><i
+              class="fas fa-shopping-bag"></i> {{ s.avgTicket | currency:'EUR' }} ticket medio</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Drill-down Section -->
+    <div class="drill-grid">
+      <div class="table-card">
+        <div class="card-header-actions">
+          <h3>Análisis Detallado de Productos</h3>
+          <div class="sort-dropdown">
+            <label>Ordenar por:</label>
+            <select [(ngModel)]="sortTopPlatos" (change)="cambiarOrdenPlatos($any($event.target).value)">
+              <option value="revenue">Mayor Facturación</option>
+              <option value="count">Mayor Volumen (Pedidos)</option>
+              <option value="avg">Tiempo más Lento</option>
+            </select>
+          </div>
+        </div>
+        <div class="data-table">
+          <div class="t-row h">
+            <span>Nombre del Plato</span>
+            <span>Pedidos</span>
+            <span>Facturación</span>
+          </div>
+          <div class="t-row" *ngFor="let p of topPlatos">
+            <span class="n">{{ p.name }}</span>
+            <span class="count-badge">{{ p.count }}</span>
+            <span class="v">{{ p.revenue | currency:'EUR' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <h3>Cuellos de Botella (Alertas Cocina)</h3>
+        <p class="sub-label">Platos con mayor tiempo de espera medio.</p>
+        <div class="data-table">
+          <div class="t-row h"><span>Plato</span><span>T. Medio</span><span>Estado</span></div>
+          <div class="t-row" *ngFor="let p of slowPlatos">
+            <span class="n">{{ p.name }}</span>
+            <span class="time-value" [class.critical]="p.avg > 18">{{ p.avg | number:'1.1-1' }} min</span>
+            <span><span class="badge" [class.danger]="p.avg > 18" [class.warning]="p.avg > 12">Crítico</span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drill-grid">
+      <div class="table-card full-width">
+        <div class="payment-overview">
+          <div class="payment-info">
+            <h3>Mix de Métodos de Pago</h3>
+            <p>Balance entre cobros digitales y efectivo.</p>
+          </div>
+          <div class="canvas-wrapper mini-doughnut">
+            <canvas #paymentsChart></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>

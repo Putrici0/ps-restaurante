@@ -4,6 +4,7 @@ import { Mesas } from './pages/barra/mesas/mesas';
 import { Bebidas } from './pages/barra/bebidas/bebidas';
 import { PlatosComponent } from './pages/barra/platos/platos';
 import { HistorialComponent } from './pages/barra/historial/historial';
+import {EstadisticasComponent} from './pages/estadisticas/estadisticas';
 
 import { tableAccessGuard } from './guards/table-access.guard';
 import { TableLogin } from './pages/cliente/table-login/table-login';
@@ -29,6 +30,7 @@ export const routes: Routes = [
   { path: 'bebidas', component: Bebidas },
   { path: 'platos', component: PlatosComponent },
   { path: 'historial', component: HistorialComponent },
+  {path: 'estadisticas', component: EstadisticasComponent},
 
   { path: 'acceso/:id', component: TableLogin },
   { path: 'admin/generar-qr', component: QrGenerator },
