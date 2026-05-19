@@ -216,38 +216,75 @@
   }
 
   @if (mostrarConfirmacionCobroTicket()) {
-    <div class="modal-overlay modal-overlay--confirmacion" (click)="cerrarConfirmacionCobroTicket()">
-      <div class="modal-confirmacion modal-confirmacion--ticket" (click)="$event.stopPropagation()">
-        <h4>Pago registrado</h4>
-        <p>El pago se ha registrado correctamente. Puedes descargar o enviar el ticket ahora.</p>
-        <div class="modal-confirmacion__acciones">
-          <button type="button" class="modal-btn modal-btn--secundario" (click)="descargarTicketCobro()">
+    <div class="payment-overlay">
+      <section class="payment-panel payment-panel--confirmacion">
+        <div class="confirmacion-icono">✓</div>
+        <h2 class="confirmacion-titulo">Pago realizado</h2>
+        <p class="confirmacion-importe">
+          Se han pagado <strong>{{ ticketCobroTotal() | number:'1.2-2' }} €</strong>
+        </p>
+
+        @if (ultimoCobroPendiente() > 0) {
+          <div class="confirmacion-pendiente">
+            <p class="confirmacion-pendiente__label">Resta por pagar</p>
+            <p class="confirmacion-pendiente__importe">
+              {{ ultimoCobroPendiente() | number:'1.2-2' }} €
+            </p>
+          </div>
+        } @else {
+          <p class="confirmacion-cuenta-cerrada">
+            La cuenta está completamente pagada.
+          </p>
+        }
+        
+        <div class="confirmacion-acciones-finales">
+          <button type="button" class="confirmacion-accion-final" (click)="descargarTicketCobro()">
             Descargar ticket
           </button>
-          <button type="button" class="modal-btn modal-btn--principal" (click)="cerrarConfirmacionCobroTicket()">
-            Cerrar
+          <button type="button" class="confirmacion-accion-final" (click)="abrirModalCorreoTicket()">
+            Enviar ticket
           </button>
         </div>
 
-        <div class="modal-ticket-correo">
-          <label for="correoTicketCobro">Enviar ticket por correo</label>
-          <input
-            id="correoTicketCobro"
-            type="email"
-            placeholder="correo@ejemplo.com"
-            [value]="correoTicketCobro()"
-            (input)="actualizarCorreoTicketCobro($any($event.target).value)"
-            [disabled]="enviandoTicketCobro()"
-          />
-          @if (errorCorreoTicketCobro()) {
-            <p class="modal-ticket-correo__error">{{ errorCorreoTicketCobro() }}</p>
-          }
-          <button
-            type="button"
-            class="modal-btn modal-btn--principal"
-            (click)="enviarTicketCobro()"
-            [disabled]="enviandoTicketCobro()"
-          >
+        <button
+          type="button"
+          class="payment-submit-btn"
+          (click)="cerrarConfirmacionCobroTicket()">
+          Aceptar
+        </button>
+      </section>
+    </div>
+  }
+
+  @if (mostrarModalCorreoTicket()) {
+    <div class="payment-overlay" (click)="cerrarModalCorreoTicket()">
+      <div class="correo-modal" (click)="$event.stopPropagation()">
+        <div class="correo-modal__header">
+          <h3>Enviar ticket por correo</h3>
+          <button type="button" class="correo-modal__cerrar" (click)="cerrarModalCorreoTicket()">✕</button>
+        </div>
+        <p class="correo-modal__texto">
+          Introduce el correo al que quieres enviar el ticket de la mesa.
+        </p>
+        <label class="correo-modal__label" for="correoTique">
+          Correo electrónico
+        </label>
+        <input
+          id="correoTique"
+          class="correo-modal__input"
+          type="email"
+          placeholder="correo@ejemplo.com"
+          [value]="correoTicketCobro()"
+          (input)="actualizarCorreoTicketCobro($any($event.target).value)"
+        />
+        @if (errorCorreoTicketCobro()) {
+          <p class="correo-modal__error">{{ errorCorreoTicketCobro() }}</p>
+        }
+        <div class="correo-modal__acciones">
+          <button type="button" class="correo-modal__cancelar" (click)="cerrarModalCorreoTicket()">
+            Cancelar
+          </button>
+          <button type="button" class="correo-modal__enviar" (click)="enviarTicketCobro()" [disabled]="enviandoTicketCobro()">
             {{ enviandoTicketCobro() ? 'Enviando...' : 'Enviar ticket' }}
           </button>
         </div>

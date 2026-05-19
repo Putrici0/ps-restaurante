@@ -86,6 +86,8 @@ export class Mesas implements OnInit, OnDestroy {
   readonly cuentaCobroId = signal<string | null>(null);
   readonly mesaCobroId = signal<string | null>(null);
   readonly totalCuentaCobro = signal<number | null>(null);
+  readonly pendienteCuentaCobro = signal<number | null>(null);
+  readonly ultimoCobroPendiente = signal<number>(0);
   readonly cargandoCobro = signal(false);
   readonly procesandoCobro = signal(false);
   readonly resumenCobro = signal<ItemCobroAgrupado[]>([]);
@@ -99,6 +101,7 @@ export class Mesas implements OnInit, OnDestroy {
   readonly mostrarConfirmacionLiberar = signal(false);
   readonly mesaPendienteLiberarId = signal<string | null>(null);
   readonly mostrarConfirmacionCobroTicket = signal(false);
+  readonly mostrarModalCorreoTicket = signal(false);
   readonly enviandoTicketCobro = signal(false);
   readonly correoTicketCobro = signal('');
   readonly errorCorreoTicketCobro = signal<string | null>(null);
@@ -341,6 +344,7 @@ export class Mesas implements OnInit, OnDestroy {
     this.mesaCobroId.set(payload.mesaId);
     this.cuentaCobroId.set(payload.cuentaId);
     this.totalCuentaCobro.set(null);
+    this.pendienteCuentaCobro.set(null);
     this.resumenCobro.set([]);
     this.seleccionCantidadPorPlato.set({});
     this.metodoPago.set('EFECTIVO');
@@ -385,6 +389,9 @@ export class Mesas implements OnInit, OnDestroy {
     request$.subscribe({
       next: (cuentaPagada) => {
         this.procesandoCobro.set(false);
+        const pendientePrevio = this.pendienteCuentaCobro() ?? 0;
+        this.ultimoCobroPendiente.set(Math.max(0, pendientePrevio - totalTicket));
+        
         this.ticketCobroMesaId.set(mesaId);
         this.ticketCobroCuentaId.set(cuentaPagada?.id ?? cuentaId);
         this.ticketCobroMetodoPago.set(metodoPago);
@@ -492,6 +499,7 @@ export class Mesas implements OnInit, OnDestroy {
     this.cuentaCobroId.set(null);
     this.mesaCobroId.set(null);
     this.totalCuentaCobro.set(null);
+    this.pendienteCuentaCobro.set(null);
     this.resumenCobro.set([]);
     this.seleccionCantidadPorPlato.set({});
     this.metodoPago.set('EFECTIVO');
@@ -508,6 +516,19 @@ export class Mesas implements OnInit, OnDestroy {
     this.correoTicketCobro.set('');
     this.errorCorreoTicketCobro.set(null);
     this.cerrarModalCobro();
+  }
+
+  abrirModalCorreoTicket(): void {
+    this.correoTicketCobro.set('');
+    this.errorCorreoTicketCobro.set(null);
+    this.mostrarModalCorreoTicket.set(true);
+  }
+
+  cerrarModalCorreoTicket(): void {
+    if (this.enviandoTicketCobro()) return;
+    this.mostrarModalCorreoTicket.set(false);
+    this.correoTicketCobro.set('');
+    this.errorCorreoTicketCobro.set(null);
   }
 
   descargarTicketCobro(): void {
@@ -555,7 +576,7 @@ export class Mesas implements OnInit, OnDestroy {
       .then(() => {
         this.enviandoTicketCobro.set(false);
         this.mostrarToast(`Ticket enviado correctamente a ${correo}`, 'ok');
-        this.cerrarConfirmacionCobroTicket();
+        this.cerrarModalCorreoTicket();
       })
       .catch((error) => {
         this.enviandoTicketCobro.set(false);
@@ -766,6 +787,7 @@ export class Mesas implements OnInit, OnDestroy {
       next: (cuentaResumen) => {
         const ordenesPendientes = cuentaResumen.ordenes.filter((orden) => orden.ordenEstado !== 'Cancelado' && !orden.pagada);
         this.totalCuentaCobro.set(Number(cuentaResumen.total));
+        this.pendienteCuentaCobro.set(Number(cuentaResumen.pendiente));
         const resumenAgrupado = this.agruparOrdenes(ordenesPendientes);
         this.resumenCobro.set(resumenAgrupado);
 
